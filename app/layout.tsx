@@ -1,6 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Raleway } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
+import Header from "@/components/header";
+import { ThemeProvider } from "@/components/theme-provider";
+import LenisProvider from "@/components/lenis-provider";
+import ClickSpark from "@/components/global/cursor-sparklin";
+
+const raleway = Raleway({ subsets: ["latin"], variable: "--font-sans" });
+
+const editorialNew = localFont({
+  src: "./fonts/EditorialNew-Regular.otf",
+  variable: "--font-editorial",
+  display: "swap",
+});
+
+const greatVibes = localFont({
+  src: "./fonts/GreatVibes-Regular.ttf",
+  variable: "--font-great-vibes",
+  display: "swap",
+});
+
+const mondwest = localFont({
+  src: "./fonts/Mondwest-Regular.otf",
+  variable: "--font-mondwest",
+  display: "swap",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +48,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={raleway.variable} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${editorialNew.variable} ${greatVibes.variable} ${mondwest.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LenisProvider>
+            <Header />
+            {children}
+            <ClickSpark />
+          </LenisProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
