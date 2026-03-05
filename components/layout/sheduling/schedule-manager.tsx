@@ -10,6 +10,7 @@ import type { PatientScheduleData } from "@/lib/dashboard/doctor-operations-serv
 import type { CalendarEvent } from "@/components/layout/sheduling/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Frame, FrameDescription, FramePanel, FrameTitle } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import {
@@ -183,7 +184,12 @@ export function DoctorScheduleManager({
           <form action={createScheduleExceptionAction} className="grid gap-2">
             <p className="font-at-aero-medium text-sm">Add Holiday / Closure</p>
             <input type="hidden" name="type" value="OFF" />
-            <Input name="date" required type="date" />
+            <DatePicker
+              buttonClassName="h-9 sm:h-8"
+              name="date"
+              placeholder="Pick holiday date"
+              required
+            />
             <Input name="reason" placeholder="Reason (optional)" />
             <Button size="sm" type="submit" variant="outline">
               Mark as Holiday
@@ -192,8 +198,20 @@ export function DoctorScheduleManager({
 
           <form action={generateSlotsAction} className="grid gap-2">
             <p className="font-at-aero-medium text-sm">Generate Bookable Slots</p>
-            <Input name="startDate" required type="date" defaultValue={defaultStartDate} />
-            <Input name="endDate" required type="date" defaultValue={defaultEndDate} />
+            <DatePicker
+              buttonClassName="h-9 sm:h-8"
+              defaultValue={defaultStartDate}
+              name="startDate"
+              placeholder="Pick start date"
+              required
+            />
+            <DatePicker
+              buttonClassName="h-9 sm:h-8"
+              defaultValue={defaultEndDate}
+              name="endDate"
+              placeholder="Pick end date"
+              required
+            />
             <Button size="sm" type="submit">
               Generate Next 30 Days
             </Button>

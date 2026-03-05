@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
 import {
@@ -45,9 +46,15 @@ export function NavUser({
     .toUpperCase()
 
   async function handleSignOut() {
-    await authClient.signOut()
-    router.push("/login")
-    router.refresh()
+    try {
+      await authClient.signOut()
+      toast.success("Logged out successfully")
+      router.push("/login")
+      router.refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to log out"
+      toast.error(message)
+    }
   }
 
   return (

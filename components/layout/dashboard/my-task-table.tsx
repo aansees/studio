@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -38,7 +39,6 @@ export function MyTaskTable({
   const [rows, setRows] = useState(initialRows)
   const [query, setQuery] = useState("")
   const [pendingById, setPendingById] = useState<Record<string, boolean>>({})
-  const [error, setError] = useState<string | null>(null)
 
   const canEditStatus = role !== "client"
 
@@ -60,7 +60,6 @@ export function MyTaskTable({
 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setPendingById((prev) => ({ ...prev, [taskId]: true }))
-    setError(null)
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
@@ -75,8 +74,11 @@ export function MyTaskTable({
       }
 
       setRows((prev) => prev.map((row) => (row.id === taskId ? { ...row, status } : row)))
+      toast.success("Task status updated")
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Unable to update task status")
+      const message =
+        updateError instanceof Error ? updateError.message : "Unable to update task status"
+      toast.error(message)
     } finally {
       setPendingById((prev) => {
         const next = { ...prev }
@@ -94,8 +96,6 @@ export function MyTaskTable({
         placeholder="Search tasks"
         className="md:max-w-sm"
       />
-
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <Frame className="p-0">
         <Table>

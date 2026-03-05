@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   CornerUpLeftIcon,
   SendHorizonalIcon,
@@ -82,7 +83,9 @@ export function TaskChatPanel({
       setText("")
       setReplyToMessageId(undefined)
     } catch (error) {
-      console.error(error)
+      const message =
+        error instanceof Error ? error.message : "Failed to send message"
+      toast.error(message)
     } finally {
       setPending(false)
     }

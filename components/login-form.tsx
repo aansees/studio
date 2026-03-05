@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -52,9 +53,12 @@ export function LoginForm({
           callbackURL: nextUrl,
         })
         if (result.error) {
-          setError(result.error.message || "Unable to sign in")
+          const message = result.error.message || "Unable to sign in"
+          setError(message)
+          toast.error(message)
           return
         }
+        toast.success("Login successful")
       } else {
         const result = await authClient.signUp.email({
           name,
@@ -63,14 +67,20 @@ export function LoginForm({
           callbackURL: nextUrl,
         })
         if (result.error) {
-          setError(result.error.message || "Unable to create account")
+          const message = result.error.message || "Unable to create account"
+          setError(message)
+          toast.error(message)
           return
         }
+        toast.success("Account created successfully")
       }
       router.push(nextUrl)
       router.refresh()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Authentication failed")
+      const message =
+        submitError instanceof Error ? submitError.message : "Authentication failed"
+      setError(message)
+      toast.error(message)
     } finally {
       setPending(false)
     }
@@ -85,10 +95,15 @@ export function LoginForm({
         callbackURL: nextUrl,
       })
       if (result?.error) {
-        setError(result.error.message || "Social sign-in failed")
+        const message = result.error.message || "Social sign-in failed"
+        setError(message)
+        toast.error(message)
       }
     } catch (socialError) {
-      setError(socialError instanceof Error ? socialError.message : "Social sign-in failed")
+      const message =
+        socialError instanceof Error ? socialError.message : "Social sign-in failed"
+      setError(message)
+      toast.error(message)
     } finally {
       setPending(false)
     }
@@ -102,13 +117,19 @@ export function LoginForm({
         autoFill: true,
       })
       if (result.error) {
-        setError(result.error.message || "Passkey sign-in failed")
+        const message = result.error.message || "Passkey sign-in failed"
+        setError(message)
+        toast.error(message)
         return
       }
+      toast.success("Login successful")
       router.push(nextUrl)
       router.refresh()
     } catch (passkeyError) {
-      setError(passkeyError instanceof Error ? passkeyError.message : "Passkey sign-in failed")
+      const message =
+        passkeyError instanceof Error ? passkeyError.message : "Passkey sign-in failed"
+      setError(message)
+      toast.error(message)
     } finally {
       setPending(false)
     }

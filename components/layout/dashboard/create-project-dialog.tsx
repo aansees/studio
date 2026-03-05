@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import { PROJECT_PRIORITIES, PROJECT_STATUSES } from "@/lib/constants/domain"
 import type { UserRole } from "@/lib/constants/rbac"
@@ -9,11 +10,12 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
-type TeamUser = {
+export type TeamUser = {
   id: string
   name: string
   email: string
@@ -30,8 +32,6 @@ export function CreateProjectDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -63,7 +63,6 @@ export function CreateProjectDialog({
     setProjectLeadId(currentUserId)
     setClientId("")
     setTeamMemberIds([])
-    setError(null)
   }
 
   function toggleTeamMember(userId: string, checked: boolean) {
@@ -78,8 +77,6 @@ export function CreateProjectDialog({
   async function submitProject(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
-    setError(null)
-    setSuccess(null)
     try {
       const response = await fetch("/api/projects", {
         method: "POST",
@@ -102,12 +99,14 @@ export function CreateProjectDialog({
         throw new Error(payload?.error ?? "Unable to create project")
       }
 
-      setSuccess("Project created.")
+      toast.success("Project created")
       setOpen(false)
       resetForm()
       router.refresh()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to create project")
+      const message =
+        submitError instanceof Error ? submitError.message : "Unable to create project"
+      toast.error(message)
     } finally {
       setPending(false)
     }
@@ -183,20 +182,22 @@ export function CreateProjectDialog({
             <div className="grid gap-4 md:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="project-start-date">Start Date</FieldLabel>
-                <Input
+                <DatePicker
+                  buttonClassName="h-9 sm:h-8"
                   id="project-start-date"
-                  type="date"
+                  onValueChange={setStartDate}
+                  placeholder="Pick start date"
                   value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="project-end-date">End Date</FieldLabel>
-                <Input
+                <DatePicker
+                  buttonClassName="h-9 sm:h-8"
                   id="project-end-date"
-                  type="date"
+                  onValueChange={setEndDate}
+                  placeholder="Pick end date"
                   value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
                 />
               </Field>
             </div>
@@ -255,9 +256,6 @@ export function CreateProjectDialog({
               )}
             </Field>
           </FieldGroup>
-
-          {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <DialogFooter showCloseButton>
             <Button type="submit" disabled={pending}>

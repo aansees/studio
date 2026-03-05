@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
+import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -22,14 +23,10 @@ function ResetPasswordForm() {
 
   const [newPassword, setNewPassword] = useState("")
   const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   async function submitReset(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
-    setMessage(null)
-    setError(null)
     try {
       if (!token) {
         throw new Error("Reset token is missing in the URL.")
@@ -49,9 +46,11 @@ function ResetPasswordForm() {
       }
 
       setNewPassword("")
-      setMessage("Password has been reset. You can sign in now.")
+      toast.success("Password reset successful")
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to reset password")
+      const message =
+        submitError instanceof Error ? submitError.message : "Unable to reset password"
+      toast.error(message)
     } finally {
       setPending(false)
     }
@@ -78,8 +77,6 @@ function ResetPasswordForm() {
                   required
                 />
               </Field>
-              {message ? <FieldDescription className="text-emerald-700">{message}</FieldDescription> : null}
-              {error ? <FieldDescription className="text-destructive">{error}</FieldDescription> : null}
               <Button type="submit" disabled={pending}>
                 {pending ? "Resetting..." : "Reset Password"}
               </Button>
