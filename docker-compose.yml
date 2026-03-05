@@ -1,0 +1,60 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: agency-mysql-local
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-agency}
+      MYSQL_USER: ${MYSQL_USER:-agency}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-agency}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./drizzle:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  mysql-init:
+    image: oven/bun:1.2.22
+    container_name: agency-admin-seed
+    depends_on:
+      mysql:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-agency}
+      MYSQL_USER: ${MYSQL_USER:-agency}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-agency}
+      DATABASE_URL: mysql://${MYSQL_USER:-agency}:${MYSQL_PASSWORD:-agency}@mysql:3306/${MYSQL_DATABASE:-agency}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Agency Admin}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-change-me-1234567890}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BETTER_AUTH_URL: ${NEXT_PUBLIC_BETTER_AUTH_URL:-http://localhost:3000}
+    command: >
+      sh -c "
+      bun install --frozen-lockfile &&
+      attempt=1 &&
+      until bun run seed:admin; do
+        if [ $$attempt -ge 10 ]; then
+          echo 'admin seed failed after retries' &&
+          exit 1
+        fi &&
+        echo \"admin seed retry $$attempt/10\" &&
+        attempt=$$((attempt + 1)) &&
+        sleep 3
+      done
+      "
+    restart: "no"
+
+volumes:
+  mysql_data:

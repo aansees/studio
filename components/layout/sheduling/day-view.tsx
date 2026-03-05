@@ -1,0 +1,577 @@
+"use client";
+
+import {
+  addHours,
+  areIntervalsOverlapping,
+  differenceInMilliseconds,
+  differenceInMinutes,
+  eachHourOfInterval,
+  format,
+  getHours,
+  isSameDay,
+  startOfDay,
+} from "date-fns";
+import type React from "react";
+import { useMemo } from "react";
+
+import {
+  EndHour,
+  StartHour,
+  WeekCellsHeight,
+} from "@/components/layout/sheduling/constants";
+import { useCurrentTimeIndicator } from "@/hooks/use-current-time-indicator";
+import { DraggableEvent } from "./draggable-event";
+import { DroppableCell } from "./droppable-cell";
+import { EventItem } from "./event-item";
+import type { CalendarEvent } from "./types";
+import { isMultiDayEvent } from "./utils";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { cn } from "@/lib/utils";
+import {
+  type CalendarSystem,
+  formatCalendarDayNumber,
+  formatCalendarWeekday,
+} from "./calendar-system";
+
+type HolidayContextAction = "MARK_HOLIDAY" | "CLEAR_HOLIDAY";
+
+interface DayViewProps {
+  blockedDates?: string[];
+  holidayDates?: string[];
+  disabledDates?: string[];
+  calendarSystem?: CalendarSystem;
+  currentDate: Date;
+  events: CalendarEvent[];
+  onEventSelect: (event: CalendarEvent) => void;
+  onEventCreate: (startTime: Date) => void;
+  onHolidayContextAction?: (payload: {
+    dateKey: string;
+    action: HolidayContextAction;
+  }) => void | Promise<void>;
+  onSlotContextAction?: (payload: {
+    event: CalendarEvent;
+    status: "OPEN" | "HELD" | "BLOCKED" | "REMOVE";
+  }) => void | Promise<void>;
+  onSlotBookAction?: (payload: { event: CalendarEvent }) => void | Promise<void>;
+}
+
+interface PositionedEvent {
+  event: CalendarEvent;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+  zIndex: number;
+}
+
+export function DayView({
+  blockedDates = [],
+  holidayDates = [],
+  disabledDates = [],
+  calendarSystem = "gregorian",
+  currentDate,
+  events,
+  onEventSelect,
+  onEventCreate,
+  onHolidayContextAction,
+  onSlotContextAction,
+  onSlotBookAction,
+}: DayViewProps) {
+  const blockedDateSet = useMemo(() => new Set(blockedDates), [blockedDates]);
+  const holidayDateSet = useMemo(() => new Set(holidayDates), [holidayDates]);
+  const disabledDateSet = useMemo(() => new Set(disabledDates), [disabledDates]);
+  const dateKey = format(currentDate, "yyyy-MM-dd");
+  const isBlockedDay = blockedDateSet.has(dateKey);
+  const isManagedHoliday = holidayDateSet.has(dateKey);
+  const isDisabledDay = disabledDateSet.has(dateKey);
+
+  const hours = useMemo(() => {
+    const dayStart = startOfDay(currentDate);
+    return eachHourOfInterval({
+      end: addHours(dayStart, EndHour - 1),
+      start: addHours(dayStart, StartHour),
+    });
+  }, [currentDate]);
+
+  const dayEvents = useMemo(() => {
+    return events
+      .filter((event) => {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        return (
+          isSameDay(currentDate, eventStart) ||
+          isSameDay(currentDate, eventEnd) ||
+          (currentDate > eventStart && currentDate < eventEnd)
+        );
+      })
+      .sort(
+        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+      );
+  }, [currentDate, events]);
+
+  // Filter all-day events
+  const allDayEvents = useMemo(() => {
+    return dayEvents.filter((event) => {
+      // Include explicitly marked all-day events or multi-day events
+      return event.allDay || isMultiDayEvent(event);
+    });
+  }, [dayEvents]);
+
+  // Get only single-day time-based events
+  const timeEvents = useMemo(() => {
+    return dayEvents.filter((event) => {
+      // Exclude all-day events and multi-day events
+      return !event.allDay && !isMultiDayEvent(event);
+    });
+  }, [dayEvents]);
+
+  // Process events to calculate positions
+  const positionedEvents = useMemo(() => {
+    const result: PositionedEvent[] = [];
+    const dayStart = startOfDay(currentDate);
+
+    // Sort events by start time and duration
+    const sortedEvents = [...timeEvents].sort((a, b) => {
+      const aStart = new Date(a.start);
+      const bStart = new Date(b.start);
+      const aEnd = new Date(a.end);
+      const bEnd = new Date(b.end);
+
+      // First sort by start time
+      if (aStart < bStart) return -1;
+      if (aStart > bStart) return 1;
+
+      // If start times are equal, sort by duration (longer events first)
+      const aDuration = differenceInMinutes(aEnd, aStart);
+      const bDuration = differenceInMinutes(bEnd, bStart);
+      return bDuration - aDuration;
+    });
+
+    // Track columns for overlapping events
+    const columns: { event: CalendarEvent; end: Date }[][] = [];
+
+    for (const event of sortedEvents) {
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
+
+      // Adjust start and end times if they're outside this day
+      const adjustedStart = isSameDay(currentDate, eventStart)
+        ? eventStart
+        : dayStart;
+      const adjustedEnd = isSameDay(currentDate, eventEnd)
+        ? eventEnd
+        : addHours(dayStart, 24);
+
+      // Clip to the visible timeline window (StartHour..EndHour) and use
+      // minute-precise math so slot height aligns exactly with hour lines.
+      const visibleStart = addHours(dayStart, StartHour);
+      const visibleEnd = addHours(dayStart, EndHour);
+      const clippedStart =
+        adjustedStart < visibleStart ? visibleStart : adjustedStart;
+      const clippedEnd = adjustedEnd > visibleEnd ? visibleEnd : adjustedEnd;
+      const durationMinutes =
+        differenceInMilliseconds(clippedEnd, clippedStart) / 60000;
+
+      if (durationMinutes <= 0) {
+        continue;
+      }
+
+      const minutesFromVisibleStart =
+        differenceInMilliseconds(clippedStart, visibleStart) / 60000;
+      const top = (minutesFromVisibleStart / 60) * WeekCellsHeight;
+      const height = Math.max((durationMinutes / 60) * WeekCellsHeight, 2);
+
+      // Find a column for this event
+      let columnIndex = 0;
+      let placed = false;
+
+      while (!placed) {
+        const col = columns[columnIndex] || [];
+        if (col.length === 0) {
+          columns[columnIndex] = col;
+          placed = true;
+        } else {
+          const overlaps = col.some((c) =>
+            areIntervalsOverlapping(
+              { end: adjustedEnd, start: adjustedStart },
+              { end: new Date(c.event.end), start: new Date(c.event.start) },
+            ),
+          );
+
+          if (!overlaps) {
+            placed = true;
+          } else {
+            columnIndex++;
+          }
+        }
+      }
+
+      // Ensure column is initialized before pushing
+      const currentColumn = columns[columnIndex] || [];
+      columns[columnIndex] = currentColumn;
+      currentColumn.push({ end: adjustedEnd, event });
+
+      // First column takes full width, others are indented by 10% and take 90% width
+      const width = columnIndex === 0 ? 1 : 0.9;
+      const left = columnIndex === 0 ? 0 : columnIndex * 0.1;
+
+      result.push({
+        event,
+        height,
+        left,
+        top,
+        width,
+        zIndex: 10 + columnIndex,
+      });
+    }
+
+    return result;
+  }, [currentDate, timeEvents]);
+
+  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEventSelect(event);
+  };
+
+  const wrapEventContextMenu = (
+    event: CalendarEvent,
+    eventNode: React.ReactNode,
+  ) => {
+    const isSlotActionBlocked = isBlockedDay || isManagedHoliday || isDisabledDay;
+    const slotStatus = event.slotStatus;
+    const slotId = event.slotId;
+    const hasSlotOptions = Boolean(event.slotOptions && event.slotOptions.length > 0);
+    const effectiveSlotStatus =
+      slotStatus ?? (slotId || hasSlotOptions ? ("OPEN" as const) : undefined);
+    const bookableContextEnabled =
+      !isSlotActionBlocked &&
+      Boolean(onSlotBookAction) &&
+      (Boolean(slotId) || hasSlotOptions) &&
+      effectiveSlotStatus === "OPEN";
+    const slotContextMenuEnabled =
+      !isSlotActionBlocked &&
+      Boolean(onSlotContextAction) &&
+      Boolean(slotId);
+    const canUpdateSlotStatus = effectiveSlotStatus !== "BOOKED";
+
+    if (bookableContextEnabled) {
+      return (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="size-full">
+              {eventNode}
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuLabel>{event.title}</ContextMenuLabel>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onSelect={() =>
+                void onSlotBookAction?.({
+                  event,
+                })
+              }
+            >
+              Book Appointment
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      );
+    }
+
+    if (!slotContextMenuEnabled) {
+      return eventNode;
+    }
+
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="size-full">
+            {eventNode}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuLabel>{event.title}</ContextMenuLabel>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={!canUpdateSlotStatus || effectiveSlotStatus === "OPEN"}
+            onSelect={() =>
+              void onSlotContextAction?.({
+                event: { ...event, slotId },
+                status: "OPEN",
+              })
+            }
+          >
+            Set Open
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={!canUpdateSlotStatus || effectiveSlotStatus === "HELD"}
+            onSelect={() =>
+              void onSlotContextAction?.({
+                event: { ...event, slotId },
+                status: "HELD",
+              })
+            }
+          >
+            Set Reserved
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={!canUpdateSlotStatus || effectiveSlotStatus === "BLOCKED"}
+            onSelect={() =>
+              void onSlotContextAction?.({
+                event: { ...event, slotId },
+                status: "BLOCKED",
+              })
+            }
+          >
+            Set Blocked
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={!canUpdateSlotStatus}
+            onSelect={() =>
+              void onSlotContextAction?.({
+                event: { ...event, slotId },
+                status: "REMOVE",
+              })
+            }
+          >
+            Remove Slot
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  };
+
+  const wrapDayContextMenu = (node: React.ReactNode) => {
+    if (!onHolidayContextAction) {
+      return node;
+    }
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div>{node}</div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuLabel>
+            {calendarSystem === "nepali"
+              ? `${formatCalendarWeekday(
+                  currentDate,
+                  calendarSystem,
+                )} ${formatCalendarDayNumber(currentDate, calendarSystem)}`
+              : format(currentDate, "EEE, MMM d, yyyy")}
+          </ContextMenuLabel>
+          <ContextMenuSeparator />
+          {isManagedHoliday ? (
+            <ContextMenuItem
+              disabled={isDisabledDay}
+              onSelect={() =>
+                void onHolidayContextAction({
+                  dateKey,
+                  action: "CLEAR_HOLIDAY",
+                })
+              }
+            >
+              Remove Holiday
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              disabled={isDisabledDay}
+              onSelect={() =>
+                void onHolidayContextAction({
+                  dateKey,
+                  action: "MARK_HOLIDAY",
+                })
+              }
+            >
+              Mark as Holiday
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  };
+
+  const showAllDaySection = allDayEvents.length > 0;
+  const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
+    currentDate,
+    "day",
+  );
+
+  return (
+    <div className="contents" data-slot="day-view">
+      {showAllDaySection && (
+        <div className="border-border/70 border-t bg-muted/50">
+          <div className="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">
+            <div className="relative">
+              <span className="absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] text-muted-foreground/70 sm:pe-4 sm:text-xs">
+                All day
+              </span>
+            </div>
+            <div
+              className={cn(
+                "relative border-border/70 border-r p-1 last:border-r-0",
+                isDisabledDay && "calendar-disabled-pattern text-muted-foreground/70",
+                !isDisabledDay &&
+                  isBlockedDay &&
+                  "calendar-holiday-pattern text-red-900/75 dark:text-red-200/80",
+              )}
+            >
+              {allDayEvents.map((event) => {
+                const eventStart = new Date(event.start);
+                const eventEnd = new Date(event.end);
+                const isFirstDay = isSameDay(currentDate, eventStart);
+                const isLastDay = isSameDay(currentDate, eventEnd);
+
+                const node = (
+                  <EventItem
+                    event={event}
+                    isFirstDay={isFirstDay}
+                    isLastDay={isLastDay}
+                    key={`spanning-${event.id}`}
+                    onClick={(e) => handleEventClick(event, e)}
+                    view="month"
+                  >
+                    {/* Always show the title in day view for better usability */}
+                    <div>{event.title}</div>
+                  </EventItem>
+                );
+                return <div key={`spanning-${event.id}`}>{wrapEventContextMenu(event, node)}</div>;
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid flex-1 grid-cols-[3rem_1fr] overflow-hidden border-border/70 border-t sm:grid-cols-[4rem_1fr]">
+        <div>
+          {hours.map((hour, index) => (
+            <div
+              className="relative h-[var(--week-cells-height)] border-border/70 border-b last:border-b-0"
+              key={hour.toString()}
+            >
+              {index > 0 && (
+                <span className="-top-3 absolute left-0 flex h-6 w-16 max-w-full items-center justify-end bg-background pe-2 text-[10px] text-muted-foreground/70 sm:pe-4 sm:text-xs">
+                  {format(hour, "h a")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {wrapDayContextMenu(
+          <div
+            className={cn(
+              "relative",
+              isDisabledDay && "calendar-disabled-pattern text-muted-foreground/70",
+              !isDisabledDay &&
+                isBlockedDay &&
+                "calendar-holiday-pattern text-red-900/75 dark:text-red-200/80",
+            )}
+          >
+          {/* Positioned events */}
+          {positionedEvents.map((positionedEvent) => (
+            <div
+              className="absolute z-10 px-0.5"
+              key={positionedEvent.event.id}
+              style={{
+                height: `${positionedEvent.height}px`,
+                left: `${positionedEvent.left * 100}%`,
+                top: `${positionedEvent.top}px`,
+                width: `${positionedEvent.width * 100}%`,
+                zIndex: positionedEvent.zIndex,
+              }}
+            >
+              <div className="size-full">
+                {wrapEventContextMenu(
+                  positionedEvent.event,
+                  positionedEvent.event.slotId ||
+                    positionedEvent.event.slotStatus ||
+                    (positionedEvent.event.slotOptions?.length ?? 0) > 0 ? (
+                    <EventItem
+                      event={positionedEvent.event}
+                      onClick={(e) => handleEventClick(positionedEvent.event, e)}
+                      showTime
+                      view="day"
+                    />
+                  ) : (
+                    <DraggableEvent
+                      event={positionedEvent.event}
+                      height={positionedEvent.height}
+                      onClick={(e) => handleEventClick(positionedEvent.event, e)}
+                      showTime
+                      view="day"
+                    />
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Current time indicator */}
+          {currentTimeVisible && (
+            <div
+              className="pointer-events-none absolute right-0 left-0 z-20"
+              style={{ top: `${currentTimePosition}%` }}
+            >
+              <div className="relative flex items-center">
+                <div className="-left-1 absolute h-2 w-2 rounded-full bg-primary" />
+                <div className="h-[2px] w-full bg-primary" />
+              </div>
+            </div>
+          )}
+
+          {/* Time grid */}
+          {hours.map((hour) => {
+            const hourValue = getHours(hour);
+            return (
+              <div
+                className="relative h-[var(--week-cells-height)] border-border/70 border-b last:border-b-0"
+                key={hour.toString()}
+              >
+                {/* Quarter-hour intervals */}
+                {[0, 1, 2, 3].map((quarter) => {
+                  const quarterHourTime = hourValue + quarter * 0.25;
+                  return (
+                    <DroppableCell
+                      className={cn(
+                        "absolute h-[calc(var(--week-cells-height)/4)] w-full",
+                        quarter === 0 && "top-0",
+                        quarter === 1 &&
+                          "top-[calc(var(--week-cells-height)/4)]",
+                        quarter === 2 &&
+                          "top-[calc(var(--week-cells-height)/4*2)]",
+                        quarter === 3 &&
+                          "top-[calc(var(--week-cells-height)/4*3)]",
+                      )}
+                      date={currentDate}
+                      id={`day-cell-${currentDate.toISOString()}-${quarterHourTime}`}
+                      key={`${hour.toString()}-${quarter}`}
+                      onClick={() => {
+                        if (isBlockedDay || isDisabledDay) return;
+                        const startTime = new Date(currentDate);
+                        startTime.setHours(hourValue);
+                        startTime.setMinutes(quarter * 15);
+                        onEventCreate(startTime);
+                      }}
+                      time={quarterHourTime}
+                    />
+                  );
+                })}
+              </div>
+              );
+            })}
+          </div>,
+        )}
+      </div>
+    </div>
+  );
+}
+

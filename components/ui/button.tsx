@@ -3,7 +3,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import type * as React from "react";
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -49,13 +49,14 @@ const buttonVariants = cva(
 );
 
 interface ButtonProps extends useRender.ComponentProps<"button"> {
+  asChild?: boolean;
   variant?: VariantProps<typeof buttonVariants>["variant"];
   size?: VariantProps<typeof buttonVariants>["size"];
 }
 
-function Button({ className, variant, size, render, ...props }: ButtonProps) {
+function Button({ className, variant, size, render, asChild, ...props }: ButtonProps) {
   const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
-    render ? undefined : "button";
+    render || asChild ? undefined : "button";
 
   const defaultProps = {
     className: cn(buttonVariants({ className, size, variant })),
@@ -63,10 +64,19 @@ function Button({ className, variant, size, render, ...props }: ButtonProps) {
     type: typeValue,
   };
 
+  let resolvedRender = render;
+  let resolvedProps: React.ComponentProps<"button"> = props;
+
+  if (asChild) {
+    const { children, ...restProps } = props;
+    resolvedProps = restProps;
+    resolvedRender = React.Children.only(children) as React.ReactElement;
+  }
+
   return useRender({
     defaultTagName: "button",
-    props: mergeProps<"button">(defaultProps, props),
-    render,
+    props: mergeProps<"button">(defaultProps, resolvedProps),
+    render: resolvedRender,
   });
 }
 
