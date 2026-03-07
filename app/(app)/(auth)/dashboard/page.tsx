@@ -56,7 +56,6 @@ export default async function Page() {
         </Card>
       </Frame>
 
-      <h1>Task Board</h1>
       <DataTable
         data={overview.recentTasks}
         canManageTasks={user.role !== "client"}

@@ -13,6 +13,7 @@ import { VoiceDictation } from "@/components/chat/voice-dictation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import type { UserRole } from "@/lib/constants/rbac"
 import { useRealtime } from "@/lib/realtime-client"
 import type { MessageEvent } from "@/lib/realtime"
 
@@ -20,6 +21,7 @@ type TaskChatPanelProps = {
   taskId: string
   roomId: string
   currentUserId: string
+  viewerRole: UserRole
   initialMessages: MessageEvent[]
   canPost: boolean
 }
@@ -34,6 +36,7 @@ export function TaskChatPanel({
   taskId,
   roomId,
   currentUserId,
+  viewerRole,
   initialMessages,
   canPost,
 }: TaskChatPanelProps) {
@@ -114,6 +117,13 @@ export function TaskChatPanel({
     })
   }
 
+  function getVisibleSenderName(message: MessageEvent) {
+    if (viewerRole === "client" && message.senderRole === "developer") {
+      return "Assigned developer"
+    }
+    return message.displayName
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -129,7 +139,7 @@ export function TaskChatPanel({
               }`}
             >
               <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{message.displayName}</span>
+                <span>{getVisibleSenderName(message)}</span>
                 <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
               </div>
               {message.replyToMessageId ? (
@@ -183,7 +193,7 @@ export function TaskChatPanel({
 
         {replyToMessage ? (
           <div className="rounded-lg border bg-muted/40 p-2 text-xs">
-            Replying to: <span className="font-medium">{replyToMessage.displayName}</span>
+            Replying to: <span className="font-medium">{getVisibleSenderName(replyToMessage)}</span>
             <div className="truncate text-muted-foreground">{replyToMessage.text}</div>
             <Button
               variant="ghost"

@@ -1,50 +1,91 @@
-import { notFound } from "next/navigation"
+import { endOfDay, isBefore, startOfDay } from "date-fns";
+import { notFound } from "next/navigation";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { requireSession } from "@/lib/session"
-import { getProjectByIdForUser } from "@/lib/services/projects"
-import { listTasksForUser } from "@/lib/services/tasks"
+import { ProjectTaskCalendar } from "@/components/layout/dashboard/project-task-calendar";
+import { Frame, FramePanel } from "@/components/ui/frame";
+import { requireSession } from "@/lib/session";
+import { getProjectByIdForUser } from "@/lib/services/projects";
+import { listProjectTasksForUser } from "@/lib/services/tasks";
+import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
+
+function getEventColor({
+  priority,
+  status,
+  dueDate,
+}: {
+  priority: string | null;
+  status: string | null;
+  dueDate: Date;
+}) {
+  if (status === "done") return "emerald" as const;
+  if (isBefore(dueDate, new Date()) && status !== "done") return "rose" as const;
+  if (status === "in_progress") return "amber" as const;
+
+  switch (priority) {
+    case "urgent":
+      return "rose" as const;
+    case "high":
+      return "orange" as const;
+    case "medium":
+      return "amber" as const;
+    case "low":
+      return "sky" as const;
+    default:
+      return "violet" as const;
+  }
+}
 
 export default async function ProjectCalendarPage({
   params,
 }: {
-  params: Promise<{ projectId: string }>
+  params: Promise<{ projectId: string }>;
 }) {
-  const { projectId } = await params
-  const { user } = await requireSession()
-  const [project, tasks] = await Promise.all([
-    getProjectByIdForUser(projectId, user),
-    listTasksForUser(user, projectId),
-  ])
+  const { projectId } = await params;
+  const { user } = await requireSession();
+  const project = await getProjectByIdForUser(projectId, user);
 
   if (!project) {
-    notFound()
+    notFound();
   }
 
-  const datedTasks = tasks
+  const tasks = await listProjectTasksForUser(user, projectId);
+
+  const calendarEvents = tasks
     .filter((item) => item.dueDate)
-    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+    .map((item) => {
+      const startDate = startOfDay(
+        resolveTaskTimelineStartDate(item.createdAt, project.startDate),
+      );
+      const dueDate = new Date(item.dueDate!);
+      const normalizedEnd = endOfDay(
+        isBefore(dueDate, startDate) ? startDate : dueDate,
+      );
+
+      return {
+        id: item.id,
+        title: item.title,
+        description:
+          item.description ?? `${item.type ?? "task"} - ${item.status ?? "todo"}`,
+        start: startDate.toISOString(),
+        end: normalizedEnd.toISOString(),
+        allDay: true,
+        color: getEventColor({
+          priority: item.priority,
+          status: item.status,
+          dueDate,
+        }),
+      };
+    })
+    .sort((left, right) => left.start.localeCompare(right.start));
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{project.name} - Calendar</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {datedTasks.map((item) => (
-            <div key={item.id} className="rounded-md border p-3">
-              <div className="font-medium">{item.title}</div>
-              <div className="text-muted-foreground">
-                Due: {new Date(item.dueDate!).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
-          {datedTasks.length === 0 ? (
-            <div className="text-muted-foreground">No due dates in this project yet.</div>
-          ) : null}
-        </CardContent>
-      </Card>
+      <Frame>
+        <FramePanel className="overflow-hidden p-0">
+          <ProjectTaskCalendar events={calendarEvents} />
+        </FramePanel>
+      </Frame>
     </div>
-  )
+  );
 }
+

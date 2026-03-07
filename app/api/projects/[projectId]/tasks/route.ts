@@ -4,7 +4,7 @@ import { z } from "zod"
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
 import { canAccessProject } from "@/lib/services/access-control"
-import { createTaskAsAdmin, listTasksForUser } from "@/lib/services/tasks"
+import { createTaskByManager, listProjectTasksForUser } from "@/lib/services/tasks"
 
 const createTaskSchema = z.object({
   title: z.string().min(2),
@@ -28,7 +28,7 @@ export async function GET(
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const tasks = await listTasksForUser(user, projectId)
+    const tasks = await listProjectTasksForUser(user, projectId)
     return NextResponse.json({ data: tasks })
   } catch (error) {
     return errorResponse(error)
@@ -41,9 +41,9 @@ export async function POST(
 ) {
   try {
     const { projectId } = await params
-    const { user } = await requireApiSession(["admin"])
+    const { user } = await requireApiSession()
     const body = createTaskSchema.parse(await request.json())
-    const taskId = await createTaskAsAdmin(user, { ...body, projectId })
+    const taskId = await createTaskByManager(user, { ...body, projectId })
     return NextResponse.json({ taskId }, { status: 201 })
   } catch (error) {
     return errorResponse(error)

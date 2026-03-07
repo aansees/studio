@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  BookOpenIcon,
   CalendarIcon,
   ChartColumnIcon,
   ChevronDownIcon,
@@ -85,6 +86,11 @@ function getPrimaryNav(role: UserRole) {
 
 function getProjectLinks(projectId: string) {
   return [
+    {
+      title: "Plan",
+      href: `/projects/${projectId}/plan`,
+      icon: <BookOpenIcon />,
+    },
     {
       title: "Tasks",
       href: `/projects/${projectId}/tasks`,

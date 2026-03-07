@@ -1,10 +1,11 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 
 import { db } from "@/lib/db"
-import { project, task, user } from "@/lib/db/schema"
+import { project, projectMember, task, user } from "@/lib/db/schema"
 import { createNotification } from "@/lib/notifications"
 import type { SessionUser } from "@/lib/session"
 import { canAccessProject, isAdmin } from "@/lib/services/access-control"
+import { canManageProject, recalculateProjectProgress } from "@/lib/services/projects"
 
 type CreateTaskInput = {
   projectId: string
@@ -42,6 +43,10 @@ export async function listTasksForUser(currentUser: SessionUser, projectId?: str
     .from(task)
     .where(
       sql`exists (
+        select 1 from ${projectMember}
+        where ${projectMember.projectId} = ${task.projectId}
+          and ${projectMember.userId} = ${currentUser.id}
+      ) or exists (
         select 1 from ${project}
         where ${project.id} = ${task.projectId}
           and ${project.clientId} = ${currentUser.id}
@@ -50,10 +55,63 @@ export async function listTasksForUser(currentUser: SessionUser, projectId?: str
     .orderBy(desc(task.updatedAt))
 }
 
-export async function createTaskAsAdmin(currentUser: SessionUser, input: CreateTaskInput) {
-  if (!isAdmin(currentUser.role)) {
-    throw new Error("Only admins can create tasks")
+export async function listProjectTasksForUser(currentUser: SessionUser, projectId: string) {
+  const hasAccess = await canAccessProject(currentUser, projectId)
+  if (!hasAccess) {
+    throw new Error("Forbidden")
   }
+
+  return db
+    .select()
+    .from(task)
+    .where(eq(task.projectId, projectId))
+    .orderBy(desc(task.updatedAt))
+}
+
+async function validateTaskAssignee(projectId: string, assigneeId?: string) {
+  if (!assigneeId) {
+    return
+  }
+
+  const [member] = await db
+    .select({
+      role: user.role,
+    })
+    .from(projectMember)
+    .innerJoin(user, eq(user.id, projectMember.userId))
+    .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, assigneeId)))
+    .limit(1)
+
+  if (!member) {
+    throw new Error("Assignee must be a member of this project")
+  }
+
+  if (member.role === "client") {
+    throw new Error("Client members cannot be assigned tasks")
+  }
+}
+
+export async function createTaskByManager(currentUser: SessionUser, input: CreateTaskInput) {
+  const [targetProject] = await db
+    .select({
+      id: project.id,
+      projectLeadId: project.projectLeadId,
+    })
+    .from(project)
+    .where(eq(project.id, input.projectId))
+    .limit(1)
+
+  if (!targetProject) {
+    throw new Error("Project not found")
+  }
+
+  const manager =
+    isAdmin(currentUser.role) || targetProject.projectLeadId === currentUser.id
+  if (!manager) {
+    throw new Error("Forbidden: only admins or project lead can create tasks")
+  }
+
+  await validateTaskAssignee(input.projectId, input.assigneeId)
 
   const [created] = await db
     .insert(task)
@@ -70,6 +128,8 @@ export async function createTaskAsAdmin(currentUser: SessionUser, input: CreateT
       createdById: currentUser.id,
     })
     .$returningId()
+
+  await recalculateProjectProgress(input.projectId)
 
   if (input.assigneeId) {
     const [assignee] = await db
@@ -104,6 +164,10 @@ export async function createTaskAsAdmin(currentUser: SessionUser, input: CreateT
   return created?.id ?? null
 }
 
+export async function createTaskAsAdmin(currentUser: SessionUser, input: CreateTaskInput) {
+  return createTaskByManager(currentUser, input)
+}
+
 export async function updateTaskWithPermissions(
   currentUser: SessionUser,
   taskId: string,
@@ -114,7 +178,11 @@ export async function updateTaskWithPermissions(
     throw new Error("Task not found")
   }
 
-  if (isAdmin(currentUser.role)) {
+  const manager = await canManageProject(currentUser, existing.projectId)
+
+  if (manager) {
+    await validateTaskAssignee(existing.projectId, updates.assigneeId)
+
     await db
       .update(task)
       .set({
@@ -157,6 +225,8 @@ export async function updateTaskWithPermissions(
         ),
       )
     }
+
+    await recalculateProjectProgress(existing.projectId)
 
     return
   }
@@ -202,6 +272,8 @@ export async function updateTaskWithPermissions(
       )
     }
 
+    await recalculateProjectProgress(existing.projectId)
+
     return
   }
 
@@ -213,7 +285,13 @@ export async function bulkDeleteTasksAsAdmin(currentUser: SessionUser, taskIds: 
     throw new Error("Only admins can delete tasks")
   }
   if (taskIds.length === 0) return 0
+  const existingTasks = await db
+    .select({ id: task.id, projectId: task.projectId })
+    .from(task)
+    .where(inArray(task.id, taskIds))
   const result = await db.delete(task).where(inArray(task.id, taskIds))
+  const affectedProjectIds = Array.from(new Set(existingTasks.map((item) => item.projectId)))
+  await Promise.all(affectedProjectIds.map((projectId) => recalculateProjectProgress(projectId)))
   if ("rowsAffected" in result && typeof result.rowsAffected === "number") {
     return result.rowsAffected
   }
@@ -231,7 +309,10 @@ export async function canUserChatOnTask(currentUser: SessionUser, taskId: string
   }
 
   if (currentUser.role === "developer") {
-    return existing.assigneeId === currentUser.id
+    if (existing.assigneeId === currentUser.id) {
+      return true
+    }
+    return canManageProject(currentUser, existing.projectId)
   }
 
   if (currentUser.role === "client") {

@@ -4,7 +4,6 @@ import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
 import { canAccessProject } from "@/lib/services/access-control"
 import { getProjectAnalytics } from "@/lib/services/projects"
-import { projectTaskSummary } from "@/lib/services/tasks"
 
 export async function GET(
   _request: Request,
@@ -18,16 +17,10 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const [analytics, summary] = await Promise.all([
-      getProjectAnalytics(projectId),
-      projectTaskSummary(projectId),
-    ])
+    const analytics = await getProjectAnalytics(projectId)
 
     return NextResponse.json({
-      data: {
-        ...analytics,
-        summary,
-      },
+      data: analytics,
     })
   } catch (error) {
     return errorResponse(error)

@@ -1,50 +1,85 @@
-import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { requireSession } from "@/lib/session"
-import { getProjectByIdForUser } from "@/lib/services/projects"
-import { listTasksForUser } from "@/lib/services/tasks"
+import { ProjectTasksWorkspace } from "@/components/layout/dashboard/project-tasks-workspace";
+import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
+import { requireSession } from "@/lib/session";
+import {
+  canManageProject,
+  getProjectByIdForUser,
+  listProjectMembersForUser,
+} from "@/lib/services/projects";
+import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
+import { listProjectTasksForUser } from "@/lib/services/tasks";
 
 export default async function ProjectTasksPage({
   params,
 }: {
-  params: Promise<{ projectId: string }>
+  params: Promise<{ projectId: string }>;
 }) {
-  const { projectId } = await params
-  const { user } = await requireSession()
-  const [project, tasks] = await Promise.all([
-    getProjectByIdForUser(projectId, user),
-    listTasksForUser(user, projectId),
-  ])
+  const { projectId } = await params;
+  const { user } = await requireSession();
+  const project = await getProjectByIdForUser(projectId, user);
 
   if (!project) {
-    notFound()
+    notFound();
   }
+
+  const [tasks, members, projectManager] = await Promise.all([
+    listProjectTasksForUser(user, projectId),
+    listProjectMembersForUser(user, projectId),
+    canManageProject(user, projectId),
+  ]);
+
+  const memberNameById = new Map(
+    members.map((member) => [member.userId, member.name]),
+  );
+  const memberImageById = new Map(
+    members.map((member) => [member.userId, member.image ?? null]),
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{project.name} - Tasks</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {tasks.map((item) => (
-            <Link
-              key={item.id}
-              href={`/tasks/${item.id}`}
-              className="flex items-center justify-between rounded-md border p-3 text-sm hover:bg-muted/40"
-            >
-              <div>{item.title}</div>
-              <Badge variant="outline">{item.status}</Badge>
-            </Link>
-          ))}
-          {tasks.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No tasks available.</div>
-          ) : null}
-        </CardContent>
-      </Card>
+      <h1>{project.name} - Tasks</h1>
+
+      <ProjectTasksWorkspace
+        projectId={projectId}
+        canManageProjectTasks={projectManager}
+        initialRows={tasks.map((item) => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          description: item.description ?? "",
+          priority: item.priority,
+          status: TASK_STATUSES.includes(item.status as TaskStatus)
+            ? (item.status as TaskStatus)
+            : "todo",
+          people: item.assigneeId
+            ? [
+                {
+                  id: item.assigneeId,
+                  name:
+                    user.role === "client"
+                      ? "Assigned developer"
+                      : (memberNameById.get(item.assigneeId) ?? "Unknown"),
+                  image: memberImageById.get(item.assigneeId) ?? null,
+                },
+              ]
+            : [],
+          startDate: resolveTaskTimelineStartDate(
+            item.createdAt,
+            project.startDate,
+          ).toISOString(),
+          dueDate: item.dueDate ? new Date(item.dueDate).toISOString() : null,
+        }))}
+        assignees={members
+          .filter((member) => member.role !== "client")
+          .map((member) => ({
+            id: member.userId,
+            name: member.name,
+            email: member.email,
+            role: member.role,
+          }))}
+      />
     </div>
-  )
+  );
 }

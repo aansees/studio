@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProjectAnalyticsDashboard } from "@/components/layout/dashboard/project-analytics-dashboard"
 import { requireSession } from "@/lib/session"
-import { getProjectByIdForUser, getProjectAnalytics } from "@/lib/services/projects"
+import {
+  getProjectByIdForUser,
+  getProjectAnalytics,
+  listProjectMembersForUser,
+} from "@/lib/services/projects"
 
 export default async function ProjectAnalyticsPage({
   params,
@@ -11,9 +15,10 @@ export default async function ProjectAnalyticsPage({
 }) {
   const { projectId } = await params
   const { user } = await requireSession()
-  const [project, analytics] = await Promise.all([
+  const [project, analytics, members] = await Promise.all([
     getProjectByIdForUser(projectId, user),
     getProjectAnalytics(projectId),
+    listProjectMembersForUser(user, projectId),
   ])
 
   if (!project) {
@@ -21,30 +26,23 @@ export default async function ProjectAnalyticsPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{project.name} - Analytics</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-          <div>
-            <div className="text-muted-foreground">Total tasks</div>
-            <div className="text-2xl font-semibold">{analytics.summary.total}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Completed</div>
-            <div className="text-2xl font-semibold">{analytics.summary.completed}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Overdue</div>
-            <div className="text-2xl font-semibold">{analytics.summary.overdue}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Team size</div>
-            <div className="text-2xl font-semibold">{analytics.assigneeBreakdown.length}</div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <ProjectAnalyticsDashboard
+      project={{
+        id: project.id,
+        name: project.name,
+        description: project.description ?? null,
+        status: project.status,
+        priority: project.priority,
+        progressPercent: project.progressPercent,
+        endDate: project.endDate ? new Date(project.endDate).toISOString() : null,
+      }}
+      analytics={analytics}
+      members={members.map((member) => ({
+        userId: member.userId,
+        name: member.name,
+        image: member.image ?? null,
+        role: member.role,
+      }))}
+    />
   )
 }

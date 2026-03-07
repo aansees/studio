@@ -7,7 +7,7 @@ import { project, projectMember, task } from "@/lib/db/schema"
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
 import { canAccessProject } from "@/lib/services/access-control"
-import { getProjectByIdForUser, updateProjectAsAdmin } from "@/lib/services/projects"
+import { getProjectByIdForUser, updateProjectByManager } from "@/lib/services/projects"
 
 const updateProjectSchema = z.object({
   name: z.string().min(2).optional(),
@@ -17,8 +17,6 @@ const updateProjectSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   projectLeadId: z.string().optional(),
-  clientId: z.string().optional(),
-  progressPercent: z.number().int().min(0).max(100).optional(),
   notes: z.string().optional(),
   devLinks: z.string().optional(),
   credentials: z.string().optional(),
@@ -47,9 +45,9 @@ export async function PATCH(
 ) {
   try {
     const { projectId } = await params
-    const { user } = await requireApiSession(["admin"])
+    const { user } = await requireApiSession()
     const body = updateProjectSchema.parse(await request.json())
-    await updateProjectAsAdmin(user, projectId, body)
+    await updateProjectByManager(user, projectId, body)
     return NextResponse.json({ success: true })
   } catch (error) {
     return errorResponse(error)

@@ -72,7 +72,14 @@ export async function canAccessTask(user: SessionUser, taskId: string) {
     if (taskWithProject.assigneeId === user.id) {
       return true
     }
-    return canAccessProject(user, taskWithProject.projectId)
+
+    const [managedProject] = await db
+      .select({ projectLeadId: project.projectLeadId })
+      .from(project)
+      .where(eq(project.id, taskWithProject.projectId))
+      .limit(1)
+
+    return managedProject?.projectLeadId === user.id
   }
 
   if (user.role === "client") {

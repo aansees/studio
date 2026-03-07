@@ -47,7 +47,16 @@ export default async function Page({ children }: { children: React.ReactNode }) 
         projects={sidebarProjects}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden">
-        <SiteHeader />
+        <SiteHeader
+          projects={projects.map((project) => ({
+            id: project.id,
+            name: project.name,
+          }))}
+          tasks={tasks.map((task) => ({
+            id: task.id,
+            title: task.title,
+          }))}
+        />
         <div
           data-lenis-prevent
           className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"

@@ -7,11 +7,11 @@ import { projectMember, user } from "@/lib/db/schema"
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
 import { canAccessProject } from "@/lib/services/access-control"
-import { updateProjectMembersAsAdmin } from "@/lib/services/projects"
+import { updateProjectMembersByManager } from "@/lib/services/projects"
 
 const updateMembersSchema = z.object({
   memberIds: z.array(z.string()),
-  clientId: z.string().optional(),
+  clientIds: z.array(z.string()).optional(),
 })
 
 export async function GET(
@@ -48,14 +48,14 @@ export async function PATCH(
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
-    const { user: currentUser } = await requireApiSession(["admin"])
+    const { user: currentUser } = await requireApiSession()
     const { projectId } = await params
     const body = updateMembersSchema.parse(await request.json())
-    await updateProjectMembersAsAdmin(
+    await updateProjectMembersByManager(
       currentUser,
       projectId,
       body.memberIds,
-      body.clientId,
+      body.clientIds ?? [],
     )
     return NextResponse.json({ success: true })
   } catch (error) {
