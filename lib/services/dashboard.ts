@@ -1,5 +1,3 @@
-import { inArray } from "drizzle-orm"
-
 import {
   PROJECT_PRIORITIES,
   PROJECT_STATUSES,
@@ -17,8 +15,6 @@ import type {
   DashboardStatusDatum,
   DashboardTaskRow,
 } from "@/lib/dashboard/overview-types"
-import { db } from "@/lib/db"
-import { user } from "@/lib/db/schema"
 import type { SessionUser } from "@/lib/session"
 import { listProjectsForUser } from "@/lib/services/projects"
 import { listTasksForUser } from "@/lib/services/tasks"
@@ -168,37 +164,16 @@ export async function getDashboardOverview(currentUser: SessionUser): Promise<Da
 
   const projectNameById = new Map(projects.map((item) => [item.id, item.name]))
 
-  const assigneeIds = Array.from(
-    new Set(
-      tasks
-        .map((item) => item.assigneeId)
-        .filter((item): item is string => typeof item === "string" && item.length > 0),
-    ),
-  )
-
-  const assigneeNameById = new Map<string, string>()
-  if (assigneeIds.length > 0 && currentUser.role !== "client") {
-    const assignees = await db
-      .select({
-        id: user.id,
-        name: user.name,
-      })
-      .from(user)
-      .where(inArray(user.id, assigneeIds))
-
-    for (const assignee of assignees) {
-      assigneeNameById.set(assignee.id, assignee.name)
-    }
-  }
-
   const recentTasks: DashboardTaskRow[] = tasks.slice(0, 25).map((item) => {
     const assigneeLabel =
       currentUser.role === "client"
-        ? item.assigneeId
-          ? "Assigned developer"
+        ? item.assigneeIds.length > 0
+          ? item.assigneeIds.length === 1
+            ? "Assigned developer"
+            : `${item.assigneeIds.length} assigned developers`
           : "Unassigned"
-        : item.assigneeId
-          ? assigneeNameById.get(item.assigneeId) ?? "Unknown"
+        : item.assignedUsers.length > 0
+          ? item.assignedUsers.map((assignedUser) => assignedUser.name).join(", ")
           : "Unassigned"
 
     return {

@@ -8,6 +8,20 @@
       "when": 1772715528366,
       "tag": "0000_hesitant_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1772870400000,
+      "tag": "0001_task_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772899800000,
+      "tag": "0002_task_chat_attachments",
+      "breakpoints": true
     }
   ]
 }

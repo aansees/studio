@@ -12,9 +12,9 @@ const createTaskSchema = z.object({
   type: z.enum(["feature", "bug", "improvement", "research", "support"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   assigneeId: z.string().optional(),
+  assigneeIds: z.array(z.string().min(1)).optional(),
   status: z.enum(["todo", "in_progress", "review", "blocked", "done"]).optional(),
   dueDate: z.coerce.date().optional(),
-  estimatedHours: z.number().int().min(1).optional(),
 })
 
 export async function GET(

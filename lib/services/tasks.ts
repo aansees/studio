@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 
 import { db } from "@/lib/db"
-import { project, projectMember, task, user } from "@/lib/db/schema"
+import { project, projectMember, task, taskAssignment, user } from "@/lib/db/schema"
 import { createNotification } from "@/lib/notifications"
 import type { SessionUser } from "@/lib/session"
 import { canAccessProject, isAdmin } from "@/lib/services/access-control"
@@ -14,16 +14,92 @@ type CreateTaskInput = {
   type?: typeof task.$inferInsert.type
   priority?: typeof task.$inferInsert.priority
   assigneeId?: string
+  assigneeIds?: string[]
   status?: typeof task.$inferInsert.status
   dueDate?: Date
-  estimatedHours?: number
 }
 
 type UpdateTaskInput = Partial<Omit<CreateTaskInput, "projectId">> & {
   status?: typeof task.$inferInsert.status
 }
 
+function normalizeAssigneeIds(input: {
+  assigneeId?: string
+  assigneeIds?: string[]
+}) {
+  const values = [
+    ...(input.assigneeIds ?? []),
+    ...(input.assigneeId ? [input.assigneeId] : []),
+  ]
+
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)),
+  )
+}
+
+async function attachTaskAssignments<T extends { id: string; assigneeId: string | null }>(
+  tasks: T[],
+) {
+  if (tasks.length === 0) {
+    return tasks.map((taskItem) => ({
+      ...taskItem,
+      assigneeIds: taskItem.assigneeId ? [taskItem.assigneeId] : [],
+      assignedUsers: [],
+    }))
+  }
+
+  const taskIds = tasks.map((taskItem) => taskItem.id)
+  const assignments = await db
+    .select({
+      taskId: taskAssignment.taskId,
+      userId: taskAssignment.userId,
+      name: user.name,
+      image: user.image,
+      role: user.role,
+    })
+    .from(taskAssignment)
+    .innerJoin(user, eq(user.id, taskAssignment.userId))
+    .where(inArray(taskAssignment.taskId, taskIds))
+
+  const assignmentsByTaskId = new Map<
+    string,
+    Array<{
+      id: string
+      name: string
+      image: string | null
+      role: string
+    }>
+  >()
+
+  for (const assignment of assignments) {
+    const existing = assignmentsByTaskId.get(assignment.taskId) ?? []
+    existing.push({
+      id: assignment.userId,
+      name: assignment.name,
+      image: assignment.image,
+      role: assignment.role,
+    })
+    assignmentsByTaskId.set(assignment.taskId, existing)
+  }
+
+  return tasks.map((taskItem) => {
+    const assignedUsers = assignmentsByTaskId.get(taskItem.id) ?? []
+    const assigneeIds = assignedUsers.map((assignment) => assignment.id)
+
+    return {
+      ...taskItem,
+      assigneeIds,
+      assignedUsers,
+      assigneeId:
+        taskItem.assigneeId ??
+        assignedUsers[0]?.id ??
+        null,
+    }
+  })
+}
+
 export async function listTasksForUser(currentUser: SessionUser, projectId?: string) {
+  const rows = await (async () => {
   if (isAdmin(currentUser.role)) {
     const whereClause = projectId ? eq(task.projectId, projectId) : undefined
     return whereClause
@@ -32,10 +108,26 @@ export async function listTasksForUser(currentUser: SessionUser, projectId?: str
   }
 
   if (currentUser.role === "developer") {
-    const whereClause = projectId
-      ? and(eq(task.projectId, projectId), eq(task.assigneeId, currentUser.id))
-      : eq(task.assigneeId, currentUser.id)
-    return db.select().from(task).where(whereClause).orderBy(desc(task.updatedAt))
+    return db
+      .select()
+      .from(task)
+      .where(
+        projectId
+          ? and(
+              eq(task.projectId, projectId),
+              sql`exists (
+                select 1 from ${taskAssignment}
+                where ${taskAssignment.taskId} = ${task.id}
+                  and ${taskAssignment.userId} = ${currentUser.id}
+              )`,
+            )
+          : sql`exists (
+              select 1 from ${taskAssignment}
+              where ${taskAssignment.taskId} = ${task.id}
+                and ${taskAssignment.userId} = ${currentUser.id}
+            )`,
+      )
+      .orderBy(desc(task.updatedAt))
   }
 
   return db
@@ -53,6 +145,9 @@ export async function listTasksForUser(currentUser: SessionUser, projectId?: str
       )`,
     )
     .orderBy(desc(task.updatedAt))
+  })()
+
+  return attachTaskAssignments(rows)
 }
 
 export async function listProjectTasksForUser(currentUser: SessionUser, projectId: string) {
@@ -61,34 +156,58 @@ export async function listProjectTasksForUser(currentUser: SessionUser, projectI
     throw new Error("Forbidden")
   }
 
-  return db
+  const rows = await db
     .select()
     .from(task)
     .where(eq(task.projectId, projectId))
     .orderBy(desc(task.updatedAt))
+
+  return attachTaskAssignments(rows)
 }
 
-async function validateTaskAssignee(projectId: string, assigneeId?: string) {
-  if (!assigneeId) {
-    return
+async function validateTaskAssignees(projectId: string, assigneeIds: string[]) {
+  if (assigneeIds.length === 0) {
+    return []
   }
 
-  const [member] = await db
+  const members = await db
     .select({
+      userId: projectMember.userId,
       role: user.role,
     })
     .from(projectMember)
     .innerJoin(user, eq(user.id, projectMember.userId))
-    .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, assigneeId)))
-    .limit(1)
+    .where(
+      and(
+        eq(projectMember.projectId, projectId),
+        inArray(projectMember.userId, assigneeIds),
+      ),
+    )
 
-  if (!member) {
-    throw new Error("Assignee must be a member of this project")
+  if (members.length !== assigneeIds.length) {
+    throw new Error("All assignees must be members of this project")
   }
 
-  if (member.role === "client") {
+  if (members.some((member) => member.role === "client")) {
     throw new Error("Client members cannot be assigned tasks")
   }
+
+  return assigneeIds
+}
+
+async function syncTaskAssignments(taskId: string, assigneeIds: string[]) {
+  await db.delete(taskAssignment).where(eq(taskAssignment.taskId, taskId))
+
+  if (assigneeIds.length === 0) {
+    return
+  }
+
+  await db.insert(taskAssignment).values(
+    assigneeIds.map((userId) => ({
+      taskId,
+      userId,
+    })),
+  )
 }
 
 export async function createTaskByManager(currentUser: SessionUser, input: CreateTaskInput) {
@@ -111,7 +230,10 @@ export async function createTaskByManager(currentUser: SessionUser, input: Creat
     throw new Error("Forbidden: only admins or project lead can create tasks")
   }
 
-  await validateTaskAssignee(input.projectId, input.assigneeId)
+  const assigneeIds = await validateTaskAssignees(
+    input.projectId,
+    normalizeAssigneeIds(input),
+  )
 
   const [created] = await db
     .insert(task)
@@ -121,44 +243,48 @@ export async function createTaskByManager(currentUser: SessionUser, input: Creat
       description: input.description ?? null,
       type: input.type ?? "feature",
       priority: input.priority ?? "medium",
-      assigneeId: input.assigneeId ?? null,
+      assigneeId: assigneeIds[0] ?? null,
       status: input.status ?? "todo",
       dueDate: input.dueDate ?? null,
-      estimatedHours: input.estimatedHours ?? null,
       createdById: currentUser.id,
     })
     .$returningId()
 
+  if (created?.id) {
+    await syncTaskAssignments(created.id, assigneeIds)
+  }
+
   await recalculateProjectProgress(input.projectId)
 
-  if (input.assigneeId) {
-    const [assignee] = await db
+  if (assigneeIds.length > 0) {
+    const assignees = await db
       .select({ id: user.id, email: user.email, name: user.name })
       .from(user)
-      .where(eq(user.id, input.assigneeId))
-      .limit(1)
+      .where(inArray(user.id, assigneeIds))
 
-    if (assignee) {
-      await createNotification({
-        userId: assignee.id,
-        event: "task_assigned",
-        title: "New task assigned",
-        body: `${currentUser.name} assigned "${input.title}" to you.`,
-        metadata: {
-          taskId: created?.id,
-          projectId: input.projectId,
-        },
-        email: {
-          to: assignee.email,
-          subject: `Task assigned: ${input.title}`,
-          preview: `A task was assigned to you`,
-          intro: `${currentUser.name} assigned a new task to you.`,
-          lines: [`Task: ${input.title}`],
-          ctaLabel: "Open my tasks",
-          ctaUrl: "/mytask",
-        },
-      })
-    }
+    await Promise.all(
+      assignees.map((assignee) =>
+        createNotification({
+          userId: assignee.id,
+          event: "task_assigned",
+          title: "New task assigned",
+          body: `${currentUser.name} assigned "${input.title}" to you.`,
+          metadata: {
+            taskId: created?.id,
+            projectId: input.projectId,
+          },
+          email: {
+            to: assignee.email,
+            subject: `Task assigned: ${input.title}`,
+            preview: `A task was assigned to you`,
+            intro: `${currentUser.name} assigned a new task to you.`,
+            lines: [`Task: ${input.title}`],
+            ctaLabel: "Open my tasks",
+            ctaUrl: "/mytask",
+          },
+        }),
+      ),
+    )
   }
 
   return created?.id ?? null
@@ -181,7 +307,11 @@ export async function updateTaskWithPermissions(
   const manager = await canManageProject(currentUser, existing.projectId)
 
   if (manager) {
-    await validateTaskAssignee(existing.projectId, updates.assigneeId)
+    const shouldUpdateAssignments =
+      "assigneeIds" in updates || "assigneeId" in updates
+    const nextAssigneeIds = shouldUpdateAssignments
+      ? await validateTaskAssignees(existing.projectId, normalizeAssigneeIds(updates))
+      : undefined
 
     await db
       .update(task)
@@ -190,16 +320,19 @@ export async function updateTaskWithPermissions(
         description: updates.description,
         type: updates.type,
         priority: updates.priority,
-        assigneeId: updates.assigneeId,
+        assigneeId: nextAssigneeIds ? nextAssigneeIds[0] ?? null : undefined,
         status: updates.status,
         dueDate: updates.dueDate,
-        estimatedHours: updates.estimatedHours,
         startedAt:
           updates.status === "in_progress" && !existing.startedAt ? new Date() : undefined,
         completedAt: updates.status === "done" ? new Date() : undefined,
         updatedAt: new Date(),
       })
       .where(eq(task.id, taskId))
+
+    if (nextAssigneeIds) {
+      await syncTaskAssignments(taskId, nextAssigneeIds)
+    }
 
     if (updates.status === "done") {
       const admins = await db
@@ -232,7 +365,15 @@ export async function updateTaskWithPermissions(
   }
 
   if (currentUser.role === "developer") {
-    if (existing.assigneeId !== currentUser.id) {
+    const [assignment] = await db
+      .select({ userId: taskAssignment.userId })
+      .from(taskAssignment)
+      .where(
+        and(eq(taskAssignment.taskId, taskId), eq(taskAssignment.userId, currentUser.id)),
+      )
+      .limit(1)
+
+    if (!assignment && existing.assigneeId !== currentUser.id) {
       throw new Error("Developers can only update their own assigned tasks")
     }
 
@@ -309,7 +450,15 @@ export async function canUserChatOnTask(currentUser: SessionUser, taskId: string
   }
 
   if (currentUser.role === "developer") {
-    if (existing.assigneeId === currentUser.id) {
+    const [assignment] = await db
+      .select({ userId: taskAssignment.userId })
+      .from(taskAssignment)
+      .where(
+        and(eq(taskAssignment.taskId, taskId), eq(taskAssignment.userId, currentUser.id)),
+      )
+      .limit(1)
+
+    if (assignment || existing.assigneeId === currentUser.id) {
       return true
     }
     return canManageProject(currentUser, existing.projectId)
@@ -362,4 +511,6 @@ export async function reassignTaskAsAdmin(
       updatedAt: new Date(),
     })
     .where(eq(task.id, taskId))
+
+  await syncTaskAssignments(taskId, [newAssigneeId])
 }

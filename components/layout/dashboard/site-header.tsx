@@ -61,7 +61,7 @@ function getHeaderState(
       return { section: "Projects", title: `${projectName} details` }
     }
     if (section === "plan") {
-      return { section: `${projectName}`, title: `Plan` }
+      return { section: projectName, title: "Plan" }
     }
     if (section === "tasks" && parts[3]) {
       return {
@@ -70,16 +70,16 @@ function getHeaderState(
       }
     }
     if (section === "tasks") {
-      return { section: projectName, title: ` tasks` }
+      return { section: projectName, title: "Tasks" }
     }
     if (section === "analytics") {
-      return { section: projectName, title: ` analytics` }
+      return { section: projectName, title: "Analytics" }
     }
     if (section === "calendar") {
-      return { section: projectName, title: `calendar` }
+      return { section: projectName, title: "Calendar" }
     }
     if (section === "settings") {
-      return { section: projectName, title: ` settings` }
+      return { section: projectName, title: "Settings" }
     }
     return {
       section: projectName,

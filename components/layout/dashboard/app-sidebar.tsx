@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  BookOpenIcon,
   CalendarIcon,
   ChartColumnIcon,
   ChevronDownIcon,
@@ -51,6 +50,7 @@ type SidebarUser = {
 
 type SidebarTask = {
   id: string;
+  projectId: string;
   title: string;
 };
 
@@ -86,11 +86,6 @@ function getPrimaryNav(role: UserRole) {
 
 function getProjectLinks(projectId: string) {
   return [
-    {
-      title: "Plan",
-      href: `/projects/${projectId}/plan`,
-      icon: <BookOpenIcon />,
-    },
     {
       title: "Tasks",
       href: `/projects/${projectId}/tasks`,
@@ -229,9 +224,11 @@ export function AppSidebar({
                           <SidebarMenuSubItem key={task.id}>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={currentPath === `/tasks/${task.id}`}
+                              isActive={
+                                currentPath === `/projects/${task.projectId}/tasks/${task.id}`
+                              }
                             >
-                              <Link href={`/tasks/${task.id}`}>
+                              <Link href={`/projects/${task.projectId}/tasks/${task.id}`}>
                                 <CircleDotIcon className="size-3" />
                                 <span className="truncate">{task.title}</span>
                               </Link>

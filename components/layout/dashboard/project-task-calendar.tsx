@@ -14,8 +14,10 @@ type SerializableCalendarEvent = Omit<CalendarEvent, "start" | "end"> & {
 };
 
 export function ProjectTaskCalendar({
+  projectId,
   events,
 }: {
+  projectId: string;
   events: SerializableCalendarEvent[];
 }) {
   const router = useRouter();
@@ -35,7 +37,7 @@ export function ProjectTaskCalendar({
       allowCreate={false}
       events={calendarEvents}
       initialView="month"
-      onEventSelectReadOnly={(event) => router.push(`/tasks/${event.id}`)}
+      onEventSelectReadOnly={(event) => router.push(`/projects/${projectId}/tasks/${event.id}`)}
     />
   );
 }

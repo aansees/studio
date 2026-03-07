@@ -119,7 +119,10 @@ export function MyTaskTable({
               filteredRows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <Link href={`/tasks/${row.id}`} className="font-medium underline-offset-4 hover:underline">
+                    <Link
+                      href={`/projects/${row.projectId}/tasks/${row.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
                       {row.title}
                     </Link>
                   </TableCell>

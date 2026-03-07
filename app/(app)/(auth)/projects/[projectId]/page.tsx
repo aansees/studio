@@ -54,14 +54,9 @@ export default async function ProjectDetailsPage({
     canManageProject(user, projectId),
   ]);
 
-  const memberNameById = new Map(
-    members.map((member) => [member.userId, member.name]),
-  );
-  const memberImageById = new Map(
-    members.map((member) => [member.userId, member.image ?? null]),
-  );
   const taskRows = tasks.map((item) => ({
     id: item.id,
+    projectId,
     title: item.title,
     type: item.type,
     description: item.description ?? "",
@@ -69,18 +64,15 @@ export default async function ProjectDetailsPage({
     status: TASK_STATUSES.includes(item.status as TaskStatus)
       ? (item.status as TaskStatus)
       : "todo",
-    people: item.assigneeId
-      ? [
-          {
-            id: item.assigneeId,
-            name:
-              user.role === "client"
-                ? "Assigned developer"
-                : (memberNameById.get(item.assigneeId) ?? "Unknown"),
-            image: memberImageById.get(item.assigneeId) ?? null,
-          },
-        ]
-      : [],
+    people:
+      item.assignedUsers?.map((assignedUser) => ({
+        id: assignedUser.id,
+        name:
+          user.role === "client" && assignedUser.role === "developer"
+            ? "Assigned developer"
+            : assignedUser.name,
+        image: assignedUser.image ?? null,
+      })) ?? [],
     startDate: resolveTaskTimelineStartDate(
       item.createdAt,
       project.startDate,

@@ -82,7 +82,7 @@ export default async function ProjectCalendarPage({
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
       <Frame>
         <FramePanel className="overflow-hidden p-0">
-          <ProjectTaskCalendar events={calendarEvents} />
+          <ProjectTaskCalendar projectId={projectId} events={calendarEvents} />
         </FramePanel>
       </Frame>
     </div>

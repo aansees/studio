@@ -52,6 +52,11 @@ export default async function ProjectDetailsTabPage({
           role: member.role,
           isActive: member.isActive,
         }))}
+        embeddedWorkspace={{
+          initialNotes: project.notes ?? "",
+          initialDevLinks: project.devLinks ?? "",
+          initialCredentials: project.credentials ?? "",
+        }}
       />
     </div>
   )

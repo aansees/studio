@@ -30,13 +30,6 @@ export default async function ProjectTasksPage({
     canManageProject(user, projectId),
   ]);
 
-  const memberNameById = new Map(
-    members.map((member) => [member.userId, member.name]),
-  );
-  const memberImageById = new Map(
-    members.map((member) => [member.userId, member.image ?? null]),
-  );
-
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
       <h1>{project.name} - Tasks</h1>
@@ -46,6 +39,7 @@ export default async function ProjectTasksPage({
         canManageProjectTasks={projectManager}
         initialRows={tasks.map((item) => ({
           id: item.id,
+          projectId,
           title: item.title,
           type: item.type,
           description: item.description ?? "",
@@ -53,18 +47,15 @@ export default async function ProjectTasksPage({
           status: TASK_STATUSES.includes(item.status as TaskStatus)
             ? (item.status as TaskStatus)
             : "todo",
-          people: item.assigneeId
-            ? [
-                {
-                  id: item.assigneeId,
-                  name:
-                    user.role === "client"
-                      ? "Assigned developer"
-                      : (memberNameById.get(item.assigneeId) ?? "Unknown"),
-                  image: memberImageById.get(item.assigneeId) ?? null,
-                },
-              ]
-            : [],
+          people:
+            item.assignedUsers?.map((assignedUser) => ({
+              id: assignedUser.id,
+              name:
+                user.role === "client" && assignedUser.role === "developer"
+                  ? "Assigned developer"
+                  : assignedUser.name,
+              image: assignedUser.image ?? null,
+            })) ?? [],
           startDate: resolveTaskTimelineStartDate(
             item.createdAt,
             project.startDate,

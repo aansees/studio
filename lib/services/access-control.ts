@@ -1,7 +1,7 @@
 import { and, eq, or } from "drizzle-orm"
 
 import { db } from "@/lib/db"
-import { project, projectMember, task, user as userTable } from "@/lib/db/schema"
+import { project, projectMember, task, taskAssignment, user as userTable } from "@/lib/db/schema"
 import type { SessionUser } from "@/lib/session"
 
 type Role = SessionUser["role"]
@@ -69,7 +69,15 @@ export async function canAccessTask(user: SessionUser, taskId: string) {
   }
 
   if (user.role === "developer") {
-    if (taskWithProject.assigneeId === user.id) {
+    const [assignment] = await db
+      .select({ userId: taskAssignment.userId })
+      .from(taskAssignment)
+      .where(
+        and(eq(taskAssignment.taskId, taskId), eq(taskAssignment.userId, user.id)),
+      )
+      .limit(1)
+
+    if (assignment || taskWithProject.assigneeId === user.id) {
       return true
     }
 

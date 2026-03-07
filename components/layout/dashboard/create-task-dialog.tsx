@@ -20,6 +20,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { TaskAssigneesPicker } from "@/components/layout/dashboard/task-assignees-picker"
 
 type AssigneeOption = {
   id: string
@@ -44,9 +45,8 @@ export function CreateTaskDialog({
   const [type, setType] = useState<(typeof TASK_TYPES)[number]>("feature")
   const [priority, setPriority] = useState<(typeof TASK_PRIORITIES)[number]>("medium")
   const [status, setStatus] = useState<(typeof TASK_STATUSES)[number]>("todo")
-  const [assigneeId, setAssigneeId] = useState("")
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [dueDate, setDueDate] = useState("")
-  const [estimatedHours, setEstimatedHours] = useState("")
 
   const assignableUsers = useMemo(
     () => assignees.filter((member) => member.role !== "client"),
@@ -59,16 +59,13 @@ export function CreateTaskDialog({
     setType("feature")
     setPriority("medium")
     setStatus("todo")
-    setAssigneeId("")
+    setAssigneeIds([])
     setDueDate("")
-    setEstimatedHours("")
   }
 
   async function submitTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
-
-    const estimated = Number.parseInt(estimatedHours, 10)
 
     try {
       const response = await fetch(`/api/projects/${projectId}/tasks`, {
@@ -80,9 +77,8 @@ export function CreateTaskDialog({
           type,
           priority,
           status,
-          assigneeId: assigneeId || undefined,
+          assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
           dueDate: dueDate || undefined,
-          estimatedHours: Number.isFinite(estimated) && estimated > 0 ? estimated : undefined,
         }),
       })
 
@@ -112,7 +108,7 @@ export function CreateTaskDialog({
         <DialogHeader>
           <DialogTitle>Create Task</DialogTitle>
           <DialogDescription>
-            Add a task for this project and assign it to a team member.
+            Add a task for this project and assign it to one or more team members.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submitTask} className="space-y-4">
@@ -190,25 +186,16 @@ export function CreateTaskDialog({
                 </Select>
               </Field>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field>
-                <FieldLabel>Assignee</FieldLabel>
-                <Select
-                  value={assigneeId || "__unassigned__"}
-                  onValueChange={(value) => setAssigneeId(value === "__unassigned__" ? "" : value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                    {assignableUsers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FieldLabel>Assignees</FieldLabel>
+                <TaskAssigneesPicker
+                  options={assignableUsers}
+                  value={assigneeIds}
+                  onChange={setAssigneeIds}
+                  disabled={pending}
+                  placeholder="Select assignees"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="task-due-date">Due Date</FieldLabel>
@@ -217,18 +204,6 @@ export function CreateTaskDialog({
                   value={dueDate}
                   onValueChange={setDueDate}
                   placeholder="Pick due date"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="task-estimated-hours">Estimated Hours</FieldLabel>
-                <Input
-                  id="task-estimated-hours"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={estimatedHours}
-                  onChange={(event) => setEstimatedHours(event.target.value)}
-                  placeholder="8"
                 />
               </Field>
             </div>

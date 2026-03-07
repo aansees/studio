@@ -14,8 +14,6 @@
     "seed:admin": "bun run scripts/seed-admin.ts"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.12.15",
-    "@assistant-ui/react-markdown": "^0.12.5",
     "@base-ui/react": "^1.2.0",
     "@better-auth/drizzle-adapter": "^1.5.3",
     "@better-auth/passkey": "^1.5.3",
@@ -26,8 +24,6 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@elevenlabs/elevenlabs-js": "^2.38.0",
-    "@elevenlabs/react": "^0.14.1",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@gsap/react": "^2.1.2",

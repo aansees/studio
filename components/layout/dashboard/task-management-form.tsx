@@ -19,10 +19,12 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { TaskAssigneesPicker } from "@/components/layout/dashboard/task-assignees-picker"
 
 type TaskAssignableUser = {
   id: string
   name: string
+  email: string
   role: "admin" | "developer" | "client"
 }
 
@@ -32,9 +34,8 @@ type EditableTask = {
   type: TaskType
   priority: TaskPriority
   status: TaskStatus
-  assigneeId: string | null
+  assigneeIds: string[]
   dueDate: string | null
-  estimatedHours: number | null
 }
 
 export function TaskManagementForm({
@@ -60,14 +61,11 @@ export function TaskManagementForm({
   const [type, setType] = useState<TaskType>(initialTask.type)
   const [priority, setPriority] = useState<TaskPriority>(initialTask.priority)
   const [status, setStatus] = useState<TaskStatus>(initialTask.status)
-  const [assigneeId, setAssigneeId] = useState(initialTask.assigneeId ?? "")
+  const [assigneeIds, setAssigneeIds] = useState(initialTask.assigneeIds)
   const [dueDate, setDueDate] = useState(initialTask.dueDate ?? "")
-  const [estimatedHours, setEstimatedHours] = useState(
-    initialTask.estimatedHours ? String(initialTask.estimatedHours) : "",
-  )
 
   const developerCanUpdateStatus =
-    role === "developer" && initialTask.assigneeId === currentUserId
+    role === "developer" && initialTask.assigneeIds.includes(currentUserId)
 
   const assignableOptions = useMemo(
     () => assignees.filter((assignee) => assignee.role !== "client"),
@@ -101,7 +99,6 @@ export function TaskManagementForm({
   async function submitFullUpdate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
-    const parsedHours = Number.parseInt(estimatedHours, 10)
 
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
@@ -113,9 +110,8 @@ export function TaskManagementForm({
           type,
           priority,
           status,
-          assigneeId: assigneeId || undefined,
+          assigneeIds,
           dueDate: dueDate || undefined,
-          estimatedHours: Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : undefined,
         }),
       })
       const payload = await response.json().catch(() => null)
@@ -233,25 +229,16 @@ export function TaskManagementForm({
             </Select>
           </Field>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Field>
-            <FieldLabel>Assignee</FieldLabel>
-            <Select
-              value={assigneeId || "__unassigned__"}
-              onValueChange={(value) => setAssigneeId(value === "__unassigned__" ? "" : value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                {assignableOptions.map((assignee) => (
-                  <SelectItem key={assignee.id} value={assignee.id}>
-                    {assignee.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FieldLabel>Assignees</FieldLabel>
+            <TaskAssigneesPicker
+              options={assignableOptions}
+              value={assigneeIds}
+              onChange={setAssigneeIds}
+              disabled={pending}
+              placeholder="Select assignees"
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="task-due-date-edit">Due Date</FieldLabel>
@@ -260,17 +247,6 @@ export function TaskManagementForm({
               value={dueDate}
               onValueChange={setDueDate}
               placeholder="Pick due date"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="task-estimated-hours-edit">Estimated Hours</FieldLabel>
-            <Input
-              id="task-estimated-hours-edit"
-              type="number"
-              min={1}
-              step={1}
-              value={estimatedHours}
-              onChange={(event) => setEstimatedHours(event.target.value)}
             />
           </Field>
         </div>

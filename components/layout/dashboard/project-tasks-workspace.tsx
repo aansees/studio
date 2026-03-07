@@ -27,6 +27,7 @@ export type ProjectTaskPerson = {
 
 export type ProjectTaskRow = {
   id: string
+  projectId: string
   title: string
   type: string
   description: string

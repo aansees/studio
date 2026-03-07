@@ -38,7 +38,7 @@ export default async function ProjectSettingsPage({
   ]);
 
   if (!projectManager) {
-    redirect(`/projects/${projectId}`);
+    redirect(`/projects/${projectId}/details`);
   }
 
   const projectLead = members.find(

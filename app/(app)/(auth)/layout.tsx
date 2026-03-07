@@ -10,12 +10,15 @@ export default async function Page({ children }: { children: React.ReactNode }) 
   const [projects, tasks] = await Promise.all([listProjectsForUser(user), listTasksForUser(user)])
 
   const myTasksSource =
-    user.role === "admin" ? tasks.filter((task) => task.assigneeId === user.id) : tasks
+    user.role === "admin"
+      ? tasks.filter((task) => task.assigneeIds?.includes(user.id))
+      : tasks
 
   const sidebarTasks = myTasksSource
     .slice(0, 8)
     .map((task) => ({
       id: task.id,
+      projectId: task.projectId,
       title: task.title,
       status: task.status,
     }))

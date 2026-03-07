@@ -846,7 +846,7 @@ export async function getProjectAnalytics(projectId: string): Promise<ProjectAna
 
       return {
         id: taskItem.id,
-        href: `/tasks/${taskItem.id}`,
+        href: `/projects/${projectId}/tasks/${taskItem.id}`,
         title: taskItem.title,
         sortDate: anchorDate,
         dateLabel: format(anchorDate, "MMMM d"),
@@ -871,7 +871,7 @@ export async function getProjectAnalytics(projectId: string): Promise<ProjectAna
     .filter((taskItem) => taskItem.status === "done" && taskItem.completedAt)
     .map((taskItem) => ({
       id: taskItem.id,
-      href: `/tasks/${taskItem.id}`,
+      href: `/projects/${projectId}/tasks/${taskItem.id}`,
       title: taskItem.title,
       sortDate: taskItem.completedAt as Date,
       dateLabel: format(taskItem.completedAt as Date, "MMMM d"),

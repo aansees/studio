@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm"
 import {
   boolean,
+  customType,
   datetime,
   index,
   int,
@@ -32,6 +33,32 @@ const taskStatusValues = [...TASK_STATUSES] as [string, ...string[]]
 const taskPriorityValues = [...TASK_PRIORITIES] as [string, ...string[]]
 const taskTypeValues = [...TASK_TYPES] as [string, ...string[]]
 const notificationEventValues = [...NOTIFICATION_EVENTS] as [string, ...string[]]
+const chatAttachmentKindValues = ["image", "audio"] as [string, ...string[]]
+
+const longblob = customType<{
+  data: Buffer
+  driverData: Buffer
+}>({
+  dataType() {
+    return "longblob"
+  },
+  fromDriver(value) {
+    const rawValue = value as Buffer | Uint8Array | ArrayBuffer
+
+    if (Buffer.isBuffer(rawValue)) {
+      return rawValue
+    }
+
+    if (rawValue instanceof Uint8Array) {
+      return Buffer.from(rawValue)
+    }
+
+    return Buffer.from(rawValue)
+  },
+  toDriver(value) {
+    return value
+  },
+})
 
 export const user = mysqlTable(
   "user",
@@ -218,6 +245,20 @@ export const task = mysqlTable(
   ],
 )
 
+export const taskAssignment = mysqlTable(
+  "taskAssignment",
+  {
+    taskId: varchar("taskId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 }).notNull(),
+    assignedAt: timestamp("assignedAt").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.userId] }),
+    index("task_assignment_task_idx").on(table.taskId),
+    index("task_assignment_user_idx").on(table.userId),
+  ],
+)
+
 export const taskComment = mysqlTable(
   "taskComment",
   {
@@ -255,6 +296,30 @@ export const taskChatMessage = mysqlTable(
   ],
 )
 
+export const taskChatAttachment = mysqlTable(
+  "taskChatAttachment",
+  {
+    id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
+    messageId: varchar("messageId", { length: 191 }).notNull(),
+    taskId: varchar("taskId", { length: 191 }).notNull(),
+    kind: mysqlEnum("kind", chatAttachmentKindValues).notNull(),
+    fileName: varchar("fileName", { length: 191 }),
+    mimeType: varchar("mimeType", { length: 191 }).notNull(),
+    sizeBytes: int("sizeBytes").notNull(),
+    durationMs: int("durationMs"),
+    width: int("width"),
+    height: int("height"),
+    storageKey: varchar("storageKey", { length: 191 }).notNull(),
+    binary: longblob("binary").notNull(),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => [
+    index("task_chat_attachment_message_idx").on(table.messageId),
+    index("task_chat_attachment_task_idx").on(table.taskId),
+    index("task_chat_attachment_storage_idx").on(table.storageKey),
+  ],
+)
+
 export const notification = mysqlTable(
   "notification",
   {
@@ -279,6 +344,7 @@ export const userRelations = relations(user, ({ many }) => ({
   ownedProjects: many(project, { relationName: "projectCreatedBy" }),
   ledProjects: many(project, { relationName: "projectLead" }),
   tasksAssigned: many(task, { relationName: "taskAssignee" }),
+  taskAssignments: many(taskAssignment),
   tasksCreated: many(task, { relationName: "taskCreator" }),
   projectMemberships: many(projectMember),
 }))
@@ -342,8 +408,20 @@ export const taskRelations = relations(task, ({ one, many }) => ({
     references: [user.id],
     relationName: "taskCreator",
   }),
+  assignments: many(taskAssignment),
   comments: many(taskComment),
   chatMessages: many(taskChatMessage),
+}))
+
+export const taskAssignmentRelations = relations(taskAssignment, ({ one }) => ({
+  task: one(task, {
+    fields: [taskAssignment.taskId],
+    references: [task.id],
+  }),
+  user: one(user, {
+    fields: [taskAssignment.userId],
+    references: [user.id],
+  }),
 }))
 
 export const taskCommentRelations = relations(taskComment, ({ one }) => ({
@@ -357,7 +435,7 @@ export const taskCommentRelations = relations(taskComment, ({ one }) => ({
   }),
 }))
 
-export const taskChatMessageRelations = relations(taskChatMessage, ({ one }) => ({
+export const taskChatMessageRelations = relations(taskChatMessage, ({ one, many }) => ({
   task: one(task, {
     fields: [taskChatMessage.taskId],
     references: [task.id],
@@ -365,6 +443,18 @@ export const taskChatMessageRelations = relations(taskChatMessage, ({ one }) => 
   sender: one(user, {
     fields: [taskChatMessage.senderId],
     references: [user.id],
+  }),
+  attachments: many(taskChatAttachment),
+}))
+
+export const taskChatAttachmentRelations = relations(taskChatAttachment, ({ one }) => ({
+  message: one(taskChatMessage, {
+    fields: [taskChatAttachment.messageId],
+    references: [taskChatMessage.id],
+  }),
+  task: one(task, {
+    fields: [taskChatAttachment.taskId],
+    references: [task.id],
   }),
 }))
 
@@ -388,8 +478,10 @@ export const appSchema = {
   project,
   projectMember,
   task,
+  taskAssignment,
   taskComment,
   taskChatMessage,
+  taskChatAttachment,
   notification,
 }
 

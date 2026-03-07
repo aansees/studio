@@ -301,7 +301,10 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
                     </TableCell>
                   ) : null}
                   <TableCell>
-                    <Link href={`/tasks/${row.id}`} className="font-medium underline-offset-4 hover:underline">
+                    <Link
+                      href={`/projects/${row.projectId}/tasks/${row.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
                       {row.title}
                     </Link>
                   </TableCell>

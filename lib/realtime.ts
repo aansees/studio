@@ -3,6 +3,18 @@ import z from "zod"
 
 import { redis } from "@/lib/redis"
 
+const attachment = z.object({
+  id: z.string(),
+  kind: z.enum(["image", "audio"]),
+  fileName: z.string().optional(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  url: z.string(),
+  durationMs: z.number().int().optional(),
+  width: z.number().int().optional(),
+  height: z.number().int().optional(),
+})
+
 const message = z.object({
   id: z.string(),
   sender: z.string(),
@@ -13,6 +25,7 @@ const message = z.object({
   roomId: z.string(),
   taskId: z.string(),
   replyToMessageId: z.string().optional(),
+  attachments: z.array(attachment).default([]),
 })
 
 const presence = z.object({
@@ -43,3 +56,4 @@ export const realtime = new Realtime({
 
 export type RealtimeEvents = InferRealtimeEvents<typeof realtime>
 export type MessageEvent = z.infer<typeof message>
+export type MessageAttachmentEvent = z.infer<typeof attachment>
