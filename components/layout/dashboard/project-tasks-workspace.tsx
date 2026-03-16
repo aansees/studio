@@ -15,9 +15,10 @@ import { ProjectTaskTimeline } from "@/components/layout/dashboard/project-task-
 import { ProjectTasksTable } from "@/components/layout/dashboard/project-tasks-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain"
+import { type TaskStatus } from "@/lib/constants/domain"
+import { taskStatusOptions } from "@/lib/constants/domain-display"
+import { VisualSelect } from "@/components/ui/visual-select"
 
 export type ProjectTaskPerson = {
   id: string
@@ -43,13 +44,6 @@ type AssigneeOption = {
   name: string
   email: string
   role: string
-}
-
-function formatStatusLabel(status: TaskStatus) {
-  return status
-    .split("_")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ")
 }
 
 export function ProjectTasksWorkspace({
@@ -141,22 +135,16 @@ export function ProjectTasksWorkspace({
             placeholder="Search tasks"
             className="sm:w-72"
           />
-          <Select
+          <VisualSelect
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TaskStatus | "__all__")}
-          >
-            <SelectTrigger className="sm:w-44">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All statuses</SelectItem>
-              {TASK_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {formatStatusLabel(status)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={[
+              { value: "__all__", label: "All statuses" },
+              ...taskStatusOptions,
+            ]}
+            placeholder="Status"
+            triggerClassName="sm:w-44"
+          />
           {canManageProjectTasks ? (
             <CreateTaskDialog projectId={projectId} assignees={assignees} />
           ) : null}

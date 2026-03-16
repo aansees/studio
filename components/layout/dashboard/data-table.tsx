@@ -1,20 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { toast } from "sonner"
+import * as React from "react";
+import Link from "next/link";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -22,46 +15,48 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain"
-import type { DashboardTaskRow } from "@/lib/dashboard/overview-types"
-import { Frame } from "@/components/ui/frame"
+} from "@/components/ui/table";
+import { type TaskStatus } from "@/lib/constants/domain";
+import { getOptionLabel, taskStatusOptions } from "@/lib/constants/domain-display";
+import type { DashboardTaskRow } from "@/lib/dashboard/overview-types";
+import { Frame } from "@/components/ui/frame";
+import { SearchIcon } from "lucide-react";
+import { VisualSelect } from "@/components/ui/visual-select";
 
 type DataTableProps = {
-  data: DashboardTaskRow[]
-  canManageTasks: boolean
-  canBulkDelete: boolean
-}
-
-function formatStatusLabel(status: TaskStatus) {
-  return status
-    .split("_")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ")
-}
+  data: DashboardTaskRow[];
+  canManageTasks: boolean;
+  canBulkDelete: boolean;
+};
 
 function formatDueDate(value: string | null) {
   if (!value) {
-    return "-"
+    return "-";
   }
-  return new Date(value).toLocaleDateString()
+  return new Date(value).toLocaleDateString();
 }
 
-export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProps) {
-  const [rows, setRows] = React.useState(data)
-  const [selectedIds, setSelectedIds] = React.useState<Record<string, boolean>>({})
-  const [query, setQuery] = React.useState("")
-  const [isSaving, setIsSaving] = React.useState(false)
+export function DataTable({
+  data,
+  canManageTasks,
+  canBulkDelete,
+}: DataTableProps) {
+  const [rows, setRows] = React.useState(data);
+  const [selectedIds, setSelectedIds] = React.useState<Record<string, boolean>>(
+    {},
+  );
+  const [query, setQuery] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
 
   React.useEffect(() => {
-    setRows(data)
-    setSelectedIds({})
-  }, [data])
+    setRows(data);
+    setSelectedIds({});
+  }, [data]);
 
   const filteredRows = React.useMemo(() => {
-    const normalized = query.trim().toLowerCase()
+    const normalized = query.trim().toLowerCase();
     if (!normalized) {
-      return rows
+      return rows;
     }
 
     return rows.filter((row) => {
@@ -69,51 +64,51 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
         row.title.toLowerCase().includes(normalized) ||
         row.projectName.toLowerCase().includes(normalized) ||
         row.assigneeLabel.toLowerCase().includes(normalized)
-      )
-    })
-  }, [query, rows])
+      );
+    });
+  }, [query, rows]);
 
   const selectedCount = React.useMemo(
     () => Object.values(selectedIds).filter(Boolean).length,
     [selectedIds],
-  )
-  const showSelection = canManageTasks || canBulkDelete
+  );
+  const showSelection = canManageTasks || canBulkDelete;
 
   const allFilteredSelected =
-    filteredRows.length > 0 && filteredRows.every((row) => selectedIds[row.id])
+    filteredRows.length > 0 && filteredRows.every((row) => selectedIds[row.id]);
 
   function toggleSelectAll() {
     setSelectedIds((current) => {
       if (allFilteredSelected) {
-        const next = { ...current }
+        const next = { ...current };
         for (const row of filteredRows) {
-          delete next[row.id]
+          delete next[row.id];
         }
-        return next
+        return next;
       }
 
-      const next = { ...current }
+      const next = { ...current };
       for (const row of filteredRows) {
-        next[row.id] = true
+        next[row.id] = true;
       }
-      return next
-    })
+      return next;
+    });
   }
 
   function toggleRowSelection(taskId: string, checked: boolean) {
     setSelectedIds((current) => {
-      const next = { ...current }
+      const next = { ...current };
       if (checked) {
-        next[taskId] = true
+        next[taskId] = true;
       } else {
-        delete next[taskId]
+        delete next[taskId];
       }
-      return next
-    })
+      return next;
+    });
   }
 
   async function updateTaskStatus(taskId: string, status: TaskStatus) {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
@@ -121,10 +116,10 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
           "content-type": "application/json",
         },
         body: JSON.stringify({ status }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Unable to update task status")
+        throw new Error("Unable to update task status");
       }
 
       setRows((current) =>
@@ -136,23 +131,24 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
               }
             : row,
         ),
-      )
-      toast.success("Task status updated")
+      );
+      toast.success("Task status updated");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to update task status"
-      toast.error(message)
+      const message =
+        error instanceof Error ? error.message : "Unable to update task status";
+      toast.error(message);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
   async function bulkUpdateStatus(status: TaskStatus) {
-    const taskIds = Object.keys(selectedIds).filter((id) => selectedIds[id])
+    const taskIds = Object.keys(selectedIds).filter((id) => selectedIds[id]);
     if (taskIds.length === 0) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch("/api/tasks/bulk", {
         method: "PATCH",
@@ -160,10 +156,10 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
           "content-type": "application/json",
         },
         body: JSON.stringify({ taskIds, status }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Unable to update selected tasks")
+        throw new Error("Unable to update selected tasks");
       }
 
       setRows((current) =>
@@ -175,24 +171,27 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
               }
             : row,
         ),
-      )
-      setSelectedIds({})
-      toast.success("Selected tasks updated")
+      );
+      setSelectedIds({});
+      toast.success("Selected tasks updated");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to update selected tasks"
-      toast.error(message)
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to update selected tasks";
+      toast.error(message);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
   async function deleteSelectedTasks() {
-    const taskIds = Object.keys(selectedIds).filter((id) => selectedIds[id])
+    const taskIds = Object.keys(selectedIds).filter((id) => selectedIds[id]);
     if (taskIds.length === 0) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch("/api/tasks/bulk", {
         method: "DELETE",
@@ -200,32 +199,41 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
           "content-type": "application/json",
         },
         body: JSON.stringify({ taskIds }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Unable to delete selected tasks")
+        throw new Error("Unable to delete selected tasks");
       }
 
-      setRows((current) => current.filter((row) => !taskIds.includes(row.id)))
-      setSelectedIds({})
-      toast.success("Selected tasks deleted")
+      setRows((current) => current.filter((row) => !taskIds.includes(row.id)));
+      setSelectedIds({});
+      toast.success("Selected tasks deleted");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to delete selected tasks"
-      toast.error(message)
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to delete selected tasks";
+      toast.error(message);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search by task, project, or assignee"
-          className="md:max-w-sm"
-        />
+        <div className="relative">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="peer ps-9 pe-9"
+            placeholder="Search by task, project, or assignee"
+            type="search"
+          />
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+            <SearchIcon size={16} />
+          </div>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {canManageTasks && selectedCount > 0 ? (
@@ -268,7 +276,10 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
             <TableRow>
               {showSelection ? (
                 <TableHead className="w-10">
-                  <Checkbox checked={allFilteredSelected} onCheckedChange={toggleSelectAll} />
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onCheckedChange={toggleSelectAll}
+                  />
                 </TableHead>
               ) : null}
               <TableHead>Task</TableHead>
@@ -296,7 +307,9 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
                     <TableCell>
                       <Checkbox
                         checked={Boolean(selectedIds[row.id])}
-                        onCheckedChange={(checked) => toggleRowSelection(row.id, Boolean(checked))}
+                        onCheckedChange={(checked) =>
+                          toggleRowSelection(row.id, Boolean(checked))
+                        }
                       />
                     </TableCell>
                   ) : null}
@@ -324,24 +337,21 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
                   </TableCell>
                   <TableCell>
                     {canManageTasks ? (
-                      <Select
+                      <VisualSelect
                         value={row.status}
-                        onValueChange={(value) => updateTaskStatus(row.id, value as TaskStatus)}
+                        onValueChange={(value) =>
+                          updateTaskStatus(row.id, value as TaskStatus)
+                        }
+                        options={taskStatusOptions}
+                        placeholder="Select status"
+                        triggerClassName="w-36"
+                        size="sm"
                         disabled={isSaving}
-                      >
-                        <SelectTrigger className="w-36" size="sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TASK_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {formatStatusLabel(status)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     ) : (
-                      <Badge variant="outline">{formatStatusLabel(row.status)}</Badge>
+                      <Badge variant="outline">
+                        {getOptionLabel(taskStatusOptions, row.status)}
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell>{formatDueDate(row.dueDate)}</TableCell>
@@ -352,5 +362,5 @@ export function DataTable({ data, canManageTasks, canBulkDelete }: DataTableProp
         </Table>
       </Frame>
     </div>
-  )
+  );
 }

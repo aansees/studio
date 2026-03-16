@@ -102,9 +102,6 @@ export function NavUser({
                   <span className="text-muted-foreground truncate text-xs">
                     {user.email || ""}
                   </span>
-                  <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wide">
-                    {user.role}
-                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>

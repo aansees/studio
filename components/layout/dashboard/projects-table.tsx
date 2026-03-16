@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { CreateProjectDialog } from "@/components/layout/dashboard/create-project-dialog";
 import type { TeamUser } from "@/components/layout/dashboard/create-project-dialog";
+import { SearchIcon } from "lucide-react";
 
 type ProjectsTableRow = {
   id: string;
@@ -70,12 +71,18 @@ export function ProjectsTable({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 md:flex-row md:items-center justify-between">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search projects"
-          className="md:max-w-sm"
-        />
+        <div className="relative">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="peer ps-9 pe-9"
+            placeholder="Search projects"
+            type="search"
+          />
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+            <SearchIcon size={16} />
+          </div>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Select
             value={statusFilter}

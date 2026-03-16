@@ -5,21 +5,19 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import {
-  TASK_PRIORITIES,
-  TASK_STATUSES,
-  TASK_TYPES,
   type TaskPriority,
   type TaskStatus,
   type TaskType,
 } from "@/lib/constants/domain"
+import { taskPriorityOptions, taskStatusOptions, taskTypeOptions } from "@/lib/constants/domain-display"
 import type { UserRole } from "@/lib/constants/rbac"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { TaskAssigneesPicker } from "@/components/layout/dashboard/task-assignees-picker"
+import { VisualSelect } from "@/components/ui/visual-select"
 
 type TaskAssignableUser = {
   id: string
@@ -138,18 +136,13 @@ export function TaskManagementForm({
       <form onSubmit={submitStatusOnly} className="space-y-4">
         <Field>
           <FieldLabel>Status</FieldLabel>
-          <Select value={status} onValueChange={(value) => setStatus(value as TaskStatus)}>
-            <SelectTrigger className="md:w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TASK_STATUSES.map((taskStatus) => (
-                <SelectItem key={taskStatus} value={taskStatus}>
-                  {taskStatus}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <VisualSelect
+            value={status}
+            onValueChange={(value) => setStatus(value as TaskStatus)}
+            options={taskStatusOptions}
+            placeholder="Select status"
+            triggerClassName="md:w-56"
+          />
         </Field>
         <div className="flex justify-end">
           <Button type="submit" disabled={pending}>
@@ -185,48 +178,33 @@ export function TaskManagementForm({
         <div className="grid gap-4 md:grid-cols-3">
           <Field>
             <FieldLabel>Type</FieldLabel>
-            <Select value={type} onValueChange={(value) => setType(value as TaskType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_TYPES.map((taskType) => (
-                  <SelectItem key={taskType} value={taskType}>
-                    {taskType}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VisualSelect
+              value={type}
+              onValueChange={(value) => setType(value as TaskType)}
+              options={taskTypeOptions}
+              placeholder="Select type"
+              triggerClassName="w-full"
+            />
           </Field>
           <Field>
             <FieldLabel>Priority</FieldLabel>
-            <Select value={priority} onValueChange={(value) => setPriority(value as TaskPriority)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_PRIORITIES.map((taskPriority) => (
-                  <SelectItem key={taskPriority} value={taskPriority}>
-                    {taskPriority}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VisualSelect
+              value={priority}
+              onValueChange={(value) => setPriority(value as TaskPriority)}
+              options={taskPriorityOptions}
+              placeholder="Select priority"
+              triggerClassName="w-full"
+            />
           </Field>
           <Field>
             <FieldLabel>Status</FieldLabel>
-            <Select value={status} onValueChange={(value) => setStatus(value as TaskStatus)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_STATUSES.map((taskStatus) => (
-                  <SelectItem key={taskStatus} value={taskStatus}>
-                    {taskStatus}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VisualSelect
+              value={status}
+              onValueChange={(value) => setStatus(value as TaskStatus)}
+              options={taskStatusOptions}
+              placeholder="Select status"
+              triggerClassName="w-full"
+            />
           </Field>
         </div>
         <div className="grid gap-4 md:grid-cols-2">

@@ -1,16 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { PROJECT_PRIORITIES, PROJECT_STATUSES } from "@/lib/constants/domain"
+import { projectPriorityOptions, projectStatusOptions } from "@/lib/constants/domain-display"
+import { searchUserOptions, type UserSearchOption } from "@/lib/users/search-client"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchableUserSelect } from "@/components/ui/searchable-user-select"
 import { Textarea } from "@/components/ui/textarea"
+import { VisualSelect } from "@/components/ui/visual-select"
 
 type EditableProject = {
   name: string
@@ -28,6 +31,8 @@ type ProjectLeadOption = {
   email: string
   role: "admin" | "developer"
 }
+
+type SearchableLeadOption = UserSearchOption
 
 export function ProjectDetailsEditor({
   projectId,
@@ -54,6 +59,30 @@ export function ProjectDetailsEditor({
   const [startDate, setStartDate] = useState(initialProject.startDate ?? "")
   const [endDate, setEndDate] = useState(initialProject.endDate ?? "")
   const [projectLeadId, setProjectLeadId] = useState(initialProject.projectLeadId)
+  const projectLead = useMemo<SearchableLeadOption | null>(
+    () =>
+      projectLeadOptions
+        .map((option) => ({
+          value: option.id,
+          label: option.name,
+          email: option.email,
+          role: option.role,
+          meta: `${option.email} / ${option.role}`,
+        }))
+        .find((option) => option.value === projectLeadId) ?? null,
+    [projectLeadId, projectLeadOptions],
+  )
+  const leadOptions = useMemo<SearchableLeadOption[]>(
+    () =>
+      projectLeadOptions.map((option) => ({
+        value: option.id,
+        label: option.name,
+        email: option.email,
+        role: option.role,
+        meta: `${option.email} / ${option.role}`,
+      })),
+    [projectLeadOptions],
+  )
 
   async function submitProjectUpdates(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -146,61 +175,51 @@ export function ProjectDetailsEditor({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Field>
             <FieldLabel>Status</FieldLabel>
-            <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_STATUSES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VisualSelect
+              value={status}
+              onValueChange={(value) => setStatus(value as typeof status)}
+              options={projectStatusOptions}
+              placeholder="Select status"
+              triggerClassName="w-full"
+            />
           </Field>
 
           <Field>
             <FieldLabel>Priority</FieldLabel>
-            <Select value={priority} onValueChange={(value) => setPriority(value as typeof priority)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_PRIORITIES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VisualSelect
+              value={priority}
+              onValueChange={(value) => setPriority(value as typeof priority)}
+              options={projectPriorityOptions}
+              placeholder="Select priority"
+              triggerClassName="w-full"
+            />
           </Field>
-
-
-          <Field>
-            <FieldLabel>Project Lead</FieldLabel>
+          <div className="space-y-2">
             {canChangeTeamLead ? (
-              <Select value={projectLeadId} onValueChange={setProjectLeadId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectLeadOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.name} ({option.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableUserSelect
+                label="Project Lead"
+                placeholder="Select project lead"
+                value={projectLead}
+                initialOptions={leadOptions}
+                onValueChange={(value) => setProjectLeadId(value?.value ?? "")}
+                onSearch={(query, signal) =>
+                  searchUserOptions(query, ["admin", "developer"], signal)
+                }
+                searchPlaceholder="Search project lead..."
+                emptyLabel="No project lead found."
+              />
             ) : (
-              <Input value={currentProjectLeadLabel} disabled />
+              <Field>
+                <FieldLabel>Project Lead</FieldLabel>
+                <Input value={currentProjectLeadLabel} disabled />
+              </Field>
             )}
             <FieldDescription>
               {canChangeTeamLead
                 ? "Admins can transfer project ownership to another admin or developer."
                 : "Team lead ownership can only be changed by an admin."}
             </FieldDescription>
-          </Field>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

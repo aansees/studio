@@ -1,14 +1,13 @@
 "use client";
 
-import { mergeProps } from "@base-ui/react/merge-props";
-import { useRender } from "@base-ui/react/use-render";
+import { Slot } from "radix-ui";
 import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-base outline-none transition-shadow before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-sm [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-base outline-none transition-shadow before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-sm [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 overflow-hidden relative",
   {
     defaultVariants: {
       size: "default",
@@ -48,36 +47,65 @@ const buttonVariants = cva(
   },
 );
 
-interface ButtonProps extends useRender.ComponentProps<"button"> {
-  asChild?: boolean;
-  variant?: VariantProps<typeof buttonVariants>["variant"];
-  size?: VariantProps<typeof buttonVariants>["size"];
-}
-
-function Button({ className, variant, size, render, asChild, ...props }: ButtonProps) {
-  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
-    render || asChild ? undefined : "button";
-
-  const defaultProps = {
-    className: cn(buttonVariants({ className, size, variant })),
-    "data-slot": "button",
-    type: typeValue,
+type ButtonProps = React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+    loading?: boolean;
   };
 
-  let resolvedRender = render;
-  let resolvedProps: React.ComponentProps<"button"> = props;
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  type,
+  disabled,
+  loading,
+  onClick,
+  ...props
+}: ButtonProps) {
+  const isDisabled = disabled || loading;
+  const Comp = asChild ? Slot.Root : "button";
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isDisabled) return;
+    const button = e.currentTarget;
+    const x = e.clientX - button.getBoundingClientRect().left;
+    const y = e.clientY - button.getBoundingClientRect().top;
+    const ripples = document.createElement("span");
 
-  if (asChild) {
-    const { children, ...restProps } = props;
-    resolvedProps = restProps;
-    resolvedRender = React.Children.only(children) as React.ReactElement;
-  }
+    ripples.style.cssText = `
+        left: ${x}px;
+        top: ${y}px;
+        position: absolute;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        border-radius: 50%;
+        ${
+          variant === "default"
+            ? "background: #000000bd"
+            : "background: rgba(255, 255, 255, 0.7)"
+        }`;
+    ripples.className = "ripple animate-ripple";
+    button.appendChild(ripples);
+    setTimeout(() => {
+      ripples.remove();
+    }, 800);
 
-  return useRender({
-    defaultTagName: "button",
-    props: mergeProps<"button">(defaultProps, resolvedProps),
-    render: resolvedRender,
-  });
+    if (onClick) {
+      onClick(e);
+    }
+  };
+  return (
+    <Comp
+      className={cn(buttonVariants({ className, size, variant }))}
+      data-slot="button"
+      type={asChild ? undefined : (type ?? "button")}
+      onClick={handleClick}
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      {...props}
+    />
+  );
 }
 
 export { Button, buttonVariants };

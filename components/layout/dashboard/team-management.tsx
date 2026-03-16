@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SearchIcon } from "lucide-react";
 
 type TeamMember = {
   id: string;
@@ -179,12 +180,18 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center justify-between">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search members"
-          className="md:max-w-sm"
-        />
+        <div className="relative">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="peer ps-9 pe-9"
+            placeholder="Search members"
+            type="search"
+          />
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+            <SearchIcon size={16} />
+          </div>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Select
             value={roleFilter}

@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm"
+import { and, asc, eq, like, or } from "drizzle-orm"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -169,22 +169,33 @@ export async function setUserRoleAsAdmin(
     .where(eq(user.id, targetUserId))
 }
 
-export async function searchUsersForAssignment(currentUser: SessionUser, query?: string) {
+export async function searchUsersForAssignment(
+  currentUser: SessionUser,
+  options?: {
+    query?: string
+    roles?: SessionUser["role"][]
+    limit?: number
+  },
+) {
   if (!isAdmin(currentUser.role)) {
     throw new Error("Only admins can search users")
   }
 
+  const query = options?.query?.trim()
+  const limit = options?.limit ?? 20
+  const roles =
+    options?.roles && options.roles.length > 0
+      ? options.roles
+      : (["admin", "developer", "client"] as SessionUser["role"][])
+
+  const roleFilter = or(...roles.map((role) => eq(user.role, role)))
   const where =
-    query && query.trim().length > 0
+    query && query.length > 0
       ? and(
-          or(
-            eq(user.role, "developer"),
-            eq(user.role, "client"),
-            eq(user.role, "admin"),
-          ),
-          or(eq(user.email, query), eq(user.name, query)),
+          roleFilter,
+          or(like(user.email, `%${query}%`), like(user.name, `%${query}%`)),
         )
-      : or(eq(user.role, "developer"), eq(user.role, "client"), eq(user.role, "admin"))
+      : roleFilter
 
   return db
     .select({
@@ -196,4 +207,6 @@ export async function searchUsersForAssignment(currentUser: SessionUser, query?:
     })
     .from(user)
     .where(where)
+    .orderBy(asc(user.name))
+    .limit(limit)
 }

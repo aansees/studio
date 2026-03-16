@@ -1,6 +1,7 @@
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { GlowingEffect } from "./glowing-effect";
 
 function Frame({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -16,16 +17,27 @@ function Frame({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
+function FramePanel({ block, className, ...props }: React.ComponentProps<"div"> & { block?: string }) {
   return (
-    <div
-      className={cn(
-        "relative rounded-xl border bg-background bg-clip-padding p-5 shadow-xs/5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
-        className,
-      )}
-      data-slot="frame-panel"
-      {...props}
-    />
+    <div className={cn("relative rounded-xl", block)}>
+      <GlowingEffect
+        variant="white"
+        spread={40}
+        glow={true}
+        disabled={false}
+        proximity={64}
+        inactiveZone={0.01}
+        borderWidth={2}
+      />
+      <div
+        className={cn(
+          "relative rounded-xl h-full bg-background bg-clip-padding p-5 shadow-xs/5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
+          className,
+        )}
+        data-slot="frame-panel"
+        {...props}
+      />
+    </div>
   );
 }
 
@@ -42,7 +54,7 @@ function FrameHeader({ className, ...props }: React.ComponentProps<"header">) {
 function FrameTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("font-semibold text-sm", className)}
+      className={cn("font-cormorant text-xl leading-none", className)}
       data-slot="frame-panel-title"
       {...props}
     />
@@ -55,7 +67,10 @@ function FrameDescription({
 }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "font-at-aero-regular text-muted-foreground text-sm",
+        className,
+      )}
       data-slot="frame-panel-description"
       {...props}
     />

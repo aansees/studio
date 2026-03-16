@@ -15,16 +15,14 @@ export default async function Page() {
     <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6">
       <SectionCards cards={overview.cards} />
 
-      <Frame className="grid gap-2 xl:grid-cols-3">
-        <FramePanel className="xl:col-span-2">
+      <Frame className="grid gap-1 xl:grid-cols-3">
+        <FramePanel block="xl:col-span-2">
           <ChartAreaInteractive data={overview.statusChart} />
         </FramePanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Projects</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <FramePanel>
+          <CardTitle>Recent Projects</CardTitle>
+          <CardContent className="p-1 space-y-3">
             {overview.recentProjects.slice(0, 6).map((item) => (
               <div key={item.id} className="rounded-md border p-3">
                 <div className="flex items-center justify-between gap-3">
@@ -53,7 +51,7 @@ export default async function Page() {
               </div>
             ) : null}
           </CardContent>
-        </Card>
+        </FramePanel>
       </Frame>
 
       <DataTable
