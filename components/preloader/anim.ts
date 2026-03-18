@@ -1,23 +1,19 @@
-export const opacity = {
-  initial: {
-    opacity: 0,
-  },
-  enter: {
-    opacity: 0.75,
-    transition: { duration: 1, delay: 0.2 },
-  },
-};
+export const COUNTER_COLUMNS = [
+  ["9", "8", "7", "4", "2", "0"],
+  ["9", "5", "9", "7", "4", "0"],
+] as const;
 
-export const slideUp = {
-  initial: {
-    top: 0,
-  },
-  exit: {
-    top: "-100vh",
-    transition: {
-      duration: 0.8,
-      ease: [0.76, 0, 0.24, 1] as [number, number, number, number],
-      delay: 0.2,
-    },
-  },
-};
+export const REVEAL_COLORS = ["#ffffff", "#cdfd50", "#000000"] as const;
+
+export const REVEAL_PATH =
+  "M75.9817 0L77.25 34.2209C78.0259 55.1571 94.8249 71.9475 115.762 72.7127L150.982 74L115.762 75.2873C94.8249 76.0525 78.0259 92.8429 77.25 113.779L75.9817 148L74.7134 113.779C73.9375 92.8429 57.1385 76.0525 36.2019 75.2873L0.981689 74L36.2018 72.7127C57.1384 71.9475 73.9375 55.1571 74.7134 34.2209L75.9817 0Z";
+
+export const COUNTER_EASE = "power4.inOut";
+export const COUNTER_START_DELAY = 0.45;
+export const COUNTER_STEP_DURATION = 0.78;
+export const REVEAL_EASE = "power4.inOut";
+export const REVEAL_DURATION = 1.2;
+export const REVEAL_STAGGER = 0.16;
+export const REVEAL_VIEWPORT_MULTIPLIER = 6;
+export const REDUCED_MOTION_REVEAL_DURATION = 0.45;
+export const LOADER_EDGE_OFFSET = 32;

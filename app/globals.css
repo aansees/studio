@@ -2,6 +2,30 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "otis-display";
+  src: url("/fonts/rader/PPRader-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "otis-body";
+  src: url("/fonts/formula/PPFormula-NarrowSemibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "otis-mono";
+  src: url("/fonts/supply-mono/PPSupplyMono-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -25,6 +49,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --font-otis-display: "otis-display", serif;
+  --font-otis-body: "otis-body", sans-serif;
+  --font-otis-mono: "otis-mono", monospace;
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -234,6 +261,35 @@
     30%,
     60% {
       background-position: calc(100% + var(--shiny-width)) 0;
+    }
+  }
+}
+
+@theme inline {
+  --animate-otis-gradient: otis-gradient 10s ease-in-out infinite;
+  --animate-otis-stripes: otis-stripes 30s linear infinite;
+
+  @keyframes otis-gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes otis-stripes {
+    0% {
+      transform: translateX(-50%);
+    }
+
+    100% {
+      transform: translateX(0%);
     }
   }
 }
