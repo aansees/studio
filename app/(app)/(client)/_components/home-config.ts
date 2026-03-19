@@ -76,10 +76,28 @@ export const serviceCards: ServiceCard[] = [
   },
 ];
 
-export const heroImagePaths = Array.from(
+export const featuredImagePaths = Array.from(
   { length: 10 },
   (_, index) => `/images/work-items/work-item-${index + 1}.jpg`,
 );
+
+export const heroImagePaths = Array.from(
+  { length: 10 },
+  (_, index) => `/images/hero/img${index + 1}.jpg`,
+);
+
+export const preloaderImagePaths = [
+  heroImagePaths[0],
+  heroImagePaths[1],
+  heroImagePaths[2],
+  heroImagePaths[3],
+];
+
+export const preloaderTextLines = [
+  "Pixels by Otis",
+  "Portfolio Mode: ON",
+  "Welcome",
+];
 
 export type FooterItem = {
   label: string;

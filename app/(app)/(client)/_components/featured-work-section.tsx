@@ -2,8 +2,8 @@
 
 import {
   displayTextClass,
+  featuredImagePaths,
   featuredTitles,
-  heroImagePaths,
   monoTextClass,
   type InternalLinkHandler,
 } from "./home-config";
@@ -22,7 +22,7 @@ export function FeaturedWorkSection({
       className="relative h-[100svh] w-screen overflow-hidden max-[1000px]:h-auto max-[1000px]:py-[4em]"
     >
       <div className="absolute left-1/2 top-1/2 hidden h-[200vh] w-[200vw] -translate-x-1/2 -translate-y-1/2 [perspective:500px] [transform-style:preserve-3d] min-[1001px]:block">
-        {heroImagePaths.map((path, index) => (
+        {featuredImagePaths.map((path, index) => (
           <div
             key={path}
             data-featured-image-card

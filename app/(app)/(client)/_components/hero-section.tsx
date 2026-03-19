@@ -16,12 +16,18 @@ export function HeroSection({ heroImageRef }: HeroSectionProps) {
       >
         <div className="relative">
           <div className="relative -translate-x-[20%]">
-            <h1 className={`${displayTextClass} text-[20vw] leading-[0.9]`}>
+            <h1
+              data-preloader-title
+              className={`${displayTextClass} text-[20vw] leading-[0.9]`}
+            >
               Otis
             </h1>
           </div>
           <div className="relative z-[2] translate-x-[20%]">
-            <h1 className={`${displayTextClass} text-[20vw] leading-[0.9]`}>
+            <h1
+              data-preloader-title
+              className={`${displayTextClass} text-[20vw] leading-[0.9]`}
+            >
               Studio
             </h1>
           </div>

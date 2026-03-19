@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { CustomEase } from "gsap/CustomEase";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 import {
   ContactCtaSection,
   FeaturedWorkSection,
@@ -14,12 +16,14 @@ import {
   ServicesStackSection,
   TransitionOverlay,
   createExplosionParticle,
+  featuredImagePaths,
   featuredCardPositionsLarge,
   featuredCardPositionsSmall,
   heroImagePaths,
 } from "./_components";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+gsap.registerPlugin(useGSAP, ScrollTrigger, CustomEase, SplitText);
+CustomEase.create("hop", "0.85, 0, 0.15, 1");
 
 export default function Page() {
   const rootRef = useRef<HTMLElement>(null);
@@ -27,6 +31,8 @@ export default function Page() {
   const footerRef = useRef<HTMLElement>(null);
   const explosionContainerRef = useRef<HTMLDivElement>(null);
   const isMenuAnimatingRef = useRef(false);
+  const isPreloaderActiveRef = useRef(true);
+  const isHeroImageFrozenRef = useRef(false);
   const scrollYRef = useRef(0);
   const bodyStylesRef = useRef<{
     backgroundColor: string;
@@ -35,7 +41,22 @@ export default function Page() {
     top: string;
     width: string;
   } | null>(null);
+  const [isPreloaderActive, setIsPreloaderActive] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  function setBodyLockState(shouldLock: boolean) {
+    const initialStyles = bodyStylesRef.current;
+
+    if (!initialStyles) {
+      return;
+    }
+
+    document.body.style.position = shouldLock ? "fixed" : initialStyles.position;
+    document.body.style.top = shouldLock
+      ? `-${scrollYRef.current}px`
+      : initialStyles.top;
+    document.body.style.width = shouldLock ? "100%" : initialStyles.width;
+  }
 
   useEffect(() => {
     const { style } = document.body;
@@ -66,17 +87,48 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    const initialStyles = bodyStylesRef.current;
+
+    if (!initialStyles) {
+      return;
+    }
+
+    scrollYRef.current = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollYRef.current}px`;
+    document.body.style.width = "100%";
+  }, []);
+
+  useEffect(() => {
+    heroImagePaths.forEach((path) => {
+      const image = new Image();
+      image.src = path;
+    });
+  }, []);
+
+  useEffect(() => {
     const heroImage = heroImageRef.current;
 
     if (!heroImage) {
       return;
     }
 
-    let currentImageIndex = 1;
+    let currentImageIndex = 0;
+    const syncHeroImages = (path: string) => {
+      if (heroImageRef.current) {
+        heroImageRef.current.src = path;
+      }
+    };
+
+    syncHeroImages(heroImagePaths[currentImageIndex]);
+
     const intervalId = window.setInterval(() => {
-      currentImageIndex =
-        currentImageIndex >= heroImagePaths.length ? 1 : currentImageIndex + 1;
-      heroImage.src = heroImagePaths[currentImageIndex - 1];
+      if (isHeroImageFrozenRef.current) {
+        return;
+      }
+
+      currentImageIndex = (currentImageIndex + 1) % heroImagePaths.length;
+      syncHeroImages(heroImagePaths[currentImageIndex]);
     }, 250);
 
     return () => {
@@ -100,7 +152,7 @@ export default function Page() {
       rotationSpeed: 10,
     };
 
-    heroImagePaths.forEach((path) => {
+    featuredImagePaths.forEach((path) => {
       const image = new Image();
       image.src = path;
     });
@@ -108,7 +160,7 @@ export default function Page() {
     const createParticles = () => {
       explosionContainer.innerHTML = "";
 
-      heroImagePaths.forEach((path) => {
+      featuredImagePaths.forEach((path) => {
         const particle = document.createElement("img");
         particle.src = path;
         particle.className =
@@ -193,8 +245,22 @@ export default function Page() {
         return;
       }
 
-      const transitionOverlays = gsap.utils.toArray<HTMLElement>(
-        "[data-transition-overlay]",
+      const preloaderRoot = root.querySelector<HTMLElement>("[data-preloader-root]");
+      const preloaderPanel = root.querySelector<HTMLElement>("[data-preloader-panel]");
+      const preloaderCounter = root.querySelector<HTMLElement>(
+        "[data-preloader-counter]",
+      );
+      const preloaderCopyTrack = root.querySelector<HTMLElement>(
+        "[data-preloader-copy-track]",
+      );
+      const preloaderGallery = root.querySelector<HTMLElement>(
+        "[data-preloader-gallery]",
+      );
+      const preloaderCenterSlot = root.querySelector<HTMLElement>(
+        "[data-preloader-center-slot]",
+      );
+      const preloaderImages = gsap.utils.toArray<HTMLElement>(
+        "[data-preloader-image]",
       );
       const navItems = gsap.utils.toArray<HTMLElement>("[data-nav-item]");
       const navFooterHeaders = gsap.utils.toArray<HTMLElement>(
@@ -203,25 +269,70 @@ export default function Page() {
       const navFooterCopies = gsap.utils.toArray<HTMLElement>(
         "[data-nav-footer-copy]",
       );
+      const heroTitles = gsap.utils.toArray<HTMLElement>("[data-preloader-title]");
       const heroFrame = root.querySelector<HTMLElement>("[data-hero-frame]");
       const heroHolder = root.querySelector<HTMLElement>("[data-hero-holder]");
       const media = gsap.matchMedia();
-
-      gsap.set(transitionOverlays, {
-        scaleY: 1,
-        transformOrigin: "top",
-      });
-      gsap.to(transitionOverlays, {
-        scaleY: 0,
-        duration: 0.6,
-        stagger: -0.1,
-        ease: "power2.inOut",
-      });
+      const splitHeroTitles = heroTitles.map(
+        (title) =>
+          new SplitText(title, {
+            type: "words",
+            mask: "words",
+            wordsClass: "preloader-word",
+          }),
+      );
+      const heroTitleWords = splitHeroTitles.flatMap((title) =>
+        title.words.map((word) => word as HTMLElement),
+      );
 
       gsap.set([...navItems, ...navFooterHeaders, ...navFooterCopies], {
         opacity: 0,
         y: "100%",
       });
+
+      type PreloaderCardMetrics = {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+        rotation: number;
+        borderRadius: string;
+        borderWidth: string;
+      };
+
+      type HeroFrameTarget = {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+        rotation: number;
+        borderRadius: string;
+        borderWidth: string;
+      };
+
+      let startHeroMotion = () => {};
+      let measureHeroFrameTarget: () => HeroFrameTarget | null = () => null;
+      let getPreloaderCardMetrics: (gapOverride?: string) => PreloaderCardMetrics =
+        () => {
+          const width =
+            window.innerWidth <= 1000
+              ? Math.max(Math.min(window.innerWidth * 0.2, 200), 88)
+              : Math.max(Math.min(window.innerWidth * 0.1, 180), 120);
+          const height = width * 1.4;
+
+          return {
+            left: window.innerWidth / 2 - width / 2,
+            top: window.innerHeight / 2 - height / 2,
+            width,
+            height,
+            rotation: 0,
+            borderRadius: "0px",
+            borderWidth: "1px",
+          };
+        };
+      let setHeroFrameToPreloaderState: (
+        metrics?: PreloaderCardMetrics,
+      ) => void = () => {};
 
       if (heroFrame && heroHolder) {
         const breakpoints = [
@@ -253,19 +364,22 @@ export default function Page() {
         };
 
         let heroAnimationFrame = 0;
+        let isHeroMotionRunning = false;
 
         const renderHeroFrame = () => {
           const scaledMovementMultiplier =
             (1 - animationState.scale) * animationState.movementMultiplier;
           const maxHorizontalMovement =
-            window.innerWidth >= 900 && animationState.scale < 0.95
+            !isPreloaderActiveRef.current &&
+            window.innerWidth >= 900 &&
+            animationState.scale < 0.95
               ? animationState.targetMouseX * scaledMovementMultiplier
               : 0;
 
           animationState.currentMouseX = gsap.utils.interpolate(
             animationState.currentMouseX,
             maxHorizontalMovement,
-            0.05,
+            isPreloaderActiveRef.current ? 0.12 : 0.05,
           );
 
           gsap.set(heroFrame, {
@@ -273,12 +387,18 @@ export default function Page() {
             yPercent: animationState.yPercent,
             scale: animationState.scale,
             rotation: animationState.rotation,
+            autoAlpha: 1,
+            transformOrigin: "center center",
           });
 
           heroAnimationFrame = window.requestAnimationFrame(renderHeroFrame);
         };
 
         const handleMouseMove = (event: globalThis.MouseEvent) => {
+          if (isPreloaderActiveRef.current) {
+            return;
+          }
+
           animationState.targetMouseX =
             (event.clientX / window.innerWidth - 0.5) * 2;
         };
@@ -289,11 +409,137 @@ export default function Page() {
           if (window.innerWidth < 900) {
             animationState.targetMouseX = 0;
           }
+
+          if (isPreloaderActiveRef.current) {
+            setHeroFrameToPreloaderState();
+          }
         };
 
-        document.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("resize", handleHeroResize);
-        renderHeroFrame();
+        getPreloaderCardMetrics = (gapOverride?: string) => {
+          const currentGap = preloaderGallery
+            ? window.getComputedStyle(preloaderGallery).gap
+            : null;
+
+          if (preloaderGallery && currentGap && gapOverride) {
+            gsap.set(preloaderGallery, { gap: gapOverride });
+          }
+
+          const slotRect = preloaderCenterSlot?.getBoundingClientRect();
+
+          if (preloaderGallery && currentGap && gapOverride) {
+            gsap.set(preloaderGallery, { gap: currentGap });
+          }
+
+          if (slotRect) {
+            return {
+              left: slotRect.left,
+              top: slotRect.top,
+              width: slotRect.width,
+              height: slotRect.height,
+              rotation: 0,
+              borderRadius: "0px",
+              borderWidth: "1px",
+            };
+          }
+
+          const width =
+            window.innerWidth <= 1000
+              ? Math.max(Math.min(window.innerWidth * 0.2, 200), 88)
+              : Math.max(Math.min(window.innerWidth * 0.1, 180), 120);
+          const height = width * 1.4;
+
+          return {
+            left: window.innerWidth / 2 - width / 2,
+            top: window.innerHeight / 2 - height / 2,
+            width,
+            height,
+            rotation: 0,
+            borderRadius: "0px",
+            borderWidth: "1px",
+          };
+        };
+
+        measureHeroFrameTarget = () => {
+          gsap.set(heroFrame, {
+            clearProps:
+              "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
+            x: 0,
+            y: 0,
+            xPercent: 0,
+            yPercent: 0,
+            scale: 1,
+            rotation: 0,
+            autoAlpha: 1,
+            transformOrigin: "center center",
+          });
+
+          const layoutRect = heroFrame.getBoundingClientRect();
+          const styles = window.getComputedStyle(heroFrame);
+          const naturalBorderRadius = parseFloat(styles.borderTopLeftRadius) || 0;
+          const naturalBorderWidth = parseFloat(styles.borderTopWidth) || 0;
+
+          gsap.set(heroFrame, {
+            x: 0,
+            y: 0,
+            xPercent: 0,
+            yPercent: animationState.yPercent,
+            scale: animationState.scale,
+            rotation: animationState.rotation,
+            autoAlpha: 1,
+            transformOrigin: "center center",
+          });
+
+          const finalBounds = heroFrame.getBoundingClientRect();
+          const centerX = finalBounds.left + finalBounds.width / 2;
+          const centerY = finalBounds.top + finalBounds.height / 2;
+          const visibleWidth = layoutRect.width * animationState.scale;
+          const visibleHeight = layoutRect.height * animationState.scale;
+
+          return {
+            left: centerX - visibleWidth / 2,
+            top: centerY - visibleHeight / 2,
+            width: visibleWidth,
+            height: visibleHeight,
+            rotation: animationState.rotation,
+            borderRadius: `${naturalBorderRadius * animationState.scale}px`,
+            borderWidth: `${Math.max(naturalBorderWidth * animationState.scale, 1)}px`,
+          };
+        };
+
+        setHeroFrameToPreloaderState = (metrics = getPreloaderCardMetrics()) => {
+
+          gsap.set(heroFrame, {
+            position: "fixed",
+            left: metrics.left,
+            top: metrics.top,
+            width: metrics.width,
+            height: metrics.height,
+            x: 0,
+            y: 0,
+            xPercent: 0,
+            yPercent: 0,
+            scale: 1,
+            rotation: metrics.rotation,
+            zIndex: 100001,
+            autoAlpha: 1,
+            pointerEvents: "none",
+            borderRadius: metrics.borderRadius,
+            borderWidth: metrics.borderWidth,
+            borderColor: "var(--otis-bg)",
+            transformOrigin: "center center",
+          });
+        };
+
+        startHeroMotion = () => {
+          if (isHeroMotionRunning) {
+            return;
+          }
+
+          isHeroMotionRunning = true;
+          document.addEventListener("mousemove", handleMouseMove);
+          window.addEventListener("resize", handleHeroResize);
+          renderHeroFrame();
+        };
 
         const heroScrollTrigger = ScrollTrigger.create({
           trigger: heroHolder,
@@ -311,11 +557,208 @@ export default function Page() {
         media.add("all", () => {
           return () => {
             heroScrollTrigger.kill();
+            isHeroMotionRunning = false;
             document.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("resize", handleHeroResize);
             window.cancelAnimationFrame(heroAnimationFrame);
           };
         });
+      }
+
+      if (
+        preloaderRoot &&
+        preloaderPanel &&
+        preloaderCounter &&
+        preloaderCopyTrack &&
+        preloaderGallery &&
+        preloaderCenterSlot &&
+        heroFrame &&
+        preloaderImages.length > 0
+      ) {
+        const counterValue = { value: 0 };
+        const preloaderCompactGap = window.innerWidth <= 1000 ? "1vw" : "0.75vw";
+        const initialSlotMetrics = getPreloaderCardMetrics();
+        const compactSlotMetrics = getPreloaderCardMetrics(preloaderCompactGap);
+        const heroFrameTarget = measureHeroFrameTarget();
+
+        gsap.set(preloaderImages, {
+          yPercent: 50,
+          scale: 0.5,
+          opacity: 0,
+          clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+          transformOrigin: "center center",
+        });
+        gsap.set(preloaderPanel, {
+          clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+        });
+        gsap.set(preloaderCopyTrack, {
+          y: "1.25rem",
+        });
+        gsap.set(heroTitleWords, {
+          yPercent: 100,
+        });
+        setHeroFrameToPreloaderState(initialSlotMetrics);
+        gsap.set(heroFrame, {
+          yPercent: 50,
+          scale: 0.5,
+          autoAlpha: 0,
+          rotation: 0,
+          borderRadius: "0px",
+          borderWidth: "1px",
+        });
+
+        const counterTl = gsap.timeline({ delay: 0.5 });
+        const overlayCopyTl = gsap.timeline({ delay: 0.75 });
+        const revealTl = gsap.timeline({
+          delay: 0.5,
+          onComplete: () => {
+            isPreloaderActiveRef.current = false;
+            isHeroImageFrozenRef.current = false;
+            gsap.set(preloaderRoot, {
+              autoAlpha: 0,
+              pointerEvents: "none",
+            });
+            startHeroMotion();
+            setBodyLockState(false);
+            window.scrollTo(0, scrollYRef.current);
+            setIsPreloaderActive(false);
+          },
+        });
+
+        counterTl.to(counterValue, {
+          value: 100,
+          duration: 5,
+          ease: "power2.out",
+          onUpdate: () => {
+            preloaderCounter.textContent = Math.floor(counterValue.value).toString();
+          },
+        });
+
+        overlayCopyTl
+          .to(preloaderCopyTrack, {
+            y: "0rem",
+            duration: 0.75,
+            ease: "hop",
+          })
+          .to(preloaderCopyTrack, {
+            y: "-1.25rem",
+            duration: 0.75,
+            ease: "hop",
+            delay: 0.75,
+          })
+          .to(preloaderCopyTrack, {
+            y: "-2.5rem",
+            duration: 0.75,
+            ease: "hop",
+            delay: 0.75,
+          })
+          .to(preloaderCopyTrack, {
+            y: "-3.75rem",
+            duration: 0.75,
+            ease: "hop",
+            delay: 1,
+          });
+
+        revealTl
+          .to(preloaderImages, {
+            yPercent: 0,
+            opacity: 1,
+            stagger: 0.05,
+            duration: 1,
+            ease: "hop",
+          })
+          .to(
+            heroFrame,
+            {
+              yPercent: 0,
+              scale: 1,
+              autoAlpha: 1,
+              duration: 1,
+              ease: "hop",
+            },
+            "<",
+          )
+          .to(preloaderGallery, {
+            gap: preloaderCompactGap,
+            duration: 1,
+            delay: 0.45,
+            ease: "hop",
+          })
+          .to(
+            heroFrame,
+            {
+              left: compactSlotMetrics.left,
+              top: compactSlotMetrics.top,
+              width: compactSlotMetrics.width,
+              height: compactSlotMetrics.height,
+              duration: 1,
+              ease: "hop",
+            },
+            "<",
+          )
+          .to(
+            preloaderImages,
+            {
+              scale: 1,
+              duration: 1,
+              ease: "hop",
+            },
+            "<",
+          )
+          .to(preloaderImages, {
+            clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
+            duration: 0.85,
+            stagger: 0.1,
+            ease: "hop",
+          })
+          .add(() => {
+            isHeroImageFrozenRef.current = true;
+          })
+          .to(
+            heroFrame,
+            {
+              left: () => heroFrameTarget?.left ?? 0,
+              top: () => heroFrameTarget?.top ?? 0,
+              width: () => heroFrameTarget?.width ?? heroFrame.offsetWidth,
+              height: () => heroFrameTarget?.height ?? heroFrame.offsetHeight,
+              rotation: () => heroFrameTarget?.rotation ?? -15,
+              borderRadius: () => heroFrameTarget?.borderRadius ?? "0.5em",
+              borderWidth: () => heroFrameTarget?.borderWidth ?? "1px",
+              borderColor: "var(--otis-fg)",
+              duration: 1.05,
+              ease: "hop",
+            },
+            ">",
+          )
+          .add(() => {
+            gsap.set(heroFrame, {
+              clearProps:
+                "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
+              x: 0,
+              y: 0,
+              xPercent: 0,
+              yPercent: -110,
+              scale: 0.25,
+              rotation: -15,
+              autoAlpha: 1,
+              transformOrigin: "center center",
+            });
+          })
+          .to(preloaderPanel, {
+            clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
+            duration: 1,
+            ease: "hop",
+          }, "-=0.55")
+          .to(
+            heroTitleWords,
+            {
+              yPercent: 0,
+              duration: 0.75,
+              stagger: 0.1,
+              ease: "power3.out",
+            },
+            "-=0.5",
+          );
       }
 
       media.add("(min-width: 1001px)", () => {
@@ -455,27 +898,20 @@ export default function Page() {
       ScrollTrigger.refresh();
 
       return () => {
+        splitHeroTitles.forEach((title) => {
+          title.revert();
+        });
         media.revert();
       };
     },
     { scope: rootRef },
   );
 
-  const setBodyLockState = (shouldLock: boolean) => {
-    const initialStyles = bodyStylesRef.current;
-
-    if (!initialStyles) {
+  const toggleMenu = (forceOpen?: boolean) => {
+    if (isPreloaderActive) {
       return;
     }
 
-    document.body.style.position = shouldLock ? "fixed" : initialStyles.position;
-    document.body.style.top = shouldLock
-      ? `-${scrollYRef.current}px`
-      : initialStyles.top;
-    document.body.style.width = shouldLock ? "100%" : initialStyles.width;
-  };
-
-  const toggleMenu = (forceOpen?: boolean) => {
     const root = rootRef.current;
 
     if (!root) {
@@ -562,6 +998,11 @@ export default function Page() {
     event: MouseEvent<HTMLAnchorElement>,
     target: string,
   ) => {
+    if (isPreloaderActive) {
+      event.preventDefault();
+      return;
+    }
+
     event.preventDefault();
 
     const scrollToTarget = () => {

@@ -84,11 +84,13 @@ export function HomeFooter({
                 }
 
                 if ("target" in item && item.target) {
+                  const target = item.target;
+
                   return (
                     <a
                       key={`${column.title}-${item.label}`}
-                      href={`#${item.target}`}
-                      onClick={(event) => onInternalLinkClick(event, item.target)}
+                      href={`#${target}`}
+                      onClick={(event) => onInternalLinkClick(event, target)}
                       className={`${bodyTextClass} opacity-[0.35]`}
                     >
                       {item.label}
