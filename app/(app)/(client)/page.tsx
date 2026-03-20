@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CustomEase } from "gsap/CustomEase";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import {
+  AboutDescriptionSection,
   ContactCtaSection,
   FeaturedWorkSection,
   HeroSection,
-  HomeNav,
   ServicesHeaderSection,
   ServicesStackSection,
   TransitionOverlay,
@@ -25,7 +25,6 @@ CustomEase.create("hop", "0.85, 0, 0.15, 1");
 export default function Page() {
   const rootRef = useRef<HTMLElement>(null);
   const heroImageRef = useRef<HTMLImageElement>(null);
-  const isMenuAnimatingRef = useRef(false);
   const isPreloaderActiveRef = useRef(true);
   const isHeroImageFrozenRef = useRef(false);
   const scrollYRef = useRef(0);
@@ -36,8 +35,6 @@ export default function Page() {
     top: string;
     width: string;
   } | null>(null);
-  const [isPreloaderActive, setIsPreloaderActive] = useState(true);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function setBodyLockState(shouldLock: boolean) {
     const initialStyles = bodyStylesRef.current;
@@ -88,9 +85,10 @@ export default function Page() {
       return;
     }
 
-    scrollYRef.current = window.scrollY;
+    scrollYRef.current = 0;
+    window.scrollTo(0, 0);
     document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollYRef.current}px`;
+    document.body.style.top = "0px";
     document.body.style.width = "100%";
   }, []);
 
@@ -156,13 +154,6 @@ export default function Page() {
       const preloaderImages = gsap.utils.toArray<HTMLElement>(
         "[data-preloader-image]",
       );
-      const navItems = gsap.utils.toArray<HTMLElement>("[data-nav-item]");
-      const navFooterHeaders = gsap.utils.toArray<HTMLElement>(
-        "[data-nav-footer-header]",
-      );
-      const navFooterCopies = gsap.utils.toArray<HTMLElement>(
-        "[data-nav-footer-copy]",
-      );
       const heroTitles = gsap.utils.toArray<HTMLElement>("[data-preloader-title]");
       const heroFrame = root.querySelector<HTMLElement>("[data-hero-frame]");
       const heroHolder = root.querySelector<HTMLElement>("[data-hero-holder]");
@@ -182,10 +173,6 @@ export default function Page() {
         .map((word) => word.parentElement)
         .filter((mask): mask is HTMLElement => Boolean(mask));
 
-      gsap.set([...navItems, ...navFooterHeaders, ...navFooterCopies], {
-        opacity: 0,
-        y: "100%",
-      });
       gsap.set(heroTitleWordMasks, {
         paddingLeft: "0.08em",
         paddingRight: "0.08em",
@@ -523,8 +510,7 @@ export default function Page() {
             });
             startHeroMotion();
             setBodyLockState(false);
-            window.scrollTo(0, scrollYRef.current);
-            setIsPreloaderActive(false);
+            window.scrollTo(0, 0);
           },
         });
 
@@ -810,98 +796,11 @@ export default function Page() {
     { scope: rootRef },
   );
 
-  const toggleMenu = (forceOpen?: boolean) => {
-    if (isPreloaderActive) {
-      return;
-    }
-
-    const root = rootRef.current;
-
-    if (!root) {
-      return;
-    }
-
-    const navOverlay = root.querySelector<HTMLElement>("[data-nav-overlay]");
-    const openLabel = root.querySelector<HTMLElement>("[data-open-label]");
-    const closeLabel = root.querySelector<HTMLElement>("[data-close-label]");
-    const navItems = gsap.utils.toArray<HTMLElement>("[data-nav-item]");
-    const navFooterHeaders = gsap.utils.toArray<HTMLElement>(
-      "[data-nav-footer-header]",
-    );
-    const navFooterCopies = gsap.utils.toArray<HTMLElement>(
-      "[data-nav-footer-copy]",
-    );
-
-    if (!navOverlay || !openLabel || !closeLabel) {
-      return;
-    }
-
-    const nextState = forceOpen ?? !isMenuOpen;
-    const tweenTargets = [
-      navOverlay,
-      openLabel,
-      closeLabel,
-      ...navItems,
-      ...navFooterHeaders,
-      ...navFooterCopies,
-    ];
-
-    if (isMenuAnimatingRef.current) {
-      gsap.killTweensOf(tweenTargets);
-      isMenuAnimatingRef.current = false;
-    }
-
-    if (nextState) {
-      isMenuAnimatingRef.current = true;
-      scrollYRef.current = window.scrollY;
-      setBodyLockState(true);
-      setIsMenuOpen(true);
-
-      gsap.to(openLabel, { y: "-1rem", duration: 0.3 });
-      gsap.to(closeLabel, { y: "-1rem", duration: 0.3 });
-      gsap.to(navOverlay, {
-        opacity: 1,
-        duration: 0.3,
-        onComplete: () => {
-          isMenuAnimatingRef.current = false;
-        },
-      });
-      gsap.to([...navItems, ...navFooterHeaders, ...navFooterCopies], {
-        opacity: 1,
-        y: "0%",
-        duration: 0.75,
-        stagger: 0.075,
-        ease: "power4.out",
-      });
-
-      return;
-    }
-
-    isMenuAnimatingRef.current = true;
-    setBodyLockState(false);
-    window.scrollTo(0, scrollYRef.current);
-    setIsMenuOpen(false);
-
-    gsap.to(openLabel, { y: "0rem", duration: 0.3 });
-    gsap.to(closeLabel, { y: "0rem", duration: 0.3 });
-    gsap.to(navOverlay, {
-      opacity: 0,
-      duration: 0.3,
-      onComplete: () => {
-        gsap.set([...navItems, ...navFooterHeaders, ...navFooterCopies], {
-          opacity: 0,
-          y: "100%",
-        });
-        isMenuAnimatingRef.current = false;
-      },
-    });
-  };
-
   const handleInternalLinkClick = (
     event: MouseEvent<HTMLAnchorElement>,
     target: string,
   ) => {
-    if (isPreloaderActive) {
+    if (isPreloaderActiveRef.current) {
       event.preventDefault();
       return;
     }
@@ -920,12 +819,6 @@ export default function Page() {
       });
     };
 
-    if (isMenuOpen) {
-      toggleMenu(false);
-      window.setTimeout(scrollToTarget, 360);
-      return;
-    }
-
     scrollToTarget();
   };
 
@@ -937,12 +830,8 @@ export default function Page() {
       <TransitionOverlay />
 
       <div className="relative w-screen overflow-x-hidden">
-        <HomeNav
-          isMenuOpen={isMenuOpen}
-          onToggleMenu={() => toggleMenu()}
-          onInternalLinkClick={handleInternalLinkClick}
-        />
         <HeroSection heroImageRef={heroImageRef} />
+        <AboutDescriptionSection />
         <FeaturedWorkSection onInternalLinkClick={handleInternalLinkClick} />
         <ServicesHeaderSection />
         <ServicesStackSection />

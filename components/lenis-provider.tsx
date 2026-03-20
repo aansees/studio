@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -27,6 +28,29 @@ function createLenis(isMobile: boolean) {
 
 export default function LenisProvider({ children }: LenisProviderProps) {
   const lenisRef = useRef<Lenis | null>(null);
+  const pathname = usePathname();
+
+  const resetScrollPosition = useCallback(() => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    lenisRef.current?.scrollTo(0, {
+      immediate: true,
+      force: true,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    return () => {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "auto";
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMobile = window.innerWidth <= 900;
@@ -68,6 +92,24 @@ export default function LenisProvider({ children }: LenisProviderProps) {
       lenisRef.current = null;
     };
   }, []);
+
+  useLayoutEffect(() => {
+    resetScrollPosition();
+
+    const frameId = window.requestAnimationFrame(() => {
+      resetScrollPosition();
+      ScrollTrigger.refresh();
+    });
+    const timeoutId = window.setTimeout(() => {
+      resetScrollPosition();
+      ScrollTrigger.refresh();
+    }, 50);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [pathname, resetScrollPosition]);
 
   return <>{children}</>;
 }

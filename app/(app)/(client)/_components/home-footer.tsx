@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useRef, type MouseEvent } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   bodyTextClass,
   createExplosionParticle,
@@ -17,6 +17,7 @@ export function HomeFooter() {
   const footerRef = useRef<HTMLElement>(null);
   const explosionContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const footer = footerRef.current;
@@ -142,13 +143,13 @@ export function HomeFooter() {
       }
     }
 
-    window.location.assign(target === "top" ? "/" : `/#${target}`);
+    router.push(target === "top" ? "/" : `/#${target}`);
   };
 
   return (
     <footer
       ref={footerRef}
-      className="relative flex h-[85svh] w-screen flex-col items-center justify-between overflow-hidden p-[2em] text-[var(--otis-bg)] max-[1000px]:h-[100svh]"
+      className="relative flex h-[85svh] w-screen flex-col items-center justify-between overflow-hidden p-[2em] text-[var(--otis-bg)] bg-[var(--otis-bg)] max-[1000px]:h-[100svh]"
     >
       <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[2em] bg-[var(--otis-fg)] p-[2em]">
         <div className="absolute left-0 top-0 flex w-full justify-between p-[2em]">
