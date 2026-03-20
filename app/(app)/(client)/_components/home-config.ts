@@ -22,7 +22,7 @@ export type MenuLink = {
 
 export const menuLinks: MenuLink[] = [
   { label: "Index", target: "top", active: true },
-  { label: "The Good Stuff", target: "featured-work" },
+  { label: "The Good Stuff", target: "/featured-work" },
   { label: "Meet Otis", target: "services" },
   { label: "Slide In", target: "contact" },
 ];
@@ -86,6 +86,12 @@ export const heroImagePaths = Array.from(
   (_, index) => `/images/hero/img${index + 1}.jpg`,
 );
 
+export const heroStopImagePath = heroImagePaths[8];
+export const heroSliceImagePaths = Array.from(
+  { length: 3 },
+  (_, index) => `/images/hero/slices/${index + 1}_slice.jpg`,
+);
+
 export const preloaderImagePaths = [
   heroImagePaths[0],
   heroImagePaths[1],
@@ -94,7 +100,7 @@ export const preloaderImagePaths = [
 ];
 
 export const preloaderTextLines = [
-  "Pixels by Otis",
+  "Pixels by Ancs",
   "Portfolio Mode: ON",
   "Welcome",
 ];

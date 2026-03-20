@@ -12,7 +12,7 @@ export function ServicesHeaderSection() {
         <div className="relative mb-[2em] h-[100px] w-[100px] overflow-hidden rounded-[1em] border-[0.25rem] border-[var(--otis-fg)] outline-[0.25rem] outline-[var(--otis-accent3)]">
           <img
             src="/images/services-header/portrait.jpeg"
-            alt="Otis Valen portrait"
+            alt="Ancs Studio portrait"
             className="h-full w-full object-cover"
           />
         </div>

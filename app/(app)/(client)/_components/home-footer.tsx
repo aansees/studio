@@ -1,25 +1,150 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
 
-import type { RefObject } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
+import { usePathname } from "next/navigation";
 import {
   bodyTextClass,
+  createExplosionParticle,
   displayTextClass,
+  featuredImagePaths,
   footerColumns,
   monoTextClass,
-  type InternalLinkHandler,
 } from "./home-config";
 
-type HomeFooterProps = {
-  footerRef: RefObject<HTMLElement | null>;
-  explosionContainerRef: RefObject<HTMLDivElement | null>;
-  onInternalLinkClick: InternalLinkHandler;
-};
+export function HomeFooter() {
+  const footerRef = useRef<HTMLElement>(null);
+  const explosionContainerRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
-export function HomeFooter({
-  footerRef,
-  explosionContainerRef,
-  onInternalLinkClick,
-}: HomeFooterProps) {
+  useEffect(() => {
+    const footer = footerRef.current;
+    const explosionContainer = explosionContainerRef.current;
+
+    if (!footer || !explosionContainer) {
+      return;
+    }
+
+    const config = {
+      gravity: 0.25,
+      friction: 0.99,
+      horizontalForce: 20,
+      verticalForce: 15,
+      rotationSpeed: 10,
+    };
+
+    featuredImagePaths.forEach((path) => {
+      const image = new Image();
+      image.src = path;
+    });
+
+    const createParticles = () => {
+      explosionContainer.innerHTML = "";
+
+      featuredImagePaths.forEach((path) => {
+        const particle = document.createElement("img");
+        particle.src = path;
+        particle.className =
+          "absolute bottom-[-200px] left-1/2 h-auto w-[150px] -translate-x-1/2 rounded-[1rem] object-cover will-change-transform";
+        explosionContainer.appendChild(particle);
+      });
+    };
+
+    let hasExploded = false;
+    let animationFrameId = 0;
+    let checkTimeout = 0;
+
+    const explode = () => {
+      if (hasExploded) {
+        return;
+      }
+
+      hasExploded = true;
+      createParticles();
+
+      const particles = Array.from(
+        explosionContainer.querySelectorAll<HTMLImageElement>("img"),
+      ).map((element) => createExplosionParticle(element, config));
+
+      const animate = () => {
+        particles.forEach((particle) => particle.update());
+        animationFrameId = window.requestAnimationFrame(animate);
+
+        if (
+          particles.every(
+            (particle) => particle.y > explosionContainer.offsetHeight / 2,
+          )
+        ) {
+          window.cancelAnimationFrame(animationFrameId);
+        }
+      };
+
+      animate();
+    };
+
+    const checkFooterPosition = () => {
+      const footerRect = footer.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      if (footerRect.top > viewportHeight + 100) {
+        hasExploded = false;
+      }
+
+      if (!hasExploded && footerRect.top <= viewportHeight + 250) {
+        explode();
+      }
+    };
+
+    const handleScroll = () => {
+      window.clearTimeout(checkTimeout);
+      checkTimeout = window.setTimeout(checkFooterPosition, 5);
+    };
+
+    const handleResize = () => {
+      hasExploded = false;
+    };
+
+    createParticles();
+    const initialTimeoutId = window.setTimeout(checkFooterPosition, 500);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.clearTimeout(initialTimeoutId);
+      window.clearTimeout(checkTimeout);
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const handleInternalLinkClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    target: string,
+  ) => {
+    event.preventDefault();
+
+    if (pathname === "/") {
+      if (target === "top") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      const targetElement = document.getElementById(target);
+
+      if (targetElement) {
+        targetElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        return;
+      }
+    }
+
+    window.location.assign(target === "top" ? "/" : `/#${target}`);
+  };
+
   return (
     <footer
       ref={footerRef}
@@ -54,7 +179,7 @@ export function HomeFooter({
 
         <div className="relative text-center">
           <h1 className={`${displayTextClass} text-[clamp(3rem,8vw,7rem)]`}>
-            Otis Valen
+            Ancs Studio
           </h1>
         </div>
 
@@ -90,7 +215,7 @@ export function HomeFooter({
                     <a
                       key={`${column.title}-${item.label}`}
                       href={`#${target}`}
-                      onClick={(event) => onInternalLinkClick(event, target)}
+                      onClick={(event) => handleInternalLinkClick(event, target)}
                       className={`${bodyTextClass} opacity-[0.35]`}
                     >
                       {item.label}
@@ -112,7 +237,7 @@ export function HomeFooter({
         </div>
 
         <div className="relative flex w-full justify-center gap-[2em] max-[1000px]:flex-col max-[1000px]:gap-[0.5em] max-[1000px]:text-center">
-          <p className={monoTextClass}>MWT - MAY 2025</p>
+          <p className={monoTextClass}>MWT - MAY 2026</p>
           <p className={`${monoTextClass} max-[1000px]:hidden`}>{"//"}</p>
           <p className={monoTextClass}>
             Built by{" "}

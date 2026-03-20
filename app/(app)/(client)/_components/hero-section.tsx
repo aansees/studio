@@ -18,15 +18,15 @@ export function HeroSection({ heroImageRef }: HeroSectionProps) {
           <div className="relative -translate-x-[20%]">
             <h1
               data-preloader-title
-              className={`${displayTextClass} text-[20vw] leading-[0.9]`}
+              className={`${displayTextClass} text-[20vw] leading-[0.95]`}
             >
-              Otis
+              Ancs
             </h1>
           </div>
           <div className="relative z-[2] translate-x-[20%]">
             <h1
               data-preloader-title
-              className={`${displayTextClass} text-[20vw] leading-[0.9]`}
+              className={`${displayTextClass} text-[20vw] leading-[0.95]`}
             >
               Studio
             </h1>
@@ -43,7 +43,7 @@ export function HeroSection({ heroImageRef }: HeroSectionProps) {
           </div>
 
           <div className="absolute left-1/2 -translate-x-1/2 max-[1000px]:left-[2em] max-[1000px]:translate-x-0">
-            <p className={monoTextClass}>Pixels by Otis / 2025</p>
+            <p className={monoTextClass}>Pixels by Ancs / 2026</p>
           </div>
 
           <div>

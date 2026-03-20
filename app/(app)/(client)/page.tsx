@@ -10,13 +10,10 @@ import {
   ContactCtaSection,
   FeaturedWorkSection,
   HeroSection,
-  HomeFooter,
   HomeNav,
   ServicesHeaderSection,
   ServicesStackSection,
   TransitionOverlay,
-  createExplosionParticle,
-  featuredImagePaths,
   featuredCardPositionsLarge,
   featuredCardPositionsSmall,
   heroImagePaths,
@@ -28,8 +25,6 @@ CustomEase.create("hop", "0.85, 0, 0.15, 1");
 export default function Page() {
   const rootRef = useRef<HTMLElement>(null);
   const heroImageRef = useRef<HTMLImageElement>(null);
-  const footerRef = useRef<HTMLElement>(null);
-  const explosionContainerRef = useRef<HTMLDivElement>(null);
   const isMenuAnimatingRef = useRef(false);
   const isPreloaderActiveRef = useRef(true);
   const isHeroImageFrozenRef = useRef(false);
@@ -136,107 +131,6 @@ export default function Page() {
     };
   }, []);
 
-  useEffect(() => {
-    const footer = footerRef.current;
-    const explosionContainer = explosionContainerRef.current;
-
-    if (!footer || !explosionContainer) {
-      return;
-    }
-
-    const config = {
-      gravity: 0.25,
-      friction: 0.99,
-      horizontalForce: 20,
-      verticalForce: 15,
-      rotationSpeed: 10,
-    };
-
-    featuredImagePaths.forEach((path) => {
-      const image = new Image();
-      image.src = path;
-    });
-
-    const createParticles = () => {
-      explosionContainer.innerHTML = "";
-
-      featuredImagePaths.forEach((path) => {
-        const particle = document.createElement("img");
-        particle.src = path;
-        particle.className =
-          "absolute bottom-[-200px] left-1/2 h-auto w-[150px] -translate-x-1/2 rounded-[1rem] object-cover will-change-transform";
-        explosionContainer.appendChild(particle);
-      });
-    };
-
-    let hasExploded = false;
-    let animationFrameId = 0;
-    let checkTimeout = 0;
-
-    const explode = () => {
-      if (hasExploded) {
-        return;
-      }
-
-      hasExploded = true;
-      createParticles();
-
-      const particles = Array.from(
-        explosionContainer.querySelectorAll<HTMLImageElement>("img"),
-      ).map((element) => createExplosionParticle(element, config));
-
-      const animate = () => {
-        particles.forEach((particle) => particle.update());
-        animationFrameId = window.requestAnimationFrame(animate);
-
-        if (
-          particles.every(
-            (particle) => particle.y > explosionContainer.offsetHeight / 2,
-          )
-        ) {
-          window.cancelAnimationFrame(animationFrameId);
-        }
-      };
-
-      animate();
-    };
-
-    const checkFooterPosition = () => {
-      const footerRect = footer.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-
-      if (footerRect.top > viewportHeight + 100) {
-        hasExploded = false;
-      }
-
-      if (!hasExploded && footerRect.top <= viewportHeight + 250) {
-        explode();
-      }
-    };
-
-    const handleScroll = () => {
-      window.clearTimeout(checkTimeout);
-      checkTimeout = window.setTimeout(checkFooterPosition, 5);
-    };
-
-    const handleResize = () => {
-      hasExploded = false;
-    };
-
-    createParticles();
-    const initialTimeoutId = window.setTimeout(checkFooterPosition, 500);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.clearTimeout(initialTimeoutId);
-      window.clearTimeout(checkTimeout);
-      window.cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
   useGSAP(
     () => {
       const root = rootRef.current;
@@ -284,10 +178,19 @@ export default function Page() {
       const heroTitleWords = splitHeroTitles.flatMap((title) =>
         title.words.map((word) => word as HTMLElement),
       );
+      const heroTitleWordMasks = heroTitleWords
+        .map((word) => word.parentElement)
+        .filter((mask): mask is HTMLElement => Boolean(mask));
 
       gsap.set([...navItems, ...navFooterHeaders, ...navFooterCopies], {
         opacity: 0,
         y: "100%",
+      });
+      gsap.set(heroTitleWordMasks, {
+        paddingLeft: "0.08em",
+        paddingRight: "0.08em",
+        marginLeft: "-0.08em",
+        marginRight: "-0.08em",
       });
 
       type PreloaderCardMetrics = {
@@ -584,7 +487,7 @@ export default function Page() {
         gsap.set(preloaderImages, {
           yPercent: 50,
           scale: 0.5,
-          opacity: 0,
+          autoAlpha: 0,
           clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
           transformOrigin: "center center",
         });
@@ -662,7 +565,7 @@ export default function Page() {
         revealTl
           .to(preloaderImages, {
             yPercent: 0,
-            opacity: 1,
+            autoAlpha: 1,
             stagger: 0.05,
             duration: 1,
             ease: "hop",
@@ -671,7 +574,6 @@ export default function Page() {
             heroFrame,
             {
               yPercent: 0,
-              scale: 1,
               autoAlpha: 1,
               duration: 1,
               ease: "hop",
@@ -691,6 +593,7 @@ export default function Page() {
               top: compactSlotMetrics.top,
               width: compactSlotMetrics.width,
               height: compactSlotMetrics.height,
+              scale: 1,
               duration: 1,
               ease: "hop",
             },
@@ -762,6 +665,7 @@ export default function Page() {
       }
 
       media.add("(min-width: 1001px)", () => {
+        const cleanupTweens: Array<gsap.core.Animation | ScrollTrigger> = [];
         const featuredSection = root.querySelector<HTMLElement>(
           "[data-featured-section]",
         );
@@ -776,7 +680,6 @@ export default function Page() {
         );
         const services = gsap.utils.toArray<HTMLElement>("[data-service-card]");
         const contactCta = root.querySelector<HTMLElement>("[data-contact-cta]");
-        const cleanupTweens: Array<gsap.core.Tween | ScrollTrigger> = [];
 
         if (featuredSection && featuredTitlesTrack && featuredCards.length > 0) {
           const positions =
@@ -1044,11 +947,6 @@ export default function Page() {
         <ServicesHeaderSection />
         <ServicesStackSection />
         <ContactCtaSection />
-        <HomeFooter
-          footerRef={footerRef}
-          explosionContainerRef={explosionContainerRef}
-          onInternalLinkClick={handleInternalLinkClick}
-        />
       </div>
     </main>
   );

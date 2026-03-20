@@ -20,7 +20,7 @@ export function HomeNav({
             onClick={(event) => onInternalLinkClick(event, "top")}
             className={`${monoTextClass} text-[var(--otis-bg)]`}
           >
-            Otis {"\u2726"} Valen
+            Ancs {"\u2726"} Studio
           </a>
         </div>
 
@@ -64,7 +64,7 @@ export function HomeNav({
               }`}
             >
               <a
-                href={`#${link.target}`}
+                href={`${link.target}`}
                 onClick={(event) => onInternalLinkClick(event, link.target)}
                 className={`${bodyTextClass} block px-[0.5em] pb-[0.3em] pt-[0.5em] ${
                   link.active ? "text-[var(--otis-bg)]" : "text-[var(--otis-fg)]"
@@ -111,7 +111,7 @@ export function HomeNav({
           <div className="flex flex-col gap-[0.5em] max-[1000px]:hidden">
             <div data-nav-footer-copy className="flex justify-center gap-[0.75em]">
               <p className={`${monoTextClass} text-[0.75rem]`}>
-                MWT - May 2025 // Admin12121
+                MWT - MAY 2026 // Admin12121
               </p>
             </div>
           </div>
@@ -129,10 +129,10 @@ export function HomeNav({
             </div>
             <div data-nav-footer-copy className="flex justify-center gap-[0.75em]">
               <a
-                href="mailto:hello@otisvalen.com"
+                href="mailto:hello@ancsstudio.com"
                 className={`${monoTextClass} text-[0.75rem]`}
               >
-                hello@otisvalen.com
+                hello@ancsstudio.com
               </a>
             </div>
           </div>

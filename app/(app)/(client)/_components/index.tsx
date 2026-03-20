@@ -7,3 +7,4 @@ export * from "./home-nav";
 export * from "./services-header-section";
 export * from "./services-stack-section";
 export * from "./transition-overlay";
+export * from "./transition-router-shell";
