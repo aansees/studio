@@ -31,9 +31,11 @@ export default function Page() {
   const bodyStylesRef = useRef<{
     backgroundColor: string;
     color: string;
+    overflow: string;
     position: string;
     top: string;
     width: string;
+    htmlOverflow: string;
   } | null>(null);
 
   function setBodyLockState(shouldLock: boolean) {
@@ -43,6 +45,10 @@ export default function Page() {
       return;
     }
 
+    document.documentElement.style.overflow = shouldLock
+      ? "hidden"
+      : initialStyles.htmlOverflow;
+    document.body.style.overflow = shouldLock ? "hidden" : initialStyles.overflow;
     document.body.style.position = shouldLock ? "fixed" : initialStyles.position;
     document.body.style.top = shouldLock
       ? `-${scrollYRef.current}px`
@@ -55,9 +61,11 @@ export default function Page() {
     bodyStylesRef.current = {
       backgroundColor: style.backgroundColor,
       color: style.color,
+      overflow: style.overflow,
       position: style.position,
       top: style.top,
       width: style.width,
+      htmlOverflow: document.documentElement.style.overflow,
     };
 
     style.backgroundColor = "#edf1e8";
@@ -72,9 +80,11 @@ export default function Page() {
 
       style.backgroundColor = initialStyles.backgroundColor;
       style.color = initialStyles.color;
+      style.overflow = initialStyles.overflow;
       style.position = initialStyles.position;
       style.top = initialStyles.top;
       style.width = initialStyles.width;
+      document.documentElement.style.overflow = initialStyles.htmlOverflow;
     };
   }, []);
 
@@ -86,6 +96,10 @@ export default function Page() {
     }
 
     scrollYRef.current = 0;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     window.scrollTo(0, 0);
     document.body.style.position = "fixed";
     document.body.style.top = "0px";
@@ -510,7 +524,14 @@ export default function Page() {
             });
             startHeroMotion();
             setBodyLockState(false);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
             window.scrollTo(0, 0);
+            window.requestAnimationFrame(() => {
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+              window.scrollTo(0, 0);
+            });
           },
         });
 

@@ -1,27 +1,52 @@
-import { bodyTextClass, menuLinks, monoTextClass, type InternalLinkHandler } from "./home-config";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  menuDetailColumns,
+  menuLinks,
+  menuPreviewImagePath,
+  monoTextClass,
+  type InternalLinkHandler,
+} from "./home-config";
 
 type HomeNavProps = {
+  activeMenuTarget: string;
   isMenuOpen: boolean;
   onToggleMenu: () => void;
   onInternalLinkClick: InternalLinkHandler;
 };
 
+function getMenuHref(target: string) {
+  if (target === "top") {
+    return "/";
+  }
+
+  if (target.startsWith("/")) {
+    return target;
+  }
+
+  return `/#${target}`;
+}
+
 export function HomeNav({
+  activeMenuTarget,
   isMenuOpen,
   onToggleMenu,
   onInternalLinkClick,
 }: HomeNavProps) {
+  const hasActiveMenuTarget = menuLinks.some(
+    (menuLink) => menuLink.target === activeMenuTarget,
+  );
+
   return (
     <>
-      <nav className="fixed left-0 top-0 z-[100] flex w-screen items-center justify-between p-[2em]">
-        <div className="rounded-[0.4em] bg-[var(--otis-fg)] px-[0.65em] py-[0.5em]">
-          <a
-            href="#top"
-            onClick={(event) => onInternalLinkClick(event, "top")}
+      <nav className="pointer-events-none fixed left-0 top-0 z-[110] flex w-screen items-center justify-between p-[1.25rem] min-[1001px]:p-[2rem]">
+        <div className="pointer-events-auto rounded-[0.4em] bg-[var(--otis-fg)] px-[0.65em] py-[0.5em]">
+          <Link
+            href="/"
             className={`${monoTextClass} text-[var(--otis-bg)]`}
           >
             Ancs {"\u2726"} Studio
-          </a>
+          </Link>
         </div>
 
         <button
@@ -29,17 +54,17 @@ export function HomeNav({
           aria-expanded={isMenuOpen}
           aria-controls="home-menu"
           onClick={onToggleMenu}
-          className={`cursor-pointer rounded-[0.4em] px-[0.65em] pb-[0.65em] pt-[0.6em] ${
+          className={`pointer-events-auto cursor-pointer rounded-[0.5rem] border border-[var(--otis-fg)]/10 px-[0.7em] pb-[0.7em] pt-[0.65em] shadow-[0_8px_24px_rgba(20,20,20,0.08)] transition-colors duration-300 ${
             isMenuOpen
               ? "bg-[var(--otis-fg)] text-[var(--otis-bg)]"
-              : "bg-[var(--otis-bg2)] text-[var(--otis-fg)]"
+              : "bg-[color-mix(in_srgb,var(--otis-bg)_82%,white)] text-[var(--otis-fg)]"
           }`}
         >
-          <span className="relative flex h-[0.875rem] flex-col items-center overflow-hidden [clip-path:polygon(0_0,100%_0,100%_100%,0%_100%)]">
-            <span data-open-label className={monoTextClass}>
+          <span className="relative flex h-[0.95rem] flex-col items-center overflow-hidden [clip-path:polygon(0_0,100%_0,100%_100%,0%_100%)]">
+            <span data-open-label className={`${monoTextClass} block`}>
               Menu
             </span>
-            <span data-close-label className={monoTextClass}>
+            <span data-close-label className={`${monoTextClass} block`}>
               Close
             </span>
           </span>
@@ -50,92 +75,128 @@ export function HomeNav({
         id="home-menu"
         data-nav-overlay
         aria-hidden={!isMenuOpen}
-        className={`fixed inset-0 z-[90] h-[100svh] w-screen overflow-hidden bg-[var(--otis-bg2)] opacity-0 ${
+        className={`fixed inset-0 z-[100] h-[100svh] w-screen overflow-hidden bg-[var(--otis-fg)] text-[var(--otis-bg)] [clip-path:polygon(0%_100%,100%_100%,100%_100%,0%_100%)] ${
           isMenuOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
-        <div className="absolute left-1/2 top-[47.5%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-[1em]">
-          {menuLinks.map((link) => (
-            <div
-              key={link.label}
-              data-nav-item
-              className={`rounded-[0.5em] ${
-                link.active ? "bg-[var(--otis-fg)]" : "bg-[var(--otis-bg)]"
-              }`}
-            >
-              <a
-                href={`${link.target}`}
-                onClick={(event) => onInternalLinkClick(event, link.target)}
-                className={`${bodyTextClass} block px-[0.5em] pb-[0.3em] pt-[0.5em] ${
-                  link.active ? "text-[var(--otis-bg)]" : "text-[var(--otis-fg)]"
-                } max-[1000px]:text-[1.5rem]`}
+        <div className="absolute left-0 top-[44%] hidden w-full -translate-y-1/2 justify-between px-[2rem] min-[1001px]:flex">
+          {menuDetailColumns.map((column, columnIndex) => {
+            const isRightAligned = column.align === "right";
+
+            return (
+              <div
+                key={`menu-detail-column-${columnIndex + 1}`}
+                className={`flex max-w-[19rem] flex-col gap-[1.5rem] ${
+                  isRightAligned ? "items-end text-right" : "items-start text-left"
+                }`}
               >
-                {link.label}
-              </a>
-            </div>
-          ))}
+                {column.groups.map((group) => (
+                  <div key={group.title} className="flex flex-col gap-[0.45rem]">
+                    <div className="overflow-hidden">
+                      <span
+                        data-nav-meta-copy
+                        className={`${monoTextClass} inline-block text-[var(--otis-bg)]/75 transition-colors duration-200 hover:text-[var(--otis-bg)]`}
+                      >
+                        {group.title}
+                      </span>
+                    </div>
+
+                    {group.items.map((item) => {
+                      const itemClassName = `${monoTextClass} inline-block text-[var(--otis-bg)]/75 transition-colors duration-200 hover:text-[var(--otis-bg)]`;
+
+                      return (
+                        <div
+                          key={`${group.title}-${item.label}`}
+                          className="overflow-hidden"
+                        >
+                          {item.href ? (
+                            <a
+                              data-nav-meta-copy
+                              href={item.href}
+                              target={item.href.startsWith("http") ? "_blank" : undefined}
+                              rel={
+                                item.href.startsWith("http")
+                                  ? "noreferrer"
+                                  : undefined
+                              }
+                              className={itemClassName}
+                            >
+                              {item.label}
+                            </a>
+                          ) : (
+                            <span data-nav-meta-copy className={itemClassName}>
+                              {item.label}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
 
-        <div className="absolute bottom-0 left-0 flex w-full items-end justify-between gap-[1.5em] p-[2em] text-center max-[1000px]:flex-col max-[1000px]:items-center max-[1000px]:justify-center">
-          <div className="flex flex-col gap-[0.5em]">
-            <div
-              data-nav-footer-header
-              className="flex justify-start gap-[0.75em] max-[1000px]:justify-center"
-            >
-              <p
-                className={`${monoTextClass} rounded-[0.4em] bg-[var(--otis-bg)] px-[0.65em] py-[0.5em] text-[var(--otis-fg)]`}
-              >
-                Find Me
-              </p>
-            </div>
-            <div data-nav-footer-copy className="flex justify-center gap-[0.75em]">
-              <a
-                href="https://www.instagram.com/Admin12121web/"
-                target="_blank"
-                rel="noreferrer"
-                className={`${monoTextClass} text-[0.75rem]`}
-              >
-                Instagram
-              </a>
-              <a
-                href="https://www.linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`${monoTextClass} text-[0.75rem]`}
-              >
-                LinkedIn
-              </a>
-            </div>
+        <div className="pointer-events-none absolute left-1/2 top-[47%] hidden -translate-x-1/2 -translate-y-1/2 min-[1001px]:block">
+          <div
+            data-nav-image
+            className="w-[11rem] overflow-hidden rounded-[1.1rem] border border-[var(--otis-fg)]/12 bg-[var(--otis-bg)] shadow-[0_24px_70px_rgba(20,20,20,0.12)]"
+          >
+            <Image
+              src={menuPreviewImagePath}
+              alt="Ancs Studio preview"
+              width={440}
+              height={616}
+              className="aspect-[5/7] h-auto w-full object-cover"
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col gap-[0.5em] max-[1000px]:hidden">
-            <div data-nav-footer-copy className="flex justify-center gap-[0.75em]">
-              <p className={`${monoTextClass} text-[0.75rem]`}>
-                MWT - MAY 2026 // Admin12121
-              </p>
-            </div>
-          </div>
+        <div
+          data-nav-links-track
+          className="absolute bottom-0 left-0 flex w-max items-end justify-between gap-[2rem] p-[2rem] will-change-transform max-[1000px]:w-full max-[1000px]:flex-col max-[1000px]:gap-0 max-[1000px]:p-[1.25rem]"
+        >
+          {menuLinks.map((link, index) => {
+            const isDefaultLink = hasActiveMenuTarget
+              ? link.target === activeMenuTarget
+              : index === 0;
 
-          <div className="mt-[1em] flex flex-col gap-[0.5em]">
-            <div
-              data-nav-footer-header
-              className="flex justify-end gap-[0.75em] max-[1000px]:justify-center"
-            >
-              <p
-                className={`${monoTextClass} rounded-[0.4em] bg-[var(--otis-bg)] px-[0.65em] py-[0.5em] text-[var(--otis-fg)]`}
+            return (
+              <div
+                key={link.label}
+                data-nav-item
+                data-nav-default={isDefaultLink ? "true" : undefined}
+                className="relative overflow-hidden will-change-transform"
               >
-                Say Hi
-              </p>
-            </div>
-            <div data-nav-footer-copy className="flex justify-center gap-[0.75em]">
-              <a
-                href="mailto:hello@ancsstudio.com"
-                className={`${monoTextClass} text-[0.75rem]`}
-              >
-                hello@ancsstudio.com
-              </a>
-            </div>
-          </div>
+                <a
+                  data-nav-link-anchor
+                  href={getMenuHref(link.target)}
+                  onClick={(event) => onInternalLinkClick(event, link.target)}
+                  className="relative inline-block overflow-hidden font-otis-display text-[10rem] font-[700] uppercase leading-[0.9] tracking-[-0.125rem] text-[var(--otis-bg)] [perspective:1000px] max-[1000px]:text-[4rem] max-[1000px]:tracking-[-0.05rem]"
+                >
+                  <span
+                    data-nav-link-primary
+                    data-nav-link-label
+                    className="block whitespace-nowrap pt-[0.08em] pr-[0.08em] max-h-[130px]"
+                  >
+                    {link.label}
+                  </span>
+                  <span
+                    data-nav-link-secondary
+                    className="pointer-events-none absolute left-0 top-0 block whitespace-nowrap pt-[0.08em] pr-[0.08em] max-h-[130px]"
+                  >
+                    {link.label}
+                  </span>
+                </a>
+              </div>
+            );
+          })}
+
+          <div
+            data-nav-highlighter
+            className="pointer-events-none absolute bottom-4 left-0 hidden h-[0.75rem] bg-[var(--otis-accent1)]/80 will-change-transform min-[1001px]:block"
+          />
         </div>
       </div>
     </>

@@ -59,6 +59,26 @@ export default function LenisProvider({ children }: LenisProviderProps) {
       const lenis = createLenis(isMobile);
       lenis.on("scroll", ScrollTrigger.update);
       lenisRef.current = lenis;
+
+      // Sync Lenis to the real top-of-page position on creation so it cannot
+      // later re-apply a stale restored scroll value on first interaction.
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+      lenis.scrollTo(0, {
+        immediate: true,
+        force: true,
+      });
+
+      window.requestAnimationFrame(() => {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+        lenis.scrollTo(0, {
+          immediate: true,
+          force: true,
+        });
+      });
     };
 
     initializeLenis();

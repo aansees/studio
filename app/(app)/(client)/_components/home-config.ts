@@ -21,11 +21,64 @@ export type MenuLink = {
 };
 
 export const menuLinks: MenuLink[] = [
-  { label: "Index", target: "top", active: true },
-  { label: "The Good Stuff", target: "/featured-work" },
-  { label: "Meet Otis", target: "services" },
-  { label: "Slide In", target: "contact" },
+  { label: "Home", target: "top", active: true },
+  { label: "Work", target: "/featured-work" },
+  { label: "Studio", target: "/services" },
+  { label: "Stories", target: "/featured-work" },
+  { label: "Contact", target: "/contact" },
 ];
+
+export type MenuDetailItem = {
+  label: string;
+  href?: string;
+};
+
+export type MenuDetailGroup = {
+  title: string;
+  items: MenuDetailItem[];
+};
+
+export type MenuDetailColumn = {
+  align?: "left" | "right";
+  groups: MenuDetailGroup[];
+};
+
+export const menuDetailColumns: MenuDetailColumn[] = [
+  {
+    groups: [
+      {
+        title: "Studio Base",
+        items: [
+          { label: "Ancs Studio" },
+          { label: "Kathmandu / Remote" },
+          { label: "Design + Dev for bold brands" },
+        ],
+      },
+      {
+        title: "Inbox",
+        items: [{ label: "hello@ancsstudio.com", href: "mailto:hello@ancsstudio.com" }],
+      },
+    ],
+  },
+  {
+    align: "right",
+    groups: [
+      {
+        title: "Field Log",
+        items: [
+          { label: "Instagram", href: "https://www.instagram.com/Admin12121web/" },
+          { label: "Membership", href: "https://admin12121.com/" },
+        ],
+      },
+      {
+        title: "Edition",
+        items: [{ label: "MWT . Mar 2026" }, { label: "Next.js + GSAP" }],
+      },
+    ],
+  },
+];
+
+export const menuPreviewImagePath = "/images/work-items/work-item-6.jpg";
 
 export type FeaturedTitle = {
   title: string;
@@ -78,7 +131,7 @@ export const serviceCards: ServiceCard[] = [
 
 export const featuredImagePaths = Array.from(
   { length: 10 },
-  (_, index) => `/images/work-items/work-item-${index + 1}.jpg`,
+  (_, index) => `/images/objects/obj-${index + 1}.png`,
 );
 
 export const heroImagePaths = Array.from(
