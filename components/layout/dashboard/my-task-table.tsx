@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Frame } from "@/components/ui/frame"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TablePagination, useTablePagination } from "@/components/ui/table-pagination"
 import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain"
 import type { UserRole } from "@/lib/constants/rbac"
 
@@ -57,6 +58,14 @@ export function MyTaskTable({
       )
     })
   }, [query, rows])
+
+  const {
+    currentPage,
+    paginatedItems: visibleRows,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(filteredRows)
 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setPendingById((prev) => ({ ...prev, [taskId]: true }))
@@ -116,7 +125,7 @@ export function MyTaskTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map((row) => (
+              visibleRows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
                     <Link
@@ -170,6 +179,13 @@ export function MyTaskTable({
           </TableBody>
         </Table>
       </Frame>
+
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
     </div>
   )
 }

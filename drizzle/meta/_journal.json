@@ -22,6 +22,20 @@
       "when": 1772899800000,
       "tag": "0002_task_chat_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1774406400000,
+      "tag": "0003_project_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1774381604951,
+      "tag": "0004_perfect_the_call",
+      "breakpoints": true
     }
   ]
 }

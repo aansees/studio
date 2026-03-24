@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import { ProjectOverviewDeepDive } from "@/components/layout/dashboard/project-overview-deep-dive"
 import { PROJECT_PRIORITIES, type ProjectPriority } from "@/lib/constants/domain"
@@ -12,6 +12,10 @@ export default async function ProjectDetailsTabPage({
 }) {
   const { projectId } = await params
   const { user } = await requireSession()
+  if (user.role === "client") {
+    redirect(`/projects/${projectId}`)
+  }
+
   const project = await getProjectByIdForUser(projectId, user)
 
   if (!project) {

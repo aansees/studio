@@ -16,6 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import { type TaskStatus } from "@/lib/constants/domain";
 import { getOptionLabel, taskStatusOptions } from "@/lib/constants/domain-display";
 import type { DashboardTaskRow } from "@/lib/dashboard/overview-types";
@@ -68,27 +72,35 @@ export function DataTable({
     });
   }, [query, rows]);
 
+  const {
+    currentPage,
+    paginatedItems: visibleRows,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(filteredRows);
+
   const selectedCount = React.useMemo(
     () => Object.values(selectedIds).filter(Boolean).length,
     [selectedIds],
   );
   const showSelection = canManageTasks || canBulkDelete;
 
-  const allFilteredSelected =
-    filteredRows.length > 0 && filteredRows.every((row) => selectedIds[row.id]);
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selectedIds[row.id]);
 
   function toggleSelectAll() {
     setSelectedIds((current) => {
-      if (allFilteredSelected) {
+      if (allVisibleSelected) {
         const next = { ...current };
-        for (const row of filteredRows) {
+        for (const row of visibleRows) {
           delete next[row.id];
         }
         return next;
       }
 
       const next = { ...current };
-      for (const row of filteredRows) {
+      for (const row of visibleRows) {
         next[row.id] = true;
       }
       return next;
@@ -277,7 +289,7 @@ export function DataTable({
               {showSelection ? (
                 <TableHead className="w-10">
                   <Checkbox
-                    checked={allFilteredSelected}
+                    checked={allVisibleSelected}
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
@@ -301,7 +313,7 @@ export function DataTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map((row) => (
+              visibleRows.map((row) => (
                 <TableRow key={row.id}>
                   {showSelection ? (
                     <TableCell>
@@ -361,6 +373,13 @@ export function DataTable({
           </TableBody>
         </Table>
       </Frame>
+
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

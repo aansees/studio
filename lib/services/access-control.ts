@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm"
+import { and, eq, or, sql } from "drizzle-orm"
 
 import { db } from "@/lib/db"
 import { project, projectMember, task, taskAssignment, user as userTable } from "@/lib/db/schema"
@@ -21,6 +21,29 @@ export function isClient(role: Role) {
 export async function canAccessProject(user: SessionUser, projectId: string) {
   if (isAdmin(user.role)) {
     return true
+  }
+
+  if (user.role === "client") {
+    const [clientProject] = await db
+      .select({ id: project.id })
+      .from(project)
+      .where(
+        and(
+          eq(project.id, projectId),
+          or(
+            eq(project.clientId, user.id),
+            sql`exists (
+              select 1 from ${projectMember}
+              where ${projectMember.projectId} = ${project.id}
+                and ${projectMember.userId} = ${user.id}
+                and ${projectMember.role} = 'client'
+            )`,
+          ),
+        ),
+      )
+      .limit(1)
+
+    return Boolean(clientProject)
   }
 
   const [membership] = await db
@@ -91,7 +114,7 @@ export async function canAccessTask(user: SessionUser, taskId: string) {
   }
 
   if (user.role === "client") {
-    return canAccessProject(user, taskWithProject.projectId)
+    return false
   }
 
   return false

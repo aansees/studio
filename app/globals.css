@@ -75,6 +75,7 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 :root {
@@ -111,6 +112,7 @@
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
   --black: #3f3f3f;
+  --destructive-foreground: var(--color-red-700);
 }
 
 .dark {
@@ -146,6 +148,7 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
   --black: #cfcfcfaf;
+  --destructive-foreground: var(--color-red-400);
 }
 
 @layer base {

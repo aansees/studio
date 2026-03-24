@@ -1,4 +1,4 @@
-# Agency Studio
+# Ancs Studio
 
 Production-oriented agency project management platform built with Next.js 16, Better Auth, Drizzle ORM, MySQL, Upstash Redis/Realtime, Nodemailer, React Email, and shadcn/ui components.
 

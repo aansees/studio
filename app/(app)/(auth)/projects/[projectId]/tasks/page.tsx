@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ProjectTasksWorkspace } from "@/components/layout/dashboard/project-tasks-workspace";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
@@ -18,6 +18,10 @@ export default async function ProjectTasksPage({
 }) {
   const { projectId } = await params;
   const { user } = await requireSession();
+  if (user.role === "client") {
+    redirect(`/projects/${projectId}`);
+  }
+
   const project = await getProjectByIdForUser(projectId, user);
 
   if (!project) {

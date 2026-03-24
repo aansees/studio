@@ -25,6 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 
 type AssignableUser = {
   id: string;
@@ -167,6 +171,22 @@ export function ProjectMembersEditor({
     [clientIds, userById],
   );
 
+  const {
+    currentPage: clientsPage,
+    paginatedItems: visibleClients,
+    setCurrentPage: setClientsPage,
+    totalItems: totalClients,
+    totalPages: clientPages,
+  } = useTablePagination(selectedClients);
+
+  const {
+    currentPage: developersPage,
+    paginatedItems: visibleDevelopers,
+    setCurrentPage: setDevelopersPage,
+    totalItems: totalDevelopers,
+    totalPages: developerPages,
+  } = useTablePagination(selectedDevelopers);
+
   async function saveMembers() {
     setPending(true);
 
@@ -242,7 +262,7 @@ export function ProjectMembersEditor({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  selectedClients.map((client) => (
+                  visibleClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">
                         {client.name}
@@ -278,6 +298,12 @@ export function ProjectMembersEditor({
               </TableBody>
             </Table>
           </Frame>
+          <TablePagination
+            currentPage={clientsPage}
+            totalPages={clientPages}
+            totalItems={totalClients}
+            onPageChange={setClientsPage}
+          />
         </div>
 
         <div className="space-y-3">
@@ -315,7 +341,7 @@ export function ProjectMembersEditor({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  selectedDevelopers.map((developer) => (
+                  visibleDevelopers.map((developer) => (
                     <TableRow key={developer.id}>
                       <TableCell className="font-medium">
                         {developer.name}
@@ -345,6 +371,12 @@ export function ProjectMembersEditor({
               </TableBody>
             </Table>
           </Frame>
+          <TablePagination
+            currentPage={developersPage}
+            totalPages={developerPages}
+            totalItems={totalDevelopers}
+            onPageChange={setDevelopersPage}
+          />
         </div>
       </FieldGroup>
 

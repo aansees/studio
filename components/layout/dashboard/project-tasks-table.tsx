@@ -22,6 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
 import type { ProjectTaskRow } from "./project-tasks-workspace";
 import { cn } from "@/lib/utils";
@@ -79,6 +83,135 @@ function priorityTone(priority: string) {
   return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
 }
 
+function ProjectTaskStatusSection({
+  isOpen,
+  onToggle,
+  statusRows,
+  meta,
+  className,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+  statusRows: ProjectTaskRow[];
+  meta: { label: string; accent: string; badgeClassName: string };
+  className?: string;
+}) {
+  const {
+    currentPage,
+    paginatedItems: visibleRows,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(statusRows);
+
+  return (
+    <Frame className={className}>
+      <div
+        className={cn(
+          "flex items-center justify-between rounded-tl-2xl rounded-tr-2xl bg-muted/35 p-1",
+          !isOpen && "rounded-b-2xl",
+        )}
+      >
+        <button className="flex items-center gap-2" onClick={onToggle} type="button">
+          <Badge className={cn(meta.badgeClassName, "h-6 rounded-sm px-1")}>
+            <span className={`h-4 w-1 rounded-full ${meta.accent}`} />
+            {meta.label} ({statusRows.length})
+          </Badge>
+        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={onToggle}
+        >
+          {isOpen ? (
+            <ChevronUpIcon className="size-4" />
+          ) : (
+            <ChevronDownIcon className="size-4" />
+          )}
+        </Button>
+      </div>
+
+      {isOpen ? (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>People</TableHead>
+                <TableHead>Priority</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <Link
+                      href={`/projects/${row.projectId}/tasks/${row.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {row.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{row.type}</TableCell>
+                  <TableCell className="max-w-[360px] truncate text-muted-foreground">
+                    {row.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    {row.dueDate
+                      ? new Date(row.dueDate).toLocaleDateString()
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {row.people.length === 0 ? (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    ) : (
+                      <AvatarGroup>
+                        {row.people.slice(0, 3).map((person) => (
+                          <Avatar key={person.id} size="sm">
+                            {person.image ? (
+                              <AvatarImage src={person.image} alt={person.name} />
+                            ) : null}
+                            <AvatarFallback>
+                              {getInitials(person.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {row.people.length > 3 ? (
+                          <AvatarGroupCount>
+                            +{row.people.length - 3}
+                          </AvatarGroupCount>
+                        ) : null}
+                      </AvatarGroup>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={priorityTone(row.priority)}>
+                      {row.priority}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="px-4 pb-4">
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        </>
+      ) : null}
+    </Frame>
+  );
+}
+
 export function ProjectTasksTable({ rows }: { rows: ProjectTaskRow[] }) {
   const [openState, setOpenState] = useState<Record<TaskStatus, boolean>>({
     todo: true,
@@ -109,114 +242,19 @@ export function ProjectTasksTable({ rows }: { rows: ProjectTaskRow[] }) {
         const isOpen = openState[status];
 
         return (
-          <Frame key={status} className={index > 0 ? "mt-5" : undefined}>
-            <div className={cn("flex items-center justify-between bg-muted/35 p-1 rounded-tl-2xl rounded-tr-2xl", !isOpen && "rounded-b-2xl")}>
-              <button
-                className="flex items-center gap-2"
-                onClick={() =>
-                  setOpenState((current) => ({
-                    ...current,
-                    [status]: !current[status],
-                  }))
-                }
-                type="button"
-              >
-                <Badge className={cn(meta.badgeClassName, "rounded-sm px-1 h-6")}>
-                <span className={`h-4 w-1 rounded-full ${meta.accent}`} />
-                  {meta.label} ({statusRows.length})
-                </Badge>
-              </button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() =>
-                  setOpenState((current) => ({
-                    ...current,
-                    [status]: !current[status],
-                  }))
-                }
-              >
-                {isOpen ? (
-                  <ChevronUpIcon className="size-4" />
-                ) : (
-                  <ChevronDownIcon className="size-4" />
-                )}
-              </Button>
-            </div>
-
-            {isOpen ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Deadline</TableHead>
-                    <TableHead>People</TableHead>
-                    <TableHead>Priority</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {statusRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>
-                        <Link
-                          href={`/projects/${row.projectId}/tasks/${row.id}`}
-                          className="font-medium underline-offset-4 hover:underline"
-                        >
-                          {row.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{row.type}</TableCell>
-                      <TableCell className="max-w-[360px] truncate text-muted-foreground">
-                        {row.description || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {row.dueDate
-                          ? new Date(row.dueDate).toLocaleDateString()
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {row.people.length === 0 ? (
-                          <span className="text-muted-foreground">
-                            Unassigned
-                          </span>
-                        ) : (
-                          <AvatarGroup>
-                            {row.people.slice(0, 3).map((person) => (
-                              <Avatar key={person.id} size="sm">
-                                {person.image ? (
-                                  <AvatarImage
-                                    src={person.image}
-                                    alt={person.name}
-                                  />
-                                ) : null}
-                                <AvatarFallback>
-                                  {getInitials(person.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                            ))}
-                            {row.people.length > 3 ? (
-                              <AvatarGroupCount>
-                                +{row.people.length - 3}
-                              </AvatarGroupCount>
-                            ) : null}
-                          </AvatarGroup>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={priorityTone(row.priority)}>
-                          {row.priority}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : null}
-          </Frame>
+          <ProjectTaskStatusSection
+            key={status}
+            statusRows={statusRows}
+            meta={meta}
+            isOpen={isOpen}
+            className={index > 0 ? "mt-5" : undefined}
+            onToggle={() =>
+              setOpenState((current) => ({
+                ...current,
+                [status]: !current[status],
+              }))
+            }
+          />
         );
       })}
     </div>

@@ -2,7 +2,7 @@ import { ChartAreaInteractive } from "@/components/layout/dashboard/chart-area-i
 import { DataTable } from "@/components/layout/dashboard/data-table";
 import { SectionCards } from "@/components/layout/dashboard/section-cards";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/session";
 import { getDashboardOverview } from "@/lib/services/dashboard";
 import { Frame, FramePanel } from "@/components/ui/frame";
@@ -13,6 +13,17 @@ export default async function Page() {
 
   return (
     <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6">
+      {user.role === "client" ? (
+        <div className="space-y-1 text-blue-700 dark:text-indigo-400">
+          <h2 className="text-xl font-semibold">
+            Hello {user.name}, Preview your project
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Track the latest delivery updates and keep the conversation moving.
+          </p>
+        </div>
+      ) : null}
+
       <SectionCards cards={overview.cards} />
 
       <Frame className="grid gap-1 xl:grid-cols-3">

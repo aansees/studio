@@ -35,6 +35,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import type { TaskType } from "@/lib/constants/domain";
 import type { ProjectAnalytics } from "@/lib/project-analytics/types";
 import { cn } from "@/lib/utils";
@@ -395,6 +399,13 @@ export function ProjectAnalyticsDashboard({
   analytics,
   members,
 }: ProjectAnalyticsDashboardProps) {
+  const {
+    currentPage,
+    paginatedItems: visibleAssignees,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(analytics.assigneeBreakdown);
   const visibleThroughput = useMemo(
     () => buildYearlyThroughputSeries(analytics.throughputEvents),
     [analytics.throughputEvents],
@@ -683,7 +694,7 @@ export function ProjectAnalyticsDashboard({
                 </TableCell>
               </TableRow>
             ) : (
-              analytics.assigneeBreakdown.map((assignee) => (
+              visibleAssignees.map((assignee) => (
                 <TableRow key={assignee.assigneeId}>
                   <TableCell className="min-w-[220px]">
                     <div className="flex items-center gap-3">
@@ -752,6 +763,12 @@ export function ProjectAnalyticsDashboard({
           </TableBody>
         </Table>
       </Frame>
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

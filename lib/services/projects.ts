@@ -24,6 +24,21 @@ function toSlug(value: string) {
     .replace(/(^-|-$)+/g, "")
 }
 
+function sanitizeProjectForUser<T extends { devLinks: string | null; credentials: string | null }>(
+  currentUser: SessionUser,
+  projectRecord: T,
+) {
+  if (currentUser.role !== "client") {
+    return projectRecord
+  }
+
+  return {
+    ...projectRecord,
+    devLinks: null,
+    credentials: null,
+  }
+}
+
 type CreateProjectInput = {
   name: string
   description?: string
@@ -40,25 +55,38 @@ type CreateProjectInput = {
 }
 
 export async function listProjectsForUser(currentUser: SessionUser) {
-  if (isAdmin(currentUser.role)) {
-    return db
-      .select()
-      .from(project)
-      .orderBy(desc(project.updatedAt))
-  }
-
-  if (currentUser.role === "developer") {
-    const memberships = await db
-      .select({ projectId: projectMember.projectId })
-      .from(projectMember)
-      .where(eq(projectMember.userId, currentUser.id))
-
-    const memberProjectIds = memberships.map((record) => record.projectId)
-    if (memberProjectIds.length === 0) {
+  const rows = await (async () => {
+    if (isAdmin(currentUser.role)) {
       return db
         .select()
         .from(project)
-        .where(eq(project.projectLeadId, currentUser.id))
+        .orderBy(desc(project.updatedAt))
+    }
+
+    if (currentUser.role === "developer") {
+      const memberships = await db
+        .select({ projectId: projectMember.projectId })
+        .from(projectMember)
+        .where(eq(projectMember.userId, currentUser.id))
+
+      const memberProjectIds = memberships.map((record) => record.projectId)
+      if (memberProjectIds.length === 0) {
+        return db
+          .select()
+          .from(project)
+          .where(eq(project.projectLeadId, currentUser.id))
+          .orderBy(desc(project.updatedAt))
+      }
+
+      return db
+        .select()
+        .from(project)
+        .where(
+          or(
+            inArray(project.id, memberProjectIds),
+            eq(project.projectLeadId, currentUser.id),
+          ),
+        )
         .orderBy(desc(project.updatedAt))
     }
 
@@ -67,43 +95,48 @@ export async function listProjectsForUser(currentUser: SessionUser) {
       .from(project)
       .where(
         or(
-          inArray(project.id, memberProjectIds),
-          eq(project.projectLeadId, currentUser.id),
+          eq(project.clientId, currentUser.id),
+          sql`exists (
+            select 1 from ${projectMember}
+            where ${projectMember.projectId} = ${project.id}
+              and ${projectMember.userId} = ${currentUser.id}
+              and ${projectMember.role} = 'client'
+          )`,
         ),
       )
       .orderBy(desc(project.updatedAt))
-  }
+  })()
 
-  const memberships = await db
-    .select({ projectId: projectMember.projectId })
-    .from(projectMember)
-    .where(eq(projectMember.userId, currentUser.id))
-
-  const memberProjectIds = memberships.map((record) => record.projectId)
-  if (memberProjectIds.length === 0) {
-    return db
-      .select()
-      .from(project)
-      .where(eq(project.clientId, currentUser.id))
-      .orderBy(desc(project.updatedAt))
-  }
-
-  return db
-    .select()
-    .from(project)
-    .where(
-      or(
-        inArray(project.id, memberProjectIds),
-        eq(project.clientId, currentUser.id),
-      ),
-    )
-    .orderBy(desc(project.updatedAt))
+  return rows.map((record) => sanitizeProjectForUser(currentUser, record))
 }
 
 export async function getProjectByIdForUser(projectId: string, currentUser: SessionUser) {
   if (isAdmin(currentUser.role)) {
     const [record] = await db.select().from(project).where(eq(project.id, projectId)).limit(1)
     return record ?? null
+  }
+
+  if (currentUser.role === "client") {
+    const [record] = await db
+      .select()
+      .from(project)
+      .where(
+        and(
+          eq(project.id, projectId),
+          or(
+            eq(project.clientId, currentUser.id),
+            sql`exists (
+              select 1 from ${projectMember}
+              where ${projectMember.projectId} = ${project.id}
+                and ${projectMember.userId} = ${currentUser.id}
+                and ${projectMember.role} = 'client'
+            )`,
+          ),
+        ),
+      )
+      .limit(1)
+
+    return record ? sanitizeProjectForUser(currentUser, record) : null
   }
 
   const [record] = await db
@@ -125,7 +158,7 @@ export async function getProjectByIdForUser(projectId: string, currentUser: Sess
     )
     .limit(1)
 
-  return record ?? null
+  return record ? sanitizeProjectForUser(currentUser, record) : null
 }
 
 export async function canManageProject(currentUser: SessionUser, projectId: string) {
@@ -163,9 +196,9 @@ export async function listProjectMembersForUser(currentUser: SessionUser, projec
       isActive: user.isActive,
     })
     .from(projectMember)
-    .innerJoin(user, eq(user.id, projectMember.userId))
-    .where(eq(projectMember.projectId, projectId))
-    .orderBy(asc(user.name))
+      .innerJoin(user, eq(user.id, projectMember.userId))
+      .where(eq(projectMember.projectId, projectId))
+      .orderBy(asc(user.name))
 }
 
 export async function listAssignableUsersForProjectManager(

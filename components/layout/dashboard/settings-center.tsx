@@ -24,6 +24,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SettingsUser = {
@@ -108,6 +112,14 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
     return Array.isArray(passkeyQuery.data) ? passkeyQuery.data : [];
   }, [passkeyQuery.data]);
 
+  const {
+    currentPage: passkeysPage,
+    paginatedItems: visiblePasskeys,
+    setCurrentPage: setPasskeysPage,
+    totalItems: totalPasskeys,
+    totalPages: passkeyPages,
+  } = useTablePagination(passkeys);
+
   const linkedByProvider = useMemo(() => {
     const map: Partial<Record<SocialProvider, LinkedAccount>> = {};
     for (const account of linkedAccounts) {
@@ -117,6 +129,14 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
     }
     return map;
   }, [linkedAccounts]);
+
+  const {
+    currentPage: socialPage,
+    paginatedItems: visibleSocialProviders,
+    setCurrentPage: setSocialPage,
+    totalItems: totalSocialProviders,
+    totalPages: socialPages,
+  } = useTablePagination(socialProviders);
 
   const tabParam = searchParams.get("tab");
   const defaultTab =
@@ -660,7 +680,7 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  passkeys.map((passkey) => (
+                  visiblePasskeys.map((passkey) => (
                     <TableRow key={passkey.id}>
                       <TableCell>{passkey.name || "Unnamed passkey"}</TableCell>
                       <TableCell>{passkey.deviceType}</TableCell>
@@ -686,6 +706,12 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
               </TableBody>
             </Table>
           </Frame>
+          <TablePagination
+            currentPage={passkeysPage}
+            totalPages={passkeyPages}
+            totalItems={totalPasskeys}
+            onPageChange={setPasskeysPage}
+          />
 
           <div>
             <h2 className="text-base font-semibold">Social Login</h2>
@@ -715,7 +741,7 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  socialProviders.map((provider) => {
+                  visibleSocialProviders.map((provider) => {
                     const linkedAccount = linkedByProvider[provider.id];
                     const isLinked = Boolean(linkedAccount);
                     const linking = socialLinkPendingByProvider[provider.id];
@@ -768,6 +794,12 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
               </TableBody>
             </Table>
           </Frame>
+          <TablePagination
+            currentPage={socialPage}
+            totalPages={socialPages}
+            totalItems={totalSocialProviders}
+            onPageChange={setSocialPage}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold">

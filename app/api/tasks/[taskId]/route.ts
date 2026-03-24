@@ -27,6 +27,9 @@ export async function GET(
   try {
     const { taskId } = await params
     const { user } = await requireApiSession()
+    if (user.role === "client") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const allowed = await canAccessTask(user, taskId)
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
@@ -49,6 +52,9 @@ export async function PATCH(
   try {
     const { taskId } = await params
     const { user } = await requireApiSession()
+    if (user.role === "client") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const body = updateTaskSchema.parse(await request.json())
     await updateTaskWithPermissions(user, taskId, body)
     return NextResponse.json({ success: true })

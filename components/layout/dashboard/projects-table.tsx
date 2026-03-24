@@ -22,6 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import { CreateProjectDialog } from "@/components/layout/dashboard/create-project-dialog";
 import type { TeamUser } from "@/components/layout/dashboard/create-project-dialog";
 import { SearchIcon } from "lucide-react";
@@ -51,22 +55,36 @@ export function ProjectsTable({
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("__all__");
   const [priorityFilter, setPriorityFilter] =
     useState<FilterPriority>("__all__");
+  const showPriority = user.role !== "client";
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return initialProjects.filter((project) => {
+      const matchesPriorityQuery = showPriority
+        ? project.priority.toLowerCase().includes(normalizedQuery)
+        : false;
       const matchesQuery =
         normalizedQuery.length === 0 ||
         project.name.toLowerCase().includes(normalizedQuery) ||
         project.status.toLowerCase().includes(normalizedQuery) ||
-        project.priority.toLowerCase().includes(normalizedQuery);
+        matchesPriorityQuery;
       const matchesStatus =
         statusFilter === "__all__" || project.status === statusFilter;
       const matchesPriority =
-        priorityFilter === "__all__" || project.priority === priorityFilter;
+        !showPriority ||
+        priorityFilter === "__all__" ||
+        project.priority === priorityFilter;
       return matchesQuery && matchesStatus && matchesPriority;
     });
-  }, [initialProjects, priorityFilter, query, statusFilter]);
+  }, [initialProjects, priorityFilter, query, showPriority, statusFilter]);
+
+  const {
+    currentPage,
+    paginatedItems: visibleProjects,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(filteredProjects);
 
   return (
     <div className="space-y-3">
@@ -100,24 +118,26 @@ export function ProjectsTable({
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={priorityFilter}
-            onValueChange={(value) =>
-              setPriorityFilter(value as FilterPriority)
-            }
-          >
-            <SelectTrigger className="md:w-44">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All Priorities</SelectItem>
-              {PROJECT_PRIORITIES.map((priority) => (
-                <SelectItem key={priority} value={priority}>
-                  {priority}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {showPriority ? (
+            <Select
+              value={priorityFilter}
+              onValueChange={(value) =>
+                setPriorityFilter(value as FilterPriority)
+              }
+            >
+              <SelectTrigger className="md:w-44">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Priorities</SelectItem>
+                {PROJECT_PRIORITIES.map((priority) => (
+                  <SelectItem key={priority} value={priority}>
+                    {priority}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
           {user.role === "admin" ? (
             <CreateProjectDialog
               users={normalizedTeam}
@@ -133,7 +153,7 @@ export function ProjectsTable({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
+              {showPriority ? <TableHead>Priority</TableHead> : null}
               <TableHead>Progress</TableHead>
               <TableHead>Deadline</TableHead>
             </TableRow>
@@ -142,14 +162,14 @@ export function ProjectsTable({
             {filteredProjects.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={showPriority ? 5 : 4}
                   className="h-24 text-center text-sm text-muted-foreground"
                 >
                   No projects found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProjects.map((item) => (
+              visibleProjects.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     <Link
@@ -162,7 +182,7 @@ export function ProjectsTable({
                   <TableCell>
                     <Badge variant="outline">{item.status}</Badge>
                   </TableCell>
-                  <TableCell>{item.priority}</TableCell>
+                  {showPriority ? <TableCell>{item.priority}</TableCell> : null}
                   <TableCell>{item.progressPercent}%</TableCell>
                   <TableCell>
                     {item.endDate
@@ -175,6 +195,13 @@ export function ProjectsTable({
           </TableBody>
         </Table>
       </Frame>
+
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

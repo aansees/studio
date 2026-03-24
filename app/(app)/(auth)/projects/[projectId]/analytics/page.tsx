@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import { ProjectAnalyticsDashboard } from "@/components/layout/dashboard/project-analytics-dashboard"
 import { requireSession } from "@/lib/session"
@@ -15,6 +15,10 @@ export default async function ProjectAnalyticsPage({
 }) {
   const { projectId } = await params
   const { user } = await requireSession()
+  if (user.role === "client") {
+    redirect(`/projects/${projectId}`)
+  }
+
   const [project, analytics, members] = await Promise.all([
     getProjectByIdForUser(projectId, user),
     getProjectAnalytics(projectId),

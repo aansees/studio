@@ -6,7 +6,7 @@ import { listTasksForUser } from "@/lib/services/tasks";
 import { Frame } from "@/components/ui/frame";
 
 export default async function MyTaskPage() {
-  const { user } = await requireSession();
+  const { user } = await requireSession(["admin", "developer"]);
   const [tasks, projects] = await Promise.all([listTasksForUser(user), listProjectsForUser(user)]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 

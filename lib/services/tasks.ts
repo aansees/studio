@@ -130,27 +130,17 @@ export async function listTasksForUser(currentUser: SessionUser, projectId?: str
       .orderBy(desc(task.updatedAt))
   }
 
-  return db
-    .select()
-    .from(task)
-    .where(
-      sql`exists (
-        select 1 from ${projectMember}
-        where ${projectMember.projectId} = ${task.projectId}
-          and ${projectMember.userId} = ${currentUser.id}
-      ) or exists (
-        select 1 from ${project}
-        where ${project.id} = ${task.projectId}
-          and ${project.clientId} = ${currentUser.id}
-      )`,
-    )
-    .orderBy(desc(task.updatedAt))
+  return []
   })()
 
   return attachTaskAssignments(rows)
 }
 
 export async function listProjectTasksForUser(currentUser: SessionUser, projectId: string) {
+  if (currentUser.role === "client") {
+    throw new Error("Forbidden")
+  }
+
   const hasAccess = await canAccessProject(currentUser, projectId)
   if (!hasAccess) {
     throw new Error("Forbidden")
@@ -465,7 +455,7 @@ export async function canUserChatOnTask(currentUser: SessionUser, taskId: string
   }
 
   if (currentUser.role === "client") {
-    return canAccessProject(currentUser, existing.projectId)
+    return false
   }
 
   return false

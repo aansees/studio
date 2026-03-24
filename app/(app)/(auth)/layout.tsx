@@ -10,7 +10,9 @@ export default async function Page({ children }: { children: React.ReactNode }) 
   const [projects, tasks] = await Promise.all([listProjectsForUser(user), listTasksForUser(user)])
 
   const myTasksSource =
-    user.role === "admin"
+    user.role === "client"
+      ? []
+      : user.role === "admin"
       ? tasks.filter((task) => task.assigneeIds?.includes(user.id))
       : tasks
 
@@ -26,11 +28,15 @@ export default async function Page({ children }: { children: React.ReactNode }) 
   const sidebarProjects = projects.slice(0, 12).map((project) => ({
     id: project.id,
     name: project.name,
+    canOpenChat:
+      user.role === "admin" ||
+      user.role === "client" ||
+      project.projectLeadId === user.id,
   }))
 
   return (
     <SidebarProvider
-      className="flex min-h-screen"
+      className="flex h-dvh min-h-0 overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",
@@ -49,7 +55,7 @@ export default async function Page({ children }: { children: React.ReactNode }) 
         myTasks={sidebarTasks}
         projects={sidebarProjects}
       />
-      <SidebarInset className="h-dvh min-h-0 overflow-hidden">
+      <SidebarInset className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         <SiteHeader
           projects={projects.map((project) => ({
             id: project.id,
@@ -62,7 +68,7 @@ export default async function Page({ children }: { children: React.ReactNode }) 
         />
         <div
           data-lenis-prevent
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain"
         >
           {children}
         </div>

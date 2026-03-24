@@ -81,7 +81,7 @@ export function AppEmailTemplate({
           ) : null}
           <Hr style={{ margin: "24px 0", borderColor: "#e5e7eb" }} />
           <Text style={{ margin: 0, color: "#64748b", fontSize: "12px" }}>
-            Agency Studio
+            Ancs Studio
           </Text>
         </Container>
       </Body>

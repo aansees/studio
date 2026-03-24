@@ -28,6 +28,18 @@ const message = z.object({
   attachments: z.array(attachment).default([]),
 })
 
+const projectMessage = z.object({
+  id: z.string(),
+  sender: z.string(),
+  senderRole: z.enum(["admin", "developer", "client"]),
+  displayName: z.string(),
+  text: z.string(),
+  timestamp: z.number(),
+  roomId: z.string(),
+  projectId: z.string(),
+  replyToMessageId: z.string().optional(),
+})
+
 const presence = z.object({
   displayName: z.string().optional(),
   username: z.string().optional(),
@@ -37,6 +49,14 @@ const presence = z.object({
 const schema = {
   chat: {
     message,
+    join: presence,
+    leave: z.object({}).optional(),
+    destroy: z.object({
+      isDestroyed: z.literal(true),
+    }),
+  },
+  projectChat: {
+    message: projectMessage,
     join: presence,
     leave: z.object({}).optional(),
     destroy: z.object({
@@ -57,3 +77,4 @@ export const realtime = new Realtime({
 export type RealtimeEvents = InferRealtimeEvents<typeof realtime>
 export type MessageEvent = z.infer<typeof message>
 export type MessageAttachmentEvent = z.infer<typeof attachment>
+export type ProjectMessageEvent = z.infer<typeof projectMessage>

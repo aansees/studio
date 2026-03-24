@@ -35,6 +35,7 @@ export function ProjectDocsWorkspace({
   initialNotes,
   initialDevLinks,
   initialCredentials,
+  layout = "workspace",
 }: {
   projectId: string;
   canEdit: boolean;
@@ -42,12 +43,18 @@ export function ProjectDocsWorkspace({
   initialNotes: string;
   initialDevLinks: string;
   initialCredentials: string;
+  layout?: "workspace" | "embedded";
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [notes, setNotes] = useState(initialNotes);
   const [devLinks, setDevLinks] = useState(initialDevLinks);
   const [credentials, setCredentials] = useState(initialCredentials);
+  const isWorkspaceLayout = layout === "workspace";
+  const richTextVariant = isWorkspaceLayout ? "workspace" : "default";
+  const richTextClassName = isWorkspaceLayout
+    ? "flex h-full min-h-0 w-full flex-1"
+    : "w-full";
 
   const hasChanges = useMemo(
     () =>
@@ -99,10 +106,13 @@ export function ProjectDocsWorkspace({
   return (
     <Tabs
       defaultValue="plan"
-      className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+      className={
+        isWorkspaceLayout
+          ? "flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+          : "flex flex-col gap-4"
+      }
     >
       <div className="shrink-0">
-
         <div className="flex items-center justify-between pt-4">
           <TabsList>
             <TabsTrigger value="plan">Plan</TabsTrigger>
@@ -121,39 +131,45 @@ export function ProjectDocsWorkspace({
         </div>
       </div>
 
-      <TabsContent value="plan" className="min-h-0 flex-1 overflow-hidden">
+      <TabsContent
+        value="plan"
+        className={isWorkspaceLayout ? "min-h-0 flex-1 overflow-hidden" : ""}
+      >
         {canEdit ? (
           <ProjectRichTextEditor
             value={notes}
             onChange={setNotes}
-            variant="workspace"
-            className="flex h-full min-h-0 w-full flex-1"
+            variant={richTextVariant}
+            className={richTextClassName}
           />
         ) : (
           <ProjectRichTextViewer
             value={notes}
             emptyMessage="No project plan added yet."
-            variant="workspace"
-            className="flex h-full min-h-0 w-full flex-1"
+            variant={richTextVariant}
+            className={richTextClassName}
           />
         )}
       </TabsContent>
 
-      <TabsContent value="resources" className="min-h-0 flex-1 overflow-hidden">
+      <TabsContent
+        value="resources"
+        className={isWorkspaceLayout ? "min-h-0 flex-1 overflow-hidden" : ""}
+      >
         {canViewInternalDocs ? (
           canEdit ? (
             <ProjectRichTextEditor
               value={devLinks}
               onChange={setDevLinks}
-              variant="workspace"
-              className="flex h-full min-h-0 w-full flex-1"
+              variant={richTextVariant}
+              className={richTextClassName}
             />
           ) : (
             <ProjectRichTextViewer
               value={devLinks}
               emptyMessage="No resources or dev links added yet."
-              variant="workspace"
-              className="flex h-full min-h-0 w-full flex-1"
+              variant={richTextVariant}
+              className={richTextClassName}
             />
           )
         ) : (
@@ -166,22 +182,22 @@ export function ProjectDocsWorkspace({
 
       <TabsContent
         value="credentials"
-        className="min-h-0 flex-1 overflow-hidden"
+        className={isWorkspaceLayout ? "min-h-0 flex-1 overflow-hidden" : ""}
       >
         {canViewInternalDocs ? (
           canEdit ? (
             <ProjectRichTextEditor
               value={credentials}
               onChange={setCredentials}
-              variant="workspace"
-              className="flex h-full min-h-0 w-full flex-1"
+              variant={richTextVariant}
+              className={richTextClassName}
             />
           ) : (
             <ProjectRichTextViewer
               value={credentials}
               emptyMessage="No credential notes added yet."
-              variant="workspace"
-              className="flex h-full min-h-0 w-full flex-1"
+              variant={richTextVariant}
+              className={richTextClassName}
             />
           )
         ) : (

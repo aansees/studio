@@ -32,6 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 import { SearchIcon } from "lucide-react";
 
 type TeamMember = {
@@ -100,6 +104,14 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
       return matchesQuery && matchesRole && matchesStatus;
     });
   }, [query, roleFilter, sortedTeam, statusFilter]);
+
+  const {
+    currentPage,
+    paginatedItems: visibleTeam,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(filteredTeam);
 
   async function refreshTeam() {
     const response = await fetch("/api/team", { cache: "no-store" });
@@ -322,7 +334,7 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTeam.map((member) => {
+              visibleTeam.map((member) => {
                 const pending = Boolean(actionPendingById[member.id]);
                 return (
                   <TableRow key={member.id}>
@@ -368,6 +380,13 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
           </TableBody>
         </Table>
       </Frame>
+
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

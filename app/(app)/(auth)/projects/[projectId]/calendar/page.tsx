@@ -1,5 +1,5 @@
 import { endOfDay, isBefore, startOfDay } from "date-fns";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ProjectTaskCalendar } from "@/components/layout/dashboard/project-task-calendar";
 import { Frame, FramePanel } from "@/components/ui/frame";
@@ -42,6 +42,10 @@ export default async function ProjectCalendarPage({
 }) {
   const { projectId } = await params;
   const { user } = await requireSession();
+  if (user.role === "client") {
+    redirect(`/projects/${projectId}`);
+  }
+
   const project = await getProjectByIdForUser(projectId, user);
 
   if (!project) {

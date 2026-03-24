@@ -21,6 +21,9 @@ export async function GET(
   try {
     const { projectId } = await params
     const { user: currentUser } = await requireApiSession()
+    if (currentUser.role === "client") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const allowed = await canAccessProject(currentUser, projectId)
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })

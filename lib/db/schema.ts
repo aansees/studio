@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm"
 import {
+  bigint,
   boolean,
   customType,
   datetime,
@@ -320,6 +321,28 @@ export const taskChatAttachment = mysqlTable(
   ],
 )
 
+export const projectChatMessage = mysqlTable(
+  "projectChatMessage",
+  {
+    id: varchar("id", { length: 191 }).primaryKey(),
+    roomId: varchar("roomId", { length: 191 }).notNull(),
+    projectId: varchar("projectId", { length: 191 }).notNull(),
+    senderId: varchar("senderId", { length: 191 }).notNull(),
+    senderRole: mysqlEnum("senderRole", roleValues).notNull(),
+    displayName: varchar("displayName", { length: 191 }).notNull(),
+    text: text("text").notNull(),
+    replyToMessageId: varchar("replyToMessageId", { length: 191 }),
+    createdAtMs: bigint("createdAtMs", { mode: "number" }).notNull(),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => [
+    index("project_chat_room_idx").on(table.roomId),
+    index("project_chat_project_idx").on(table.projectId),
+    index("project_chat_sender_idx").on(table.senderId),
+    index("project_chat_created_at_ms_idx").on(table.createdAtMs),
+  ],
+)
+
 export const notification = mysqlTable(
   "notification",
   {
@@ -347,6 +370,7 @@ export const userRelations = relations(user, ({ many }) => ({
   taskAssignments: many(taskAssignment),
   tasksCreated: many(task, { relationName: "taskCreator" }),
   projectMemberships: many(projectMember),
+  projectChatMessages: many(projectChatMessage),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -380,6 +404,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   members: many(projectMember),
   tasks: many(task),
+  chatMessages: many(projectChatMessage),
 }))
 
 export const projectMemberRelations = relations(projectMember, ({ one }) => ({
@@ -458,6 +483,17 @@ export const taskChatAttachmentRelations = relations(taskChatAttachment, ({ one 
   }),
 }))
 
+export const projectChatMessageRelations = relations(projectChatMessage, ({ one }) => ({
+  project: one(project, {
+    fields: [projectChatMessage.projectId],
+    references: [project.id],
+  }),
+  sender: one(user, {
+    fields: [projectChatMessage.senderId],
+    references: [user.id],
+  }),
+}))
+
 export const notificationRelations = relations(notification, ({ one }) => ({
   user: one(user, {
     fields: [notification.userId],
@@ -482,6 +518,7 @@ export const appSchema = {
   taskComment,
   taskChatMessage,
   taskChatAttachment,
+  projectChatMessage,
   notification,
 }
 

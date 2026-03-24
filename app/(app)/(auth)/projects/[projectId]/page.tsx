@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRightIcon } from "lucide-react";
 
+import { ProjectDocsWorkspace } from "@/components/layout/dashboard/project-docs-workspace";
 import { ProjectTasksWorkspace } from "@/components/layout/dashboard/project-tasks-workspace";
 import {
   Avatar,
@@ -13,10 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Frame, FramePanel } from "@/components/ui/frame";
-import {
-  TASK_STATUSES,
-  type TaskStatus,
-} from "@/lib/constants/domain";
+import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
 import { requireSession } from "@/lib/session";
 import {
   canManageProject,
@@ -24,6 +22,7 @@ import {
   getProjectAnalytics,
   listProjectMembersForUser,
 } from "@/lib/services/projects";
+import { projectTaskSummary } from "@/lib/services/tasks";
 import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
 import { listProjectTasksForUser } from "@/lib/services/tasks";
 
@@ -45,6 +44,87 @@ export default async function ProjectDetailsPage({
 
   if (!project) {
     notFound();
+  }
+
+  if (user.role === "client") {
+    const summary = await projectTaskSummary(projectId);
+
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Project Overview</h2>
+            <p className="text-sm text-muted-foreground">
+              See the latest status, deadline, and shared plan for this project.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/projects/${projectId}/chat`}>Open chats</Link>
+          </Button>
+        </div>
+
+        <Frame>
+          <FramePanel className="space-y-4 p-4 md:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 text-base font-semibold">
+                <span>{project.name}</span>
+                <Badge variant="outline">{project.status}</Badge>
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              {project.description || "No project description available."}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${project.progressPercent}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+              <div>
+                <div className="text-muted-foreground">Total tasks</div>
+                <div className="text-lg font-semibold">{summary.total}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Completed</div>
+                <div className="text-lg font-semibold">{summary.done}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Overdue</div>
+                <div className="text-lg font-semibold">{summary.overdue}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Deadline</div>
+                <div className="text-lg font-semibold">
+                  {project.endDate
+                    ? new Date(project.endDate).toLocaleDateString()
+                    : "-"}
+                </div>
+              </div>
+            </div>
+          </FramePanel>
+        </Frame>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium">Project Plan & Resources</h3>
+            <p className="text-sm text-muted-foreground">
+              Shared project notes and approved resources for this delivery.
+            </p>
+          </div>
+          <ProjectDocsWorkspace
+            projectId={projectId}
+            canEdit={false}
+            canViewInternalDocs={false}
+            initialNotes={project.notes ?? ""}
+            initialDevLinks={project.devLinks ?? ""}
+            initialCredentials={project.credentials ?? ""}
+            layout="embedded"
+          />
+        </div>
+      </div>
+    );
   }
 
   const [analytics, tasks, members, projectManager] = await Promise.all([

@@ -24,6 +24,9 @@ export async function GET(
   try {
     const { projectId } = await params
     const { user } = await requireApiSession()
+    if (user.role === "client") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const allowed = await canAccessProject(user, projectId)
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
@@ -42,6 +45,9 @@ export async function POST(
   try {
     const { projectId } = await params
     const { user } = await requireApiSession()
+    if (user.role === "client") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const body = createTaskSchema.parse(await request.json())
     const taskId = await createTaskByManager(user, { ...body, projectId })
     return NextResponse.json({ taskId }, { status: 201 })

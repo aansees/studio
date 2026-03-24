@@ -8,6 +8,7 @@ import { ProjectDocsWorkspace } from "@/components/layout/dashboard/project-docs
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TablePagination, useTablePagination } from "@/components/ui/table-pagination"
 import { Frame, FramePanel } from "@/components/ui/frame"
 
 type ProjectMemberRow = {
@@ -46,6 +47,13 @@ export function ProjectOverviewDeepDive({
 }) {
   const showEmbeddedWorkspace =
     Boolean(embeddedWorkspace) && userRole === "developer" && !projectManager
+  const {
+    currentPage,
+    paginatedItems: visibleMembers,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(members)
 
   return (
     <div className="space-y-4">
@@ -108,7 +116,7 @@ export function ProjectOverviewDeepDive({
                   </TableCell>
                 </TableRow>
               ) : (
-                members.map((member) => {
+                visibleMembers.map((member) => {
                   const hideIdentity = userRole === "client" && member.role === "developer"
                   return (
                     <TableRow key={member.userId}>
@@ -125,6 +133,12 @@ export function ProjectOverviewDeepDive({
             </TableBody>
           </Table>
         </Frame>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       <div className="space-y-3">
