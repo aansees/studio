@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { ProjectDocsWorkspace } from "@/components/layout/dashboard/project-docs-workspace";
 import { requireSession } from "@/lib/session";
@@ -6,6 +6,7 @@ import {
   canManageProject,
   getProjectByIdForUser,
 } from "@/lib/services/projects";
+import { Unauthorized } from "@/components/global/pages/401";
 
 export default async function ProjectPlanPage({
   params,
@@ -15,7 +16,7 @@ export default async function ProjectPlanPage({
   const { projectId } = await params;
   const { user } = await requireSession();
   if (user.role === "client") {
-    redirect(`/projects/${projectId}`);
+    return <Unauthorized />
   }
 
   const project = await getProjectByIdForUser(projectId, user);

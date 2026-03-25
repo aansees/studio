@@ -105,110 +105,121 @@ function ProjectTaskStatusSection({
   } = useTablePagination(statusRows);
 
   return (
-    <Frame className={className}>
-      <div
-        className={cn(
-          "flex items-center justify-between rounded-tl-2xl rounded-tr-2xl bg-muted/35 p-1",
-          !isOpen && "rounded-b-2xl",
-        )}
-      >
-        <button className="flex items-center gap-2" onClick={onToggle} type="button">
-          <Badge className={cn(meta.badgeClassName, "h-6 rounded-sm px-1")}>
-            <span className={`h-4 w-1 rounded-full ${meta.accent}`} />
-            {meta.label} ({statusRows.length})
-          </Badge>
-        </button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          onClick={onToggle}
-        >
-          {isOpen ? (
-            <ChevronUpIcon className="size-4" />
-          ) : (
-            <ChevronDownIcon className="size-4" />
+    <>
+      <Frame className={className}>
+        <div
+          className={cn(
+            "flex items-center justify-between rounded-tl-2xl rounded-tr-2xl bg-muted/35 p-1",
+            !isOpen && "rounded-b-2xl",
           )}
-        </Button>
-      </div>
+        >
+          <button
+            className="flex items-center gap-2"
+            onClick={onToggle}
+            type="button"
+          >
+            <Badge className={cn(meta.badgeClassName, "h-6 rounded-sm px-1")}>
+              <span className={`h-4 w-1 rounded-full ${meta.accent}`} />
+              {meta.label} ({statusRows.length})
+            </Badge>
+          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={onToggle}
+          >
+            {isOpen ? (
+              <ChevronUpIcon className="size-4" />
+            ) : (
+              <ChevronDownIcon className="size-4" />
+            )}
+          </Button>
+        </div>
 
-      {isOpen ? (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Deadline</TableHead>
-                <TableHead>People</TableHead>
-                <TableHead>Priority</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <Link
-                      href={`/projects/${row.projectId}/tasks/${row.id}`}
-                      className="font-medium underline-offset-4 hover:underline"
-                    >
-                      {row.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{row.type}</TableCell>
-                  <TableCell className="max-w-[360px] truncate text-muted-foreground">
-                    {row.description || "-"}
-                  </TableCell>
-                  <TableCell>
-                    {row.dueDate
-                      ? new Date(row.dueDate).toLocaleDateString()
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {row.people.length === 0 ? (
-                      <span className="text-muted-foreground">Unassigned</span>
-                    ) : (
-                      <AvatarGroup>
-                        {row.people.slice(0, 3).map((person) => (
-                          <Avatar key={person.id} size="sm">
-                            {person.image ? (
-                              <AvatarImage src={person.image} alt={person.name} />
-                            ) : null}
-                            <AvatarFallback>
-                              {getInitials(person.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {row.people.length > 3 ? (
-                          <AvatarGroupCount>
-                            +{row.people.length - 3}
-                          </AvatarGroupCount>
-                        ) : null}
-                      </AvatarGroup>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={priorityTone(row.priority)}>
-                      {row.priority}
-                    </Badge>
-                  </TableCell>
+        {isOpen ? (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>People</TableHead>
+                  <TableHead>Priority</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="px-4 pb-4">
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        </>
-      ) : null}
-    </Frame>
+              </TableHeader>
+              <TableBody>
+                {visibleRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      <Link
+                        href={`/projects/${row.projectId}/tasks/${row.id}`}
+                        className="font-medium underline-offset-4 hover:underline"
+                      >
+                        {row.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{row.type}</TableCell>
+                    <TableCell className="max-w-[360px] truncate text-muted-foreground">
+                      {row.description || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {row.dueDate
+                        ? new Date(row.dueDate).toLocaleDateString()
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {row.people.length === 0 ? (
+                        <span className="text-muted-foreground">
+                          Unassigned
+                        </span>
+                      ) : (
+                        <AvatarGroup>
+                          {row.people.slice(0, 3).map((person) => (
+                            <Avatar key={person.id} size="sm">
+                              {person.image ? (
+                                <AvatarImage
+                                  src={person.image}
+                                  alt={person.name}
+                                />
+                              ) : null}
+                              <AvatarFallback>
+                                {getInitials(person.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                          {row.people.length > 3 ? (
+                            <AvatarGroupCount>
+                              +{row.people.length - 3}
+                            </AvatarGroupCount>
+                          ) : null}
+                        </AvatarGroup>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={priorityTone(row.priority)}>
+                        {row.priority}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
+        ) : null}
+      </Frame>
+      <div className="pb-4">
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+    </>
   );
 }
 

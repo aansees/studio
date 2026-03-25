@@ -54,6 +54,31 @@ type CreateProjectInput = {
   credentials?: string
 }
 
+type CreateProjectProposalInput = {
+  name: string
+  notes?: string
+}
+
+async function getDefaultProposalLead() {
+  const [adminLead] = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    })
+    .from(user)
+    .where(and(eq(user.role, "admin"), eq(user.isActive, true)))
+    .orderBy(asc(user.createdAt), asc(user.name))
+    .limit(1)
+
+  if (!adminLead) {
+    throw new Error("No active admin is available to receive this proposal")
+  }
+
+  return adminLead
+}
+
 export async function listProjectsForUser(currentUser: SessionUser) {
   const rows = await (async () => {
     if (isAdmin(currentUser.role)) {
@@ -164,6 +189,10 @@ export async function getProjectByIdForUser(projectId: string, currentUser: Sess
 export async function canManageProject(currentUser: SessionUser, projectId: string) {
   if (isAdmin(currentUser.role)) {
     return true
+  }
+
+  if (currentUser.role !== "developer") {
+    return false
   }
 
   const [record] = await db
@@ -278,11 +307,27 @@ export async function createProjectAsAdmin(
   }
 
   if (memberIds.size > 0) {
+    const memberRecords = await db
+      .select({
+        id: user.id,
+        role: user.role,
+      })
+      .from(user)
+      .where(inArray(user.id, Array.from(memberIds)))
+    const roleByMemberId = new Map(
+      memberRecords.map((member) => [member.id, member.role]),
+    )
+
     await db.insert(projectMember).values(
       Array.from(memberIds).map((memberId) => ({
         projectId,
         userId: memberId,
-        role: memberId === input.clientId ? "client" : "developer",
+        role:
+          memberId === input.clientId
+            ? "client"
+            : roleByMemberId.get(memberId) === "admin"
+              ? "admin"
+              : "developer",
       })),
     )
   }
@@ -318,6 +363,57 @@ export async function createProjectAsAdmin(
   return projectId
 }
 
+export async function createProjectProposalAsClient(
+  currentUser: SessionUser,
+  input: CreateProjectProposalInput,
+) {
+  if (currentUser.role !== "client") {
+    throw new Error("Only clients can submit project proposals")
+  }
+
+  const adminLead = await getDefaultProposalLead()
+  const slug = `${toSlug(input.name)}-${Date.now().toString(36)}`
+
+  const [created] = await db
+    .insert(project)
+    .values({
+      slug,
+      name: input.name,
+      description: null,
+      status: "draft",
+      priority: "medium",
+      startDate: null,
+      endDate: null,
+      projectLeadId: adminLead.id,
+      clientId: currentUser.id,
+      notes: input.notes ?? null,
+      devLinks: null,
+      credentials: null,
+      createdById: currentUser.id,
+    })
+    .$returningId()
+
+  const projectId = created?.id
+  if (!projectId) {
+    throw new Error("Unable to create project proposal")
+  }
+
+  await db.insert(projectMember).values([
+    {
+      projectId,
+      userId: adminLead.id,
+      role: "admin",
+    },
+    {
+      projectId,
+      userId: currentUser.id,
+      role: "client",
+    },
+  ])
+
+  return projectId
+}
+
 export async function updateProjectByManager(
   currentUser: SessionUser,
   projectId: string,
@@ -340,7 +436,9 @@ export async function updateProjectByManager(
   }
 
   const isProjectManager =
-    isAdmin(currentUser.role) || existing.projectLeadId === currentUser.id
+    isAdmin(currentUser.role) ||
+    (currentUser.role === "developer" &&
+      existing.projectLeadId === currentUser.id)
   if (!isProjectManager) {
     throw new Error("Forbidden: only admins or project lead can update project")
   }
@@ -1053,7 +1151,10 @@ export async function updateProjectMembersAsAdmin(
     throw new Error("Project not found")
   }
 
-  const manager = isAdmin(currentUser.role) || existingProject.projectLeadId === currentUser.id
+  const manager =
+    isAdmin(currentUser.role) ||
+    (currentUser.role === "developer" &&
+      existingProject.projectLeadId === currentUser.id)
   if (!manager) {
     throw new Error("Forbidden: only admins or project lead can update members")
   }

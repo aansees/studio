@@ -169,6 +169,46 @@ export async function setUserRoleAsAdmin(
     .where(eq(user.id, targetUserId))
 }
 
+export async function setUserActiveStateAsAdmin(
+  currentUser: SessionUser,
+  targetUserId: string,
+  isActive: boolean,
+) {
+  if (!isAdmin(currentUser.role)) {
+    throw new Error("Only admins can update user status")
+  }
+
+  const [target] = await db
+    .select({
+      id: user.id,
+      role: user.role,
+      isActive: user.isActive,
+    })
+    .from(user)
+    .where(eq(user.id, targetUserId))
+    .limit(1)
+
+  if (!target) {
+    throw new Error("User not found")
+  }
+
+  if (target.role === "admin") {
+    throw new Error("Admin users are protected")
+  }
+
+  if (target.isActive === isActive) {
+    return
+  }
+
+  await db
+    .update(user)
+    .set({
+      isActive,
+      updatedAt: new Date(),
+    })
+    .where(eq(user.id, targetUserId))
+}
+
 export async function searchUsersForAssignment(
   currentUser: SessionUser,
   options?: {

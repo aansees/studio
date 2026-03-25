@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, Sparkle } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 function normalizePathname(pathname: string | null) {
   if (!pathname) return "/dashboard";
@@ -33,6 +35,9 @@ function getHeaderState(
   }
   if (pathname === "/projects") {
     return { section: "Projects" };
+  }
+  if (pathname === "/projects/new") {
+    return { section: "Projects", title: "New Proposal" };
   }
   if (pathname === "/team") {
     return { section: "Team" };
@@ -98,9 +103,11 @@ function getHeaderState(
 }
 
 export function SiteHeader({
+  userRole,
   projects,
   tasks,
 }: {
+  userRole: "admin" | "developer" | "client";
   projects: { id: string; name: string }[];
   tasks: { id: string; title: string }[];
 }) {
@@ -112,10 +119,12 @@ export function SiteHeader({
     tasks.map((task) => [task.id, task.title]),
   );
   const { section, title } = getHeaderState(pathname, projectsById, tasksById);
+  const showProposalAction =
+    userRole === "client" && normalizePathname(pathname) !== "/projects/new";
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6 justify-between">
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <SidebarTrigger className="-ml-1 flex sm:hidden" />
           <Separator
@@ -128,6 +137,14 @@ export function SiteHeader({
           )}
           <h1 className="truncate text-base font-medium">{title}</h1>
         </div>
+        {showProposalAction ? (
+          <Button asChild>
+            <Link href="/projects/new">
+              <Sparkle className="h-4 w-4 rounded-full bg-white fill-primary text-white" />
+              Start New Project
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </header>
   );

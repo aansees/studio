@@ -17,6 +17,10 @@ const roleProtectedPrefixes: Array<{
   allowedRoles: UserRole[]
 }> = [
   {
+    prefix: "/projects/new",
+    allowedRoles: ["client"],
+  },
+  {
     prefix: "/team",
     allowedRoles: ["admin"],
   },

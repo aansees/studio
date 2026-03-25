@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
+import { PROJECT_PRIORITIES, PROJECT_STATUSES } from "@/lib/constants/domain"
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
-import { createProjectAsAdmin, listProjectsForUser } from "@/lib/services/projects"
+import {
+  createProjectAsAdmin,
+  createProjectProposalAsClient,
+  listProjectsForUser,
+} from "@/lib/services/projects"
 
 const createProjectSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
-  status: z.enum(["draft", "ongoing", "on_hold", "completed", "cancelled"]).optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+  priority: z.enum(PROJECT_PRIORITIES).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   projectLeadId: z.string().optional(),
@@ -18,6 +23,11 @@ const createProjectSchema = z.object({
   notes: z.string().optional(),
   devLinks: z.string().optional(),
   credentials: z.string().optional(),
+})
+
+const createProposalSchema = z.object({
+  name: z.string().min(2),
+  notes: z.string().optional(),
 })
 
 export async function GET() {
@@ -32,9 +42,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await requireApiSession(["admin"])
-    const body = createProjectSchema.parse(await request.json())
-    const projectId = await createProjectAsAdmin(user, body)
+    const { user } = await requireApiSession(["admin", "client"])
+    const rawBody = await request.json()
+    const projectId =
+      user.role === "admin"
+        ? await createProjectAsAdmin(user, createProjectSchema.parse(rawBody))
+        : await createProjectProposalAsClient(
+            user,
+            createProposalSchema.parse(rawBody),
+          )
+
     return NextResponse.json({ projectId }, { status: 201 })
   } catch (error) {
     return errorResponse(error)

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
+import { PROJECT_PRIORITIES, PROJECT_STATUSES } from "@/lib/constants/domain"
 import { db } from "@/lib/db"
 import { project, projectMember, task } from "@/lib/db/schema"
 import { errorResponse } from "@/lib/http"
@@ -12,8 +13,8 @@ import { getProjectByIdForUser, updateProjectByManager } from "@/lib/services/pr
 const updateProjectSchema = z.object({
   name: z.string().min(2).optional(),
   description: z.string().optional(),
-  status: z.enum(["draft", "ongoing", "on_hold", "completed", "cancelled"]).optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+  priority: z.enum(PROJECT_PRIORITIES).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   projectLeadId: z.string().optional(),

@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { ProjectTasksWorkspace } from "@/components/layout/dashboard/project-tasks-workspace";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
@@ -10,6 +10,7 @@ import {
 } from "@/lib/services/projects";
 import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
 import { listProjectTasksForUser } from "@/lib/services/tasks";
+import { Unauthorized } from "@/components/global/pages";
 
 export default async function ProjectTasksPage({
   params,
@@ -19,7 +20,7 @@ export default async function ProjectTasksPage({
   const { projectId } = await params;
   const { user } = await requireSession();
   if (user.role === "client") {
-    redirect(`/projects/${projectId}`);
+    return <Unauthorized /> 
   }
 
   const project = await getProjectByIdForUser(projectId, user);

@@ -1,3 +1,4 @@
+import { NoProjectsYet } from "@/components/global/pages";
 import { ChartAreaInteractive } from "@/components/layout/dashboard/chart-area-interactive";
 import { DataTable } from "@/components/layout/dashboard/data-table";
 import { SectionCards } from "@/components/layout/dashboard/section-cards";
@@ -11,9 +12,17 @@ export default async function Page() {
   const { user } = await requireSession();
   const overview = await getDashboardOverview(user);
 
-  return (
-    <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6">
-      {user.role === "client" ? (
+  if (user.role === "client" && overview.recentProjects.length === 0) {
+    return (
+      <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6 relative h-[calc(100vh-49px)] overflow-hidden">
+        <NoProjectsYet />
+      </div>
+    );
+  }
+
+  if (user.role === "client") {
+    return (
+      <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6">
         <div className="space-y-1 text-blue-700 dark:text-indigo-400">
           <h2 className="text-xl font-semibold">
             Hello {user.name}, Preview your project
@@ -22,8 +31,14 @@ export default async function Page() {
             Track the latest delivery updates and keep the conversation moving.
           </p>
         </div>
-      ) : null}
 
+        <SectionCards cards={overview.cards} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="@container/main font-at-aero-regular flex flex-1 flex-col gap-4 p-4 md:p-6">
       <SectionCards cards={overview.cards} />
 
       <Frame className="grid gap-1 xl:grid-cols-3">
@@ -67,7 +82,7 @@ export default async function Page() {
 
       <DataTable
         data={overview.recentTasks}
-        canManageTasks={user.role !== "client"}
+        canManageTasks
         canBulkDelete={user.role === "admin"}
       />
     </div>

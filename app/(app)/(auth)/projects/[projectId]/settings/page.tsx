@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { ProjectDetailsEditor } from "@/components/layout/dashboard/project-details-editor";
 import { ProjectDocsLauncher } from "@/components/layout/dashboard/project-docs-launcher";
@@ -18,6 +18,7 @@ import {
   listAssignableUsersForProjectManager,
   listProjectMembersForUser,
 } from "@/lib/services/projects";
+import { Unauthorized } from "@/components/global/pages/401";
 
 export default async function ProjectSettingsPage({
   params,
@@ -27,7 +28,7 @@ export default async function ProjectSettingsPage({
   const { projectId } = await params;
   const { user } = await requireSession();
   if (user.role === "client") {
-    redirect(`/projects/${projectId}`);
+    return <Unauthorized />
   }
 
   const project = await getProjectByIdForUser(projectId, user);
@@ -42,7 +43,7 @@ export default async function ProjectSettingsPage({
   ]);
 
   if (!projectManager) {
-    redirect(`/projects/${projectId}/details`);
+    return <Unauthorized />;
   }
 
   const projectLead = members.find(

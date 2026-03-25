@@ -80,7 +80,8 @@ function MemberCombobox({
       }}
     >
       <ComboboxInput
-        className="w-full max-w-60"
+        className="w-full max-w-60 h-10 [&>div]:w-full"
+        inputClass="bg-[#f7f7f8] dark:bg-[#171719] rounded-lg w-full"
         placeholder={placeholder}
         showClear
       />

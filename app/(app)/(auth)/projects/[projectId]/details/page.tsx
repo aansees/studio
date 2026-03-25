@@ -1,9 +1,10 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 
 import { ProjectOverviewDeepDive } from "@/components/layout/dashboard/project-overview-deep-dive"
 import { PROJECT_PRIORITIES, type ProjectPriority } from "@/lib/constants/domain"
 import { requireSession } from "@/lib/session"
 import { canManageProject, getProjectByIdForUser, listProjectMembersForUser } from "@/lib/services/projects"
+import { Unauthorized } from "@/components/global/pages/401"
 
 export default async function ProjectDetailsTabPage({
   params,
@@ -13,7 +14,7 @@ export default async function ProjectDetailsTabPage({
   const { projectId } = await params
   const { user } = await requireSession()
   if (user.role === "client") {
-    redirect(`/projects/${projectId}`)
+    return <Unauthorized />
   }
 
   const project = await getProjectByIdForUser(projectId, user)

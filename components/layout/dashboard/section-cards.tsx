@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card"
 import { Frame, FramePanel } from "@/components/ui/frame"
 import type { DashboardCardItem } from "@/lib/dashboard/overview-types"
+import { cn } from "@/lib/utils"
 
 function getToneBadge(tone: DashboardCardItem["tone"]) {
   if (tone === "warning") {
@@ -37,7 +38,12 @@ function getToneBadge(tone: DashboardCardItem["tone"]) {
 
 export function SectionCards({ cards }: { cards: DashboardCardItem[] }) {
   return (
-    <Frame className="grid grid-cols-1 gap-1 md:grid-cols-2 xl:grid-cols-4">
+    <Frame
+      className={cn(
+        "grid grid-cols-1 gap-1 md:grid-cols-2",
+        cards.length === 3 ? "xl:grid-cols-3" : "xl:grid-cols-4",
+      )}
+    >
       {cards.map((card) => (
         <FramePanel key={card.id} className="m-0! h-full space-y-2 p-5">
           <CardHeader>

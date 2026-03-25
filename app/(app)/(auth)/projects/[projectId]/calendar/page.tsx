@@ -1,5 +1,5 @@
 import { endOfDay, isBefore, startOfDay } from "date-fns";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { ProjectTaskCalendar } from "@/components/layout/dashboard/project-task-calendar";
 import { Frame, FramePanel } from "@/components/ui/frame";
@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/session";
 import { getProjectByIdForUser } from "@/lib/services/projects";
 import { listProjectTasksForUser } from "@/lib/services/tasks";
 import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
+import { Unauthorized } from "@/components/global/pages";
 
 function getEventColor({
   priority,
@@ -43,7 +44,7 @@ export default async function ProjectCalendarPage({
   const { projectId } = await params;
   const { user } = await requireSession();
   if (user.role === "client") {
-    redirect(`/projects/${projectId}`);
+    return <Unauthorized />
   }
 
   const project = await getProjectByIdForUser(projectId, user);

@@ -1,0 +1,139 @@
+"use client"
+
+import { CircleAlertIcon } from "lucide-react"
+import { useId, useState, type ReactNode } from "react"
+
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+export function DeleteConfirmationDialog({
+  trigger,
+  confirmationValue,
+  confirmationLabel,
+  placeholder,
+  disabled = false,
+  pending = false,
+  confirmLabel = "Delete",
+  pendingLabel = "Deleting...",
+  title = "Final confirmation",
+  descriptionPrefix = "This action cannot be undone. To confirm, please enter the",
+  onConfirm,
+}: {
+  trigger: ReactNode
+  confirmationValue: string
+  confirmationLabel: string
+  placeholder: string
+  disabled?: boolean
+  pending?: boolean
+  confirmLabel?: string
+  pendingLabel?: string
+  title?: string
+  descriptionPrefix?: string
+  onConfirm: () => Promise<void> | void
+}) {
+  const id = useId()
+  const [inputValue, setInputValue] = useState("")
+  const [open, setOpen] = useState(false)
+
+  async function handleConfirm() {
+    try {
+      await onConfirm()
+      setInputValue("")
+      setOpen(false)
+    } catch {
+      // Keep the dialog open when the delete action fails.
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && pending) {
+          return
+        }
+        if (!nextOpen && !pending) {
+          setInputValue("")
+        }
+        setOpen(nextOpen)
+      }}
+    >
+      <DialogTrigger asChild disabled={disabled}>
+        {trigger}
+      </DialogTrigger>
+      <DialogContent showCloseButton={false}>
+        <div className="flex flex-col items-center gap-2">
+          <div
+            aria-hidden="true"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border"
+          >
+            <CircleAlertIcon className="opacity-80" size={16} />
+          </div>
+          <DialogHeader>
+            <DialogTitle className="sm:text-center">{title}</DialogTitle>
+            <DialogDescription className="sm:text-center">
+              {descriptionPrefix}{" "}
+              <span className="text-foreground">
+                {confirmationLabel.toLowerCase()}
+              </span>{" "}
+              <span className="text-foreground">{confirmationValue}</span>.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (inputValue !== confirmationValue || pending) {
+              return
+            }
+            void handleConfirm()
+          }}
+        >
+          <div className="*:not-first:mt-2">
+            <Label htmlFor={id}>{confirmationLabel}</Label>
+            <Input
+              id={id}
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder={placeholder}
+              type="text"
+              value={inputValue}
+              disabled={pending}
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                className="flex-1"
+                type="button"
+                variant="outline"
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              className="flex-1"
+              disabled={inputValue !== confirmationValue || pending}
+              type="submit"
+            >
+              {pending ? pendingLabel : confirmLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -13,6 +13,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input"
 import { SearchableUserSelect } from "@/components/ui/searchable-user-select"
 import { Textarea } from "@/components/ui/textarea"
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 import { VisualSelect } from "@/components/ui/visual-select"
 
 type EditableProject = {
@@ -119,13 +120,6 @@ export function ProjectDetailsEditor({
   }
 
   async function deleteProject() {
-    const confirmed = window.confirm(
-      `Delete "${initialProject.name}"? This will remove the project, tasks, and members.`,
-    )
-    if (!confirmed) {
-      return
-    }
-
     setDeletePending(true)
 
     try {
@@ -143,6 +137,7 @@ export function ProjectDetailsEditor({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete project"
       toast.error(message)
+      throw error
     } finally {
       setDeletePending(false)
     }
@@ -247,15 +242,23 @@ export function ProjectDetailsEditor({
 
       <div className="flex flex-col gap-3 pt-4 md:flex-row md:items-center md:justify-between">
         {canDeleteProject ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="border-destructive/30 text-destructive hover:bg-destructive/10"
-            onClick={() => void deleteProject()}
+          <DeleteConfirmationDialog
+            confirmationValue={initialProject.name}
+            confirmationLabel="Project name"
+            placeholder={`Type ${initialProject.name} to confirm`}
+            pending={deletePending}
             disabled={deletePending || pending}
-          >
-            {deletePending ? "Deleting..." : "Delete project"}
-          </Button>
+            onConfirm={deleteProject}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              >
+                Delete project
+              </Button>
+            }
+          />
         ) : (
           <div className="text-sm text-muted-foreground">
             Team leads can update project settings, but only admins can delete the project.

@@ -146,23 +146,33 @@ function createCardsForRole(
       description: "Projects delivered",
       tone: "positive",
     },
-    {
-      id: "tasks_overdue",
-      title: "Overdue Tasks",
-      value: overdueTasks,
-      description: "Pending tasks in your projects",
-      tone: overdueTasks > 0 ? "warning" : "positive",
-    },
   ]
 }
 
 export async function getDashboardOverview(currentUser: SessionUser): Promise<DashboardOverview> {
-  const [projects, tasks] = await Promise.all([
-    listProjectsForUser(currentUser),
-    listTasksForUser(currentUser),
-  ])
-
+  const projects = await listProjectsForUser(currentUser)
   const projectNameById = new Map(projects.map((item) => [item.id, item.name]))
+
+  const recentProjects: DashboardProjectRow[] = projects.slice(0, 12).map((item) => ({
+    id: item.id,
+    name: item.name,
+    status: normalizeProjectStatus(item.status),
+    priority: normalizeProjectPriority(item.priority),
+    progressPercent: item.progressPercent,
+    endDate: item.endDate ? item.endDate.toISOString() : null,
+  }))
+
+  if (currentUser.role === "client") {
+    return {
+      role: currentUser.role,
+      cards: createCardsForRole(currentUser.role, projects, []),
+      statusChart: [],
+      recentTasks: [],
+      recentProjects,
+    }
+  }
+
+  const tasks = await listTasksForUser(currentUser)
 
   const recentTasks: DashboardTaskRow[] = tasks.slice(0, 25).map((item) => {
     const assigneeLabel =
@@ -187,15 +197,6 @@ export async function getDashboardOverview(currentUser: SessionUser): Promise<Da
       dueDate: item.dueDate ? item.dueDate.toISOString() : null,
     }
   })
-
-  const recentProjects: DashboardProjectRow[] = projects.slice(0, 12).map((item) => ({
-    id: item.id,
-    name: item.name,
-    status: normalizeProjectStatus(item.status),
-    priority: normalizeProjectPriority(item.priority),
-    progressPercent: item.progressPercent,
-    endDate: item.endDate ? item.endDate.toISOString() : null,
-  }))
 
   const statusChart: DashboardStatusDatum[] = TASK_STATUSES.map((status) => ({
     status,

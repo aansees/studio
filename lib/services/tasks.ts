@@ -204,7 +204,6 @@ export async function createTaskByManager(currentUser: SessionUser, input: Creat
   const [targetProject] = await db
     .select({
       id: project.id,
-      projectLeadId: project.projectLeadId,
     })
     .from(project)
     .where(eq(project.id, input.projectId))
@@ -214,8 +213,7 @@ export async function createTaskByManager(currentUser: SessionUser, input: Creat
     throw new Error("Project not found")
   }
 
-  const manager =
-    isAdmin(currentUser.role) || targetProject.projectLeadId === currentUser.id
+  const manager = await canManageProject(currentUser, input.projectId)
   if (!manager) {
     throw new Error("Forbidden: only admins or project lead can create tasks")
   }
