@@ -8,7 +8,7 @@ import { project, projectMember, task } from "@/lib/db/schema"
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
 import { canAccessProject } from "@/lib/services/access-control"
-import { getProjectByIdForUser, updateProjectByManager } from "@/lib/services/projects"
+import { getProjectByIdForApi, updateProjectByManager } from "@/lib/services/projects"
 
 const updateProjectSchema = z.object({
   name: z.string().min(2).optional(),
@@ -30,7 +30,7 @@ export async function GET(
   try {
     const { projectId } = await params
     const { user } = await requireApiSession()
-    const data = await getProjectByIdForUser(projectId, user)
+    const data = await getProjectByIdForApi(projectId, user)
     if (!data) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 })
     }

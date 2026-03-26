@@ -6,7 +6,6 @@ import {
   datetime,
   index,
   int,
-  json,
   longtext,
   mysqlEnum,
   mysqlTable,
@@ -61,6 +60,39 @@ const longblob = customType<{
   },
 })
 
+const jsonText = customType<{
+  data: unknown
+  driverData: string | Buffer | null
+}>({
+  dataType() {
+    return "longtext"
+  },
+  fromDriver(value) {
+    const rawValue = value as string | Buffer | null | undefined
+
+    if (rawValue === null || typeof rawValue === "undefined") {
+      return null
+    }
+
+    if (typeof rawValue === "string") {
+      return JSON.parse(rawValue)
+    }
+
+    if (Buffer.isBuffer(rawValue)) {
+      return JSON.parse(rawValue.toString("utf8"))
+    }
+
+    return rawValue
+  },
+  toDriver(value) {
+    if (value === null || typeof value === "undefined") {
+      return null
+    }
+
+    return JSON.stringify(value)
+  },
+})
+
 export const user = mysqlTable(
   "user",
   {
@@ -88,7 +120,9 @@ export const session = mysqlTable(
     updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
     ipAddress: varchar("ipAddress", { length: 255 }),
     userAgent: text("userAgent"),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
   },
   (table) => [
     uniqueIndex("session_token_unique").on(table.token),
@@ -102,7 +136,9 @@ export const account = mysqlTable(
     id: varchar("id", { length: 191 }).primaryKey(),
     accountId: varchar("accountId", { length: 255 }).notNull(),
     providerId: varchar("providerId", { length: 255 }).notNull(),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     accessToken: longtext("accessToken"),
     refreshToken: longtext("refreshToken"),
     idToken: longtext("idToken"),
@@ -127,15 +163,12 @@ export const verification = mysqlTable(
   {
     id: varchar("id", { length: 191 }).primaryKey(),
     identifier: varchar("identifier", { length: 191 }).notNull(),
-    value: varchar("value", { length: 255 }).notNull(),
+    value: text("value").notNull(),
     expiresAt: timestamp("expiresAt").notNull(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
   },
-  (table) => [
-    index("verification_identifier_idx").on(table.identifier),
-    uniqueIndex("verification_value_unique").on(table.value),
-  ],
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
 )
 
 export const twoFactor = mysqlTable(
@@ -144,7 +177,9 @@ export const twoFactor = mysqlTable(
     id: varchar("id", { length: 191 }).primaryKey(),
     secret: varchar("secret", { length: 512 }).notNull(),
     backupCodes: text("backupCodes").notNull(),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
   },
@@ -160,7 +195,9 @@ export const passkey = mysqlTable(
     id: varchar("id", { length: 191 }).primaryKey(),
     name: varchar("name", { length: 191 }),
     publicKey: longtext("publicKey").notNull(),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     credentialID: varchar("credentialID", { length: 512 }).notNull(),
     counter: int("counter").notNull().default(0),
     deviceType: varchar("deviceType", { length: 64 }).notNull(),
@@ -188,13 +225,20 @@ export const project = mysqlTable(
     startDate: datetime("startDate", { mode: "date" }),
     endDate: datetime("endDate", { mode: "date" }),
     completedAt: datetime("completedAt", { mode: "date" }),
-    projectLeadId: varchar("projectLeadId", { length: 191 }).notNull(),
-    clientId: varchar("clientId", { length: 191 }),
+    projectLeadId: varchar("projectLeadId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    clientId: varchar("clientId", { length: 191 }).references(() => user.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
     progressPercent: int("progressPercent").notNull().default(0),
     notes: longtext("notes"),
     devLinks: longtext("devLinks"),
     credentials: longtext("credentials"),
-    createdById: varchar("createdById", { length: 191 }).notNull(),
+    createdById: varchar("createdById", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
   },
@@ -209,8 +253,12 @@ export const project = mysqlTable(
 export const projectMember = mysqlTable(
   "projectMember",
   {
-    projectId: varchar("projectId", { length: 191 }).notNull(),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    projectId: varchar("projectId", { length: 191 })
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     role: mysqlEnum("role", roleValues).notNull().default("developer"),
     joinedAt: timestamp("joinedAt").notNull().defaultNow(),
   },
@@ -224,14 +272,21 @@ export const task = mysqlTable(
   "task",
   {
     id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
-    projectId: varchar("projectId", { length: 191 }).notNull(),
+    projectId: varchar("projectId", { length: 191 })
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
     title: varchar("title", { length: 191 }).notNull(),
     description: text("description"),
     type: mysqlEnum("type", taskTypeValues).notNull().default("feature"),
     priority: mysqlEnum("priority", taskPriorityValues).notNull().default("medium"),
     status: mysqlEnum("status", taskStatusValues).notNull().default("todo"),
-    assigneeId: varchar("assigneeId", { length: 191 }),
-    createdById: varchar("createdById", { length: 191 }).notNull(),
+    assigneeId: varchar("assigneeId", { length: 191 }).references(() => user.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    createdById: varchar("createdById", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
     dueDate: datetime("dueDate", { mode: "date" }),
     startedAt: datetime("startedAt", { mode: "date" }),
     completedAt: datetime("completedAt", { mode: "date" }),
@@ -249,8 +304,12 @@ export const task = mysqlTable(
 export const taskAssignment = mysqlTable(
   "taskAssignment",
   {
-    taskId: varchar("taskId", { length: 191 }).notNull(),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    taskId: varchar("taskId", { length: 191 })
+      .notNull()
+      .references(() => task.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     assignedAt: timestamp("assignedAt").notNull().defaultNow(),
   },
   (table) => [
@@ -264,8 +323,12 @@ export const taskComment = mysqlTable(
   "taskComment",
   {
     id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
-    taskId: varchar("taskId", { length: 191 }).notNull(),
-    authorId: varchar("authorId", { length: 191 }).notNull(),
+    taskId: varchar("taskId", { length: 191 })
+      .notNull()
+      .references(() => task.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    authorId: varchar("authorId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
     body: text("body").notNull(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
@@ -281,13 +344,17 @@ export const taskChatMessage = mysqlTable(
   {
     id: varchar("id", { length: 191 }).primaryKey(),
     roomId: varchar("roomId", { length: 191 }).notNull(),
-    taskId: varchar("taskId", { length: 191 }).notNull(),
-    senderId: varchar("senderId", { length: 191 }).notNull(),
+    taskId: varchar("taskId", { length: 191 })
+      .notNull()
+      .references(() => task.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    senderId: varchar("senderId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
     senderRole: mysqlEnum("senderRole", roleValues).notNull(),
     displayName: varchar("displayName", { length: 191 }).notNull(),
     text: text("text").notNull(),
     replyToMessageId: varchar("replyToMessageId", { length: 191 }),
-    reactions: json("reactions"),
+    reactions: jsonText("reactions").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => [
@@ -301,8 +368,12 @@ export const taskChatAttachment = mysqlTable(
   "taskChatAttachment",
   {
     id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
-    messageId: varchar("messageId", { length: 191 }).notNull(),
-    taskId: varchar("taskId", { length: 191 }).notNull(),
+    messageId: varchar("messageId", { length: 191 })
+      .notNull()
+      .references(() => taskChatMessage.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    taskId: varchar("taskId", { length: 191 })
+      .notNull()
+      .references(() => task.id, { onDelete: "cascade", onUpdate: "cascade" }),
     kind: mysqlEnum("kind", chatAttachmentKindValues).notNull(),
     fileName: varchar("fileName", { length: 191 }),
     mimeType: varchar("mimeType", { length: 191 }).notNull(),
@@ -326,8 +397,12 @@ export const projectChatMessage = mysqlTable(
   {
     id: varchar("id", { length: 191 }).primaryKey(),
     roomId: varchar("roomId", { length: 191 }).notNull(),
-    projectId: varchar("projectId", { length: 191 }).notNull(),
-    senderId: varchar("senderId", { length: 191 }).notNull(),
+    projectId: varchar("projectId", { length: 191 })
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    senderId: varchar("senderId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
     senderRole: mysqlEnum("senderRole", roleValues).notNull(),
     displayName: varchar("displayName", { length: 191 }).notNull(),
     text: text("text").notNull(),
@@ -347,11 +422,13 @@ export const notification = mysqlTable(
   "notification",
   {
     id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
-    userId: varchar("userId", { length: 191 }).notNull(),
+    userId: varchar("userId", { length: 191 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
     event: mysqlEnum("event", notificationEventValues).notNull(),
     title: varchar("title", { length: 191 }).notNull(),
     body: text("body"),
-    metadata: json("metadata"),
+    metadata: jsonText("metadata").$type<Record<string, unknown> | null>(),
     readAt: datetime("readAt", { mode: "date" }),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },

@@ -17,16 +17,26 @@ const SUPPORTED_AUDIO_TYPES = new Set([
   "audio/mpeg",
 ])
 
+const FILE_NAME_CONTROL_CHARS = /[\u0000-\u001f\u007f]+/g
+const FILE_NAME_UNSAFE_CHARS = /[\\/:*?"<>|;=]+/g
+
 function toBuffer(file: File) {
   return file.arrayBuffer().then((value) => Buffer.from(value))
 }
 
-function baseName(fileName: string | undefined, fallback: string) {
-  if (!fileName) {
-    return fallback
-  }
+export function sanitizeAttachmentFileName(fileName: string | undefined, fallback: string) {
+  const baseName = fileName ? path.basename(fileName) : fallback
+  const sanitized = baseName
+    .replace(FILE_NAME_CONTROL_CHARS, "")
+    .replace(FILE_NAME_UNSAFE_CHARS, "-")
+    .trim()
 
-  return path.basename(fileName, path.extname(fileName)) || fallback
+  return sanitized.length > 0 ? sanitized : fallback
+}
+
+function baseName(fileName: string | undefined, fallback: string) {
+  const sanitizedFileName = sanitizeAttachmentFileName(fileName, fallback)
+  return path.basename(sanitizedFileName, path.extname(sanitizedFileName)) || fallback
 }
 
 async function compressImage(file: File): Promise<PersistedChatAttachmentInput> {
@@ -84,7 +94,7 @@ async function prepareAudio(file: File): Promise<PersistedChatAttachmentInput> {
 
   return {
     kind: "audio",
-    fileName: file.name || "voice-message.webm",
+    fileName: sanitizeAttachmentFileName(file.name, "voice-message.webm"),
     mimeType: file.type || "audio/webm",
     sizeBytes: file.size,
     binary: await toBuffer(file),

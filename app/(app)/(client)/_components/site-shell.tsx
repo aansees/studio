@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { HomeFooter } from "./home-footer";
 import { TransitionRouterShell } from "./transition-router-shell";
+import { registerDocumentEntryPath } from "./document-entry-state";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -12,6 +13,7 @@ type SiteShellProps = {
 
 export function SiteShell({ children }: SiteShellProps) {
   const pathname = usePathname();
+  registerDocumentEntryPath(pathname);
 
   return (
     <TransitionRouterShell>

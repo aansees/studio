@@ -7,7 +7,7 @@ import { requireApiSession } from "@/lib/session"
 import {
   createProjectAsAdmin,
   createProjectProposalAsClient,
-  listProjectsForUser,
+  listProjectsForApi,
 } from "@/lib/services/projects"
 
 const createProjectSchema = z.object({
@@ -33,7 +33,7 @@ const createProposalSchema = z.object({
 export async function GET() {
   try {
     const { user } = await requireApiSession()
-    const projects = await listProjectsForUser(user)
+    const projects = await listProjectsForApi(user)
     return NextResponse.json({ data: projects })
   } catch (error) {
     return errorResponse(error)

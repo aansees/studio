@@ -39,6 +39,47 @@ function sanitizeProjectForUser<T extends { devLinks: string | null; credentials
   }
 }
 
+type ProjectRecord = typeof project.$inferSelect
+
+export type ClientProjectApiView = Pick<
+  ProjectRecord,
+  | "id"
+  | "slug"
+  | "name"
+  | "description"
+  | "status"
+  | "startDate"
+  | "endDate"
+  | "completedAt"
+  | "progressPercent"
+  | "notes"
+  | "createdAt"
+  | "updatedAt"
+>
+
+export type ProjectApiView = ProjectRecord | ClientProjectApiView
+
+function toProjectApiView(currentUser: SessionUser, projectRecord: ProjectRecord): ProjectApiView {
+  if (currentUser.role !== "client") {
+    return projectRecord
+  }
+
+  return {
+    id: projectRecord.id,
+    slug: projectRecord.slug,
+    name: projectRecord.name,
+    description: projectRecord.description,
+    status: projectRecord.status,
+    startDate: projectRecord.startDate,
+    endDate: projectRecord.endDate,
+    completedAt: projectRecord.completedAt,
+    progressPercent: projectRecord.progressPercent,
+    notes: projectRecord.notes,
+    createdAt: projectRecord.createdAt,
+    updatedAt: projectRecord.updatedAt,
+  }
+}
+
 type CreateProjectInput = {
   name: string
   description?: string
@@ -135,6 +176,11 @@ export async function listProjectsForUser(currentUser: SessionUser) {
   return rows.map((record) => sanitizeProjectForUser(currentUser, record))
 }
 
+export async function listProjectsForApi(currentUser: SessionUser) {
+  const rows = await listProjectsForUser(currentUser)
+  return rows.map((record) => toProjectApiView(currentUser, record))
+}
+
 export async function getProjectByIdForUser(projectId: string, currentUser: SessionUser) {
   if (isAdmin(currentUser.role)) {
     const [record] = await db.select().from(project).where(eq(project.id, projectId)).limit(1)
@@ -184,6 +230,11 @@ export async function getProjectByIdForUser(projectId: string, currentUser: Sess
     .limit(1)
 
   return record ? sanitizeProjectForUser(currentUser, record) : null
+}
+
+export async function getProjectByIdForApi(projectId: string, currentUser: SessionUser) {
+  const record = await getProjectByIdForUser(projectId, currentUser)
+  return record ? toProjectApiView(currentUser, record) : null
 }
 
 export async function canManageProject(currentUser: SessionUser, projectId: string) {
@@ -276,6 +327,50 @@ export async function createProjectAsAdmin(
 
   const slug = `${toSlug(input.name)}-${Date.now().toString(36)}`
   const leadId = input.projectLeadId ?? currentUser.id
+  const normalizedTeamMemberIds = Array.from(
+    new Set(
+      (input.teamMemberIds ?? [])
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .filter((value) => value !== leadId && value !== input.clientId),
+    ),
+  )
+  const requestedIds = Array.from(
+    new Set([leadId, ...normalizedTeamMemberIds, ...(input.clientId ? [input.clientId] : [])]),
+  )
+  const requestedUsers =
+    requestedIds.length > 0
+      ? await db
+          .select({
+            id: user.id,
+            role: user.role,
+          })
+          .from(user)
+          .where(inArray(user.id, requestedIds))
+      : []
+  const roleByUserId = new Map(requestedUsers.map((member) => [member.id, member.role]))
+
+  if (requestedUsers.length !== requestedIds.length) {
+    throw new Error("One or more selected users do not exist")
+  }
+
+  const leadRole = roleByUserId.get(leadId)
+  if (leadRole !== "admin" && leadRole !== "developer") {
+    throw new Error("Project lead must be an admin or developer")
+  }
+
+  if (input.clientId) {
+    const clientRole = roleByUserId.get(input.clientId)
+    if (clientRole !== "client") {
+      throw new Error("Selected client must have client role")
+    }
+  }
+
+  for (const memberId of normalizedTeamMemberIds) {
+    if (roleByUserId.get(memberId) !== "developer") {
+      throw new Error("Team members must have developer role")
+    }
+  }
 
   const [created] = await db
     .insert(project)
@@ -301,23 +396,12 @@ export async function createProjectAsAdmin(
     throw new Error("Unable to create project")
   }
 
-  const memberIds = new Set<string>([leadId, ...(input.teamMemberIds ?? [])])
+  const memberIds = new Set<string>([leadId, ...normalizedTeamMemberIds])
   if (input.clientId) {
     memberIds.add(input.clientId)
   }
 
   if (memberIds.size > 0) {
-    const memberRecords = await db
-      .select({
-        id: user.id,
-        role: user.role,
-      })
-      .from(user)
-      .where(inArray(user.id, Array.from(memberIds)))
-    const roleByMemberId = new Map(
-      memberRecords.map((member) => [member.id, member.role]),
-    )
-
     await db.insert(projectMember).values(
       Array.from(memberIds).map((memberId) => ({
         projectId,
@@ -325,7 +409,7 @@ export async function createProjectAsAdmin(
         role:
           memberId === input.clientId
             ? "client"
-            : roleByMemberId.get(memberId) === "admin"
+            : roleByUserId.get(memberId) === "admin"
               ? "admin"
               : "developer",
       })),

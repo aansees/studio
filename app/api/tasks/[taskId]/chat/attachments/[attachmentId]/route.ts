@@ -2,8 +2,26 @@ import { NextResponse } from "next/server"
 
 import { errorResponse } from "@/lib/http"
 import { requireApiSession } from "@/lib/session"
+import { sanitizeAttachmentFileName } from "@/lib/services/chat-attachments"
 import { loadTaskAttachmentBinary } from "@/lib/services/chat"
 import { canUserChatOnTask } from "@/lib/services/tasks"
+
+function encodeRfc5987Value(value: string) {
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  )
+}
+
+function buildInlineContentDisposition(fileName: string) {
+  const safeFileName = sanitizeAttachmentFileName(fileName, "attachment")
+    .replace(/[^\x20-\x7E]+/g, "_")
+    .replace(/["\\]/g, "_")
+
+  return `inline; filename="${safeFileName}"; filename*=UTF-8''${encodeRfc5987Value(
+    safeFileName,
+  )}`
+}
 
 export async function GET(
   _request: Request,
@@ -29,7 +47,9 @@ export async function GET(
       status: 200,
       headers: {
         "cache-control": "private, max-age=31536000, immutable",
-        "content-disposition": `inline; filename="${attachment.fileName ?? attachment.id}"`,
+        "content-disposition": buildInlineContentDisposition(
+          attachment.fileName ?? attachment.id,
+        ),
         "content-length": String(attachment.sizeBytes),
         "content-type": attachment.mimeType,
       },

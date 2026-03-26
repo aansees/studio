@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CustomEase } from "gsap/CustomEase";
@@ -18,15 +18,20 @@ import {
   featuredCardPositionsSmall,
   heroImagePaths,
 } from "./_components";
+import {
+  markHomeEntryOverlayPlayed,
+  shouldPlayHomeEntryOverlay,
+} from "./_components/document-entry-state";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger, CustomEase, SplitText);
 CustomEase.create("hop", "0.85, 0, 0.15, 1");
 
 export default function Page() {
+  const [shouldRunPreloader] = useState(() => shouldPlayHomeEntryOverlay("/"));
   const rootRef = useRef<HTMLElement>(null);
   const heroImageRef = useRef<HTMLImageElement>(null);
-  const isPreloaderActiveRef = useRef(true);
-  const isHeroImageFrozenRef = useRef(false);
+  const isPreloaderActiveRef = useRef(shouldRunPreloader);
+  const isHeroImageFrozenRef = useRef(!shouldRunPreloader);
   const scrollYRef = useRef(0);
   const bodyStylesRef = useRef<{
     backgroundColor: string;
@@ -55,6 +60,14 @@ export default function Page() {
       : initialStyles.top;
     document.body.style.width = shouldLock ? "100%" : initialStyles.width;
   }
+
+  useEffect(() => {
+    if (!shouldRunPreloader) {
+      return;
+    }
+
+    markHomeEntryOverlayPlayed();
+  }, [shouldRunPreloader]);
 
   useEffect(() => {
     const { style } = document.body;
@@ -89,6 +102,10 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    if (!shouldRunPreloader) {
+      return;
+    }
+
     const initialStyles = bodyStylesRef.current;
 
     if (!initialStyles) {
@@ -104,7 +121,7 @@ export default function Page() {
     document.body.style.position = "fixed";
     document.body.style.top = "0px";
     document.body.style.width = "100%";
-  }, []);
+  }, [shouldRunPreloader]);
 
   useEffect(() => {
     heroImagePaths.forEach((path) => {
@@ -457,6 +474,24 @@ export default function Page() {
             animationState.rotation = -15 + 15 * progress;
           },
         });
+
+        if (!shouldRunPreloader) {
+          isPreloaderActiveRef.current = false;
+          isHeroImageFrozenRef.current = true;
+          gsap.set(heroFrame, {
+            clearProps:
+              "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
+            x: 0,
+            y: 0,
+            xPercent: 0,
+            yPercent: animationState.yPercent,
+            scale: animationState.scale,
+            rotation: animationState.rotation,
+            autoAlpha: 1,
+            transformOrigin: "center center",
+          });
+          startHeroMotion();
+        }
 
         media.add("all", () => {
           return () => {
@@ -848,7 +883,7 @@ export default function Page() {
       ref={rootRef}
       className="relative min-h-screen overflow-x-hidden bg-[var(--otis-bg)] text-[var(--otis-fg)] [--otis-accent1:#ed6a5a] [--otis-accent2:#f4f1bb] [--otis-accent3:#9bc1bc] [--otis-accent4:#5d576b] [--otis-bg:#edf1e8] [--otis-bg2:#d7dbd2] [--otis-fg:#141414]"
     >
-      <TransitionOverlay />
+      {shouldRunPreloader ? <TransitionOverlay /> : null}
 
       <div className="relative w-screen overflow-x-hidden">
         <HeroSection heroImageRef={heroImageRef} />

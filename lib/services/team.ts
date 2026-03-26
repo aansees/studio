@@ -123,6 +123,10 @@ export async function promoteUserToDeveloperAsAdmin(
     throw new Error("User not found")
   }
 
+  if (target.role === "admin") {
+    throw new Error("Admin users are protected")
+  }
+
   await db
     .update(user)
     .set({
@@ -158,6 +162,23 @@ export async function setUserRoleAsAdmin(
   }
   if (role === "admin") {
     throw new Error("Admin role cannot be granted from web")
+  }
+
+  const [target] = await db
+    .select({
+      id: user.id,
+      role: user.role,
+    })
+    .from(user)
+    .where(eq(user.id, targetUserId))
+    .limit(1)
+
+  if (!target) {
+    throw new Error("User not found")
+  }
+
+  if (target.role === "admin") {
+    throw new Error("Admin users are protected")
   }
 
   await db

@@ -10,7 +10,7 @@ async function seedAdmin() {
     throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD are required")
   }
 
-  const name = env.ADMIN_NAME ?? "Agency Admin"
+  const name = env.ADMIN_NAME ?? "Ancs Admin"
 
   const [existing] = await db
     .select({ id: user.id, role: user.role })

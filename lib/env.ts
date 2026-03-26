@@ -3,11 +3,10 @@ import { z } from "zod"
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_NAME: z.string().default("Agency Studio"),
-  DATABASE_URL: z.string().default("mysql://agency:agency@127.0.0.1:3306/agency"),
+  DATABASE_URL: z.string(),
   BETTER_AUTH_SECRET: z
     .string()
-    .min(16, "BETTER_AUTH_SECRET must be at least 16 chars")
-    .default("dev-only-secret-change-me-1234567890"),
+    .min(16, "BETTER_AUTH_SECRET must be at least 16 chars"),
   BETTER_AUTH_URL: z.string().url().optional(),
   NEXT_PUBLIC_BETTER_AUTH_URL: z.string().url().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
