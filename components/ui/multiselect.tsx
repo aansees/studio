@@ -204,11 +204,11 @@ export default function MultipleSelector({
         align="start"
         className="w-full min-w-[var(--radix-popover-trigger-width)] border-input p-0"
       >
-        <Command shouldFilter={false}>
+        <Command>
           <CommandInput
             placeholder={placeholder}
             value={query}
-            onValueChange={setQuery}
+            onChange={(event) => setQuery(event.currentTarget.value)}
           />
           <CommandList>
             {loading ? (

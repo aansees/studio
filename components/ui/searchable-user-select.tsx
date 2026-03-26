@@ -118,13 +118,13 @@ export function SearchableUserSelect({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-full min-w-[var(--radix-popover-trigger-width)] border-input p-0"
+          className="w-full min-w-(--radix-popover-trigger-width) border-input p-0"
         >
-          <Command shouldFilter={false}>
+          <Command>
             <CommandInput
               placeholder={searchPlaceholder}
               value={query}
-              onValueChange={setQuery}
+              onChange={(event) => setQuery(event.currentTarget.value)}
             />
             <CommandList>
               {loading ? (
