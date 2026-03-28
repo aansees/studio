@@ -80,7 +80,7 @@ docker compose logs -f mysql-init
 What docker does:
 
 - Starts MySQL 8.4 with persistent volume
-- Applies schema from `./drizzle/*.sql` on first DB initialization
+- Waits for MySQL to become healthy, then runs tracked Drizzle migrations
 - Runs one-shot admin seed (`bun run seed:admin`)
 
 If you need a clean DB re-initialize:

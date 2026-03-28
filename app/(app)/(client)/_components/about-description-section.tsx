@@ -8,20 +8,20 @@ import { useRef } from "react";
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const aboutParagraphs = [
-  "Welcome to the corner of the internet where things get built, not just for the scroll, but for the story. This isn't just a site. It's a working archive of experiments, learnings, and quiet flexes.",
-  "I'm Juno Watts. I design with rhythm, build with care, and believe every detail deserves a reason to exist. From quick sketches to final deploy, everything here was made with intent and maybe a bit of caffeine. This space is built for motion, meaning, and messing around until it clicks.",
+  "ANCS Studio is built for brands that need more than a clean launch. We create modern websites and digital experiences where story leads, performance follows, and every detail earns its place.",
+  "From custom software to immersive 3D and GSAP-led motion, our work turns complex ideas into premium products that feel refined on screen and reliable in every interaction.",
 ];
 
 const keywordToneByWord: Record<string, string> = {
-  corner: "var(--otis-accent1)",
-  learnings: "var(--otis-accent1)",
-  deploy: "var(--otis-accent1)",
-  scroll: "var(--otis-accent2)",
-  rhythm: "var(--otis-accent2)",
-  caffeine: "var(--otis-accent2)",
-  archive: "var(--otis-accent3)",
-  detail: "var(--otis-accent3)",
-  messing: "var(--otis-accent3)",
+  immersive: "var(--otis-accent1)",
+  story: "var(--otis-accent1)",
+  detail: "var(--otis-accent1)",
+  brands: "var(--otis-accent2)",
+  refined: "var(--otis-accent2)",
+  "complex": "var(--otis-accent2)",
+  create: "var(--otis-accent3)",
+  "performance": "var(--otis-accent3)",
+  interaction: "var(--otis-accent3)",
 };
 
 const paragraphClass =
@@ -39,9 +39,7 @@ function normalizeWord(word: string) {
   return word.toLowerCase().replace(/[.,!?;:"]/g, "");
 }
 
-function renderWord(word: string, key: string) {
-  const keywordTone = keywordToneByWord[normalizeWord(word)];
-
+function renderWord(word: string, key: string, keywordTone?: string) {
   return (
     <span key={key} data-anime-word className={wordClass}>
       <span className="relative inline-flex">
@@ -235,13 +233,30 @@ export function AboutDescriptionSection() {
             <h2 className="sr-only">About description</h2>
 
             <div className="space-y-[3.5rem] max-[1000px]:space-y-[2.5rem]">
-              {aboutParagraphs.map((paragraph, paragraphIndex) => (
-                <p key={paragraph} className={paragraphClass}>
-                  {paragraph.split(/\s+/).map((word, wordIndex) =>
-                    renderWord(word, `p-${paragraphIndex}-w-${wordIndex}`),
-                  )}
-                </p>
-              ))}
+              {aboutParagraphs.map((paragraph, paragraphIndex) => {
+                const words = paragraph.split(/\s+/);
+                let previousWordWasKeyword = false;
+
+                return (
+                  <p key={paragraph} className={paragraphClass}>
+                    {words.map((word, wordIndex) => {
+                      const requestedTone = keywordToneByWord[normalizeWord(word)];
+                      const keywordTone =
+                        requestedTone && !previousWordWasKeyword
+                          ? requestedTone
+                          : undefined;
+
+                      previousWordWasKeyword = Boolean(requestedTone);
+
+                      return renderWord(
+                        word,
+                        `p-${paragraphIndex}-w-${wordIndex}`,
+                        keywordTone,
+                      );
+                    })}
+                  </p>
+                );
+              })}
             </div>
           </div>
         </div>

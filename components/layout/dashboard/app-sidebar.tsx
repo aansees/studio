@@ -3,9 +3,11 @@
 import * as React from "react";
 import {
   CalendarIcon,
+  CalendarDaysIcon,
   ChartColumnIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  Clock3Icon,
   CircleDotIcon,
   FolderIcon,
   LayoutDashboardIcon,
@@ -81,6 +83,9 @@ function getPrimaryNav(role: UserRole) {
       { title: "Dashboard", href: "/dashboard", icon: <LayoutDashboardIcon /> },
       { title: "Projects", href: "/projects", icon: <FolderIcon /> },
       { title: "Team", href: "/team", icon: <UsersIcon /> },
+      { title: "Event Types", href: "/bookings/event-types", icon: <CalendarDaysIcon /> },
+      { title: "Bookings", href: "/bookings", icon: <CalendarIcon /> },
+      { title: "Availability", href: "/bookings/availability", icon: <Clock3Icon /> },
       // { title: "Settings", href: "/settings", icon: <Settings2Icon /> },
     ];
   }
@@ -187,8 +192,8 @@ export function AppSidebar({
   >({});
 
   const isActive = (url: string) => {
-    if (url === "/dashboard") {
-      return currentPath === "/dashboard";
+    if (url === "/dashboard" || url === "/bookings") {
+      return currentPath === url;
     }
     return currentPath === url || currentPath.startsWith(`${url}/`);
   };

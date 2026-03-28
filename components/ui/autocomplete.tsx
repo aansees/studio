@@ -32,7 +32,7 @@ export function AutocompleteInput({
 
   return (
     <AutocompletePrimitive.InputGroup
-      className="relative not-has-[>*.w-full]:w-fit w-full text-foreground has-disabled:opacity-64"
+      className="relative w-full text-foreground has-disabled:opacity-64"
       data-slot="autocomplete-input-group"
     >
       {startAddon && (

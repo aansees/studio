@@ -133,7 +133,7 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Frame className="border-none dark:bg-[#18181b] py-5">
+      <Frame className="border-none bg-white dark:bg-[#18181b] py-5">
         <div className="text-center mb-5">
           <Link
             href="/"

@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Raleway } from "next/font/google";
 import localFont from "next/font/local";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import LenisProvider from "@/components/lenis-provider";
 import ClickSpark from "@/components/global/cursor-sparklin";
 import { RealtimeProvider } from "@/lib/realtime-client";
 import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
 
 const raleway = Raleway({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -60,20 +59,13 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${editorialNew.variable} ${greatVibes.variable} ${mondwest.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <RealtimeProvider api={{ url: "/api/realtime", withCredentials: true }}>
-            <LenisProvider>
-              {children}
-              <ClickSpark />
-            </LenisProvider>
-          </RealtimeProvider>
-          <Toaster />
-        </ThemeProvider>
+        <RealtimeProvider api={{ url: "/api/realtime", withCredentials: true }}>
+          <LenisProvider>
+            {children}
+            <ClickSpark />
+          </LenisProvider>
+        </RealtimeProvider>
+        <Toaster />
       </body>
     </html>
   );

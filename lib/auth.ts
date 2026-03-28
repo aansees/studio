@@ -67,6 +67,37 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
+      username: {
+        type: "string",
+        required: false,
+      },
+      bio: {
+        type: "string",
+        required: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
+      },
+      timezone: {
+        type: "string",
+        required: false,
+        defaultValue: "UTC",
+      },
+      bookingPageTitle: {
+        type: "string",
+        required: false,
+      },
+      bookingPageDescription: {
+        type: "string",
+        required: false,
+      },
+      bookingEnabled: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+        input: false,
+      },
       role: {
         type: "string",
         required: true,

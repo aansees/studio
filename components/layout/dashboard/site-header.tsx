@@ -45,8 +45,21 @@ function getHeaderState(
   if (pathname === "/settings") {
     return { section: "Account settings" };
   }
+  if (pathname === "/bookings") {
+    return { section: "Bookings" };
+  }
+  if (pathname === "/bookings/availability") {
+    return { section: "Bookings", title: "Availability" };
+  }
+  if (pathname === "/bookings/event-types") {
+    return { section: "Bookings", title: "Event Types" };
+  }
   if (pathname === "/mytask") {
     return { section: "My Tasks" };
+  }
+
+  if (pathname.startsWith("/bookings/event-types/")) {
+    return { section: "Bookings", title: "Event Type" };
   }
 
   if (pathname.startsWith("/tasks/")) {

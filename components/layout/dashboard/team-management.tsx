@@ -27,7 +27,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Frame } from "@/components/ui/frame";
+import {
+  Frame,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+} from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import {
   Menu,
@@ -270,35 +275,44 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
           }
         }}
       >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia>
-              <Image src={"/alert.png"} alt="Alert" height={500} width={500} />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Block user?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {memberToBlock
-                ? `${memberToBlock.name} will be blocked from signing in until you unblock the account.`
-                : "This user will be blocked from signing in until you unblock the account."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={(event) => {
-                if (blockPending) {
-                  event.preventDefault();
-                  return;
-                }
+        <AlertDialogContent size="sm" className="p-0 ring-0">
+          <Frame>
+            <FramePanel className="flex justify-center flex-col items-center gap-2">
+              <AlertDialogHeader>
+                <AlertDialogMedia>
+                  <Image
+                    src={"/alert.png"}
+                    alt="Alert"
+                    height={500}
+                    width={500}
+                  />
+                </AlertDialogMedia>
+              </AlertDialogHeader>
+              <AlertDialogTitle>Block user?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {memberToBlock
+                  ? `${memberToBlock.name} will be blocked from signing in until you unblock the account.`
+                  : "This user will be blocked from signing in until you unblock the account."}
+              </AlertDialogDescription>
+            </FramePanel>
+            <FrameFooter className="flex items-center justify-end gap-2 px-2.5 py-2">
+              <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={(event) => {
+                  if (blockPending) {
+                    event.preventDefault();
+                    return;
+                  }
 
-                event.preventDefault();
-                void confirmBlock();
-              }}
-            >
-              {blockPending ? "Blocking..." : "Block user"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+                  event.preventDefault();
+                  void confirmBlock();
+                }}
+              >
+                {blockPending ? "Blocking..." : "Block user"}
+              </AlertDialogAction>
+            </FrameFooter>
+          </Frame>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -352,73 +366,81 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
               <DialogTrigger asChild>
                 <Button>Invite Developer</Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite Developer</DialogTitle>
-                  <DialogDescription>
-                    Create a new account and assign the Developer role.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={submitInvite}>
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="developer-name">Name</FieldLabel>
-                      <Input
-                        id="developer-name"
-                        value={inviteForm.name}
-                        onChange={(event) =>
-                          setInviteForm((prev) => ({
-                            ...prev,
-                            name: event.target.value,
-                          }))
-                        }
-                        required
-                        minLength={2}
-                        placeholder="Developer name"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="developer-email">Email</FieldLabel>
-                      <Input
-                        id="developer-email"
-                        type="email"
-                        value={inviteForm.email}
-                        onChange={(event) =>
-                          setInviteForm((prev) => ({
-                            ...prev,
-                            email: event.target.value,
-                          }))
-                        }
-                        required
-                        placeholder="developer@agency.com"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="developer-password">
-                        Temporary Password
-                      </FieldLabel>
-                      <Input
-                        id="developer-password"
-                        type="password"
-                        value={inviteForm.password}
-                        onChange={(event) =>
-                          setInviteForm((prev) => ({
-                            ...prev,
-                            password: event.target.value,
-                          }))
-                        }
-                        required
-                        minLength={8}
-                        placeholder="At least 8 characters"
-                      />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter showCloseButton className="mt-4">
-                    <Button type="submit" disabled={invitePending}>
-                      {invitePending ? "Creating..." : "Create Developer"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+              <DialogContent className="p-0 ring-0">
+                <Frame>
+                  <FrameHeader>
+                    <DialogHeader>
+                      <DialogTitle>Invite Developer</DialogTitle>
+                      <DialogDescription>
+                        Create a new account and assign Developer.
+                      </DialogDescription>
+                    </DialogHeader>
+                  </FrameHeader>
+                  <form onSubmit={submitInvite}>
+                    <FramePanel>
+                      <FieldGroup>
+                        <Field>
+                          <FieldLabel htmlFor="developer-name">Name</FieldLabel>
+                          <Input
+                            id="developer-name"
+                            value={inviteForm.name}
+                            onChange={(event) =>
+                              setInviteForm((prev) => ({
+                                ...prev,
+                                name: event.target.value,
+                              }))
+                            }
+                            required
+                            minLength={2}
+                            placeholder="Developer name"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="developer-email">
+                            Email
+                          </FieldLabel>
+                          <Input
+                            id="developer-email"
+                            type="email"
+                            value={inviteForm.email}
+                            onChange={(event) =>
+                              setInviteForm((prev) => ({
+                                ...prev,
+                                email: event.target.value,
+                              }))
+                            }
+                            required
+                            placeholder="developer@agency.com"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="developer-password">
+                            Temporary Password
+                          </FieldLabel>
+                          <Input
+                            id="developer-password"
+                            type="password"
+                            value={inviteForm.password}
+                            onChange={(event) =>
+                              setInviteForm((prev) => ({
+                                ...prev,
+                                password: event.target.value,
+                              }))
+                            }
+                            required
+                            minLength={8}
+                            placeholder="At least 8 characters"
+                          />
+                        </Field>
+                      </FieldGroup>
+                    </FramePanel>
+                    <FrameFooter className="flex items-center justify-end px-2.5 py-2">
+                      <Button type="submit" disabled={invitePending}>
+                        {invitePending ? "Creating..." : "Create Developer"}
+                      </Button>
+                    </FrameFooter>
+                  </form>
+                </Frame>
               </DialogContent>
             </Dialog>
           </div>

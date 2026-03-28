@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { BookingAppsManager } from "@/components/layout/dashboard/booking-apps-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import {
   TablePagination,
   useTablePagination,
 } from "@/components/ui/table-pagination";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SettingsUser = {
@@ -35,8 +37,28 @@ type SettingsUser = {
   name: string;
   email: string;
   image: string | null;
+  username: string | null;
+  bio: string | null;
+  phone: string | null;
+  timezone: string;
+  bookingPageTitle: string | null;
+  bookingPageDescription: string | null;
+  bookingEnabled: boolean;
   role: "admin" | "developer" | "client";
   twoFactorEnabled: boolean;
+};
+
+type BookingAppConnection = {
+  id: string;
+  provider: string;
+  status: string;
+  accountEmail: string | null;
+  accountLabel: string;
+  externalCalendarName: string | null;
+  supportsCalendar: boolean;
+  supportsConferencing: boolean;
+  canCheckConflicts: boolean;
+  canCreateEvents: boolean;
 };
 
 type AuthResult<T = unknown> = {
@@ -67,14 +89,32 @@ function resolveError(result: AuthResult | null | undefined, fallback: string) {
   return fallback;
 }
 
-export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
+export function SettingsCenter({
+  initialUser,
+  initialBookingApps,
+}: {
+  initialUser: SettingsUser;
+  initialBookingApps: BookingAppConnection[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const passkeyQuery = authClient.useListPasskeys();
 
   const [name, setName] = useState(initialUser.name);
   const [image, setImage] = useState(initialUser.image ?? "");
+  const [username, setUsername] = useState(initialUser.username ?? "");
+  const [bio, setBio] = useState(initialUser.bio ?? "");
+  const [phone, setPhone] = useState(initialUser.phone ?? "");
+  const [timezone, setTimezone] = useState(initialUser.timezone);
+  const [bookingPageTitle, setBookingPageTitle] = useState(
+    initialUser.bookingPageTitle ?? "",
+  );
+  const [bookingPageDescription, setBookingPageDescription] = useState(
+    initialUser.bookingPageDescription ?? "",
+  );
   const [profilePending, setProfilePending] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -139,8 +179,11 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
   } = useTablePagination(socialProviders);
 
   const tabParam = searchParams.get("tab");
-  const defaultTab =
-    tabParam === "profile" || tabParam === "password" ? tabParam : "security";
+  const allowedTabs = new Set(["profile", "password", "security"]);
+  if (initialUser.role === "admin") {
+    allowedTabs.add("apps");
+  }
+  const defaultTab = allowedTabs.has(tabParam ?? "") ? tabParam! : "security";
 
   useEffect(() => {
     void loadLinkedAccounts();
@@ -248,17 +291,32 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
     event.preventDefault();
     setProfilePending(true);
     try {
-      const result = (await authClient.$fetch("/update-user", {
-        method: "POST",
-        body: {
+      const response = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
           name: name.trim(),
           image: image.trim() ? image.trim() : null,
-        },
-        throw: false,
-      })) as AuthResult;
+          username: username.trim() ? username.trim() : null,
+          bio: bio.trim() ? bio.trim() : null,
+          phone: phone.trim() ? phone.trim() : null,
+          timezone: timezone.trim(),
+          bookingPageTitle:
+            bookingPageTitle.trim() && initialUser.role === "admin"
+              ? bookingPageTitle.trim()
+              : null,
+          bookingPageDescription:
+            bookingPageDescription.trim() && initialUser.role === "admin"
+              ? bookingPageDescription.trim()
+              : null,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-      if (result?.error) {
-        throw new Error(resolveError(result, "Unable to update profile"));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to update profile");
       }
 
       toast.success("Profile updated");
@@ -513,69 +571,206 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
     }
   }
 
-  return (
-    <Tabs defaultValue={defaultTab} className="w-full">
-      <TabsList className="no-scrollbar w-full justify-start overflow-x-auto">
-        <TabsTrigger value="profile">Profile</TabsTrigger>
-        <TabsTrigger value="password">Password</TabsTrigger>
-        <TabsTrigger value="security">Security</TabsTrigger>
-      </TabsList>
-      <TabsContent value="profile" className="mt-4">
-        {/* <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Profile</h2>
-          <Badge variant="outline" className="uppercase">
-            {initialUser.role}
-          </Badge>
-        </div> */}
-        <Frame className="text-sm">
-          <FramePanel className="space-y-3">
-            <form onSubmit={submitProfile} className="space-y-3">
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="settings-name">Name</FieldLabel>
-                  <Input
-                    id="settings-name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    required
-                    minLength={2}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="settings-email">Email</FieldLabel>
-                  <Input
-                    id="settings-email"
-                    value={initialUser.email}
-                    readOnly
-                    disabled
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="settings-image">
-                    Profile Image URL
-                  </FieldLabel>
-                  <Input
-                    id="settings-image"
-                    type="url"
-                    placeholder="https://example.com/avatar.png"
-                    value={image}
-                    onChange={(event) => setImage(event.target.value)}
-                  />
-                </Field>
-              </FieldGroup>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={profilePending}>
-                  {profilePending ? "Saving..." : "Update Profile"}
-                </Button>
-              </div>
-            </form>
-          </FramePanel>
-        </Frame>
-      </TabsContent>
+  async function deleteAccount() {
+    if (!window.confirm("Delete this account permanently?")) {
+      return;
+    }
 
-      <TabsContent value="password" className="mt-4">
-        <Frame className="text-sm">
-          <FramePanel className="space-y-3">
+    setDeletePending(true);
+    try {
+      const result = (await authClient.$fetch("/delete-user", {
+        method: "POST",
+        body: {
+          callbackURL: "/login",
+          password: deletePassword.trim() ? deletePassword.trim() : undefined,
+        },
+        throw: false,
+      })) as AuthResult;
+
+      if (result?.error) {
+        throw new Error(resolveError(result, "Unable to delete account"));
+      }
+
+      window.location.href = "/login";
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to delete account",
+      );
+    } finally {
+      setDeletePending(false);
+    }
+  }
+
+  return (
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className="no-scrollbar w-full justify-start overflow-x-auto">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="password">Password</TabsTrigger>
+          {initialUser.role === "admin" ? (
+            <TabsTrigger value="apps">Apps</TabsTrigger>
+          ) : null}
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile" className="mt-4">
+          <div className="space-y-4">
+            <Frame className="text-sm">
+              <FramePanel className="space-y-3">
+                <form onSubmit={submitProfile} className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="uppercase">
+                      {initialUser.role}
+                    </Badge>
+                  </div>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="settings-name">Name</FieldLabel>
+                      <Input
+                        id="settings-name"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        required
+                        minLength={2}
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="settings-email">Email</FieldLabel>
+                      <Input
+                        id="settings-email"
+                        value={initialUser.email}
+                        readOnly
+                        disabled
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="settings-username">Username</FieldLabel>
+                      <Input
+                        id="settings-username"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="public booking slug"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="settings-phone">Phone</FieldLabel>
+                      <Input
+                        id="settings-phone"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        placeholder="+977..."
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="settings-timezone">Timezone</FieldLabel>
+                      <Input
+                        id="settings-timezone"
+                        value={timezone}
+                        onChange={(event) => setTimezone(event.target.value)}
+                        placeholder="Asia/Kathmandu"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="settings-image">
+                        Profile Image URL
+                      </FieldLabel>
+                      <Input
+                        id="settings-image"
+                        type="url"
+                        placeholder="https://example.com/avatar.png"
+                        value={image}
+                        onChange={(event) => setImage(event.target.value)}
+                      />
+                    </Field>
+                    <Field className="md:col-span-2">
+                      <FieldLabel htmlFor="settings-bio">About</FieldLabel>
+                      <Textarea
+                        id="settings-bio"
+                        value={bio}
+                        onChange={(event) => setBio(event.target.value)}
+                        placeholder="Add a short profile summary"
+                      />
+                    </Field>
+                    {initialUser.role === "admin" ? (
+                      <>
+                        <Field>
+                          <FieldLabel htmlFor="settings-booking-title">
+                            Booking page title
+                          </FieldLabel>
+                          <Input
+                            id="settings-booking-title"
+                            value={bookingPageTitle}
+                            onChange={(event) =>
+                              setBookingPageTitle(event.target.value)
+                            }
+                            placeholder="Intro call with admin"
+                          />
+                        </Field>
+                        <Field className="md:col-span-2">
+                          <FieldLabel htmlFor="settings-booking-description">
+                            Booking page description
+                          </FieldLabel>
+                          <Textarea
+                            id="settings-booking-description"
+                            value={bookingPageDescription}
+                            onChange={(event) =>
+                              setBookingPageDescription(event.target.value)
+                            }
+                            placeholder="Explain what bookers should expect"
+                          />
+                        </Field>
+                      </>
+                    ) : null}
+                  </FieldGroup>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit" disabled={profilePending}>
+                      {profilePending ? "Saving..." : "Update Profile"}
+                    </Button>
+                  </div>
+                </form>
+              </FramePanel>
+            </Frame>
+
+            <Frame className="text-sm">
+              <FramePanel className="space-y-3">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-destructive">
+                    Danger zone
+                  </h2>
+                  <FieldDescription>
+                    Permanently delete this account and remove access to the
+                    workspace.
+                  </FieldDescription>
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="settings-delete-password">
+                      Password for confirmation
+                    </FieldLabel>
+                    <Input
+                      id="settings-delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(event) => setDeletePassword(event.target.value)}
+                      placeholder="Optional for social-only accounts"
+                    />
+                  </Field>
+                </FieldGroup>
+                <div className="flex justify-end">
+                  <Button
+                    variant="destructive"
+                    onClick={() => void deleteAccount()}
+                    disabled={deletePending}
+                  >
+                    {deletePending ? "Deleting..." : "Delete Account"}
+                  </Button>
+                </div>
+              </FramePanel>
+            </Frame>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="password" className="mt-4">
+          <Frame className="text-sm">
+            <FramePanel className="space-y-3">
             <form onSubmit={submitChangePassword} className="space-y-3">
               <FieldGroup>
                 <Field>
@@ -625,12 +820,18 @@ export function SettingsCenter({ initialUser }: { initialUser: SettingsUser }) {
                 </Button>
               </div>
             </div>
-          </FramePanel>
-        </Frame>
-      </TabsContent>
+            </FramePanel>
+          </Frame>
+        </TabsContent>
 
-      <TabsContent value="security" className="mt-4">
-        <div className="space-y-4">
+        {initialUser.role === "admin" ? (
+          <TabsContent value="apps" className="mt-4">
+            <BookingAppsManager initialConnections={initialBookingApps} />
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="security" className="mt-4">
+          <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">Passkeys</h2>
             <div className="flex items-center gap-2">

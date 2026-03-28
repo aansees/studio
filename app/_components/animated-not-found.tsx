@@ -391,7 +391,7 @@ export function AnimatedNotFound({ slugLabel }: AnimatedNotFoundProps) {
 
               <div className="flex flex-col gap-[0.25em] text-center">
                 <p className={bodyTextClass}>Juno Merrick</p>
-                <p className={monoTextClass}>Director, WOW Studio</p>
+                <p className={monoTextClass}>Director, Ancs Studio</p>
               </div>
             </div>
           </div>

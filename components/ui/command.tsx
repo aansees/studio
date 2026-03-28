@@ -118,7 +118,7 @@ export function CommandInput({
       <AutocompleteInput
         autoFocus
         className={cn(
-          "border-transparent! bg-transparent! shadow-none before:hidden has-focus-visible:ring-0",
+          "pl-7",
           className,
         )}
         placeholder={placeholder}
