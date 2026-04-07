@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm"
 import { eachMonthOfInterval, endOfYear, format, startOfYear } from "date-fns"
 
 import { db } from "@/lib/db"
-import { project, projectMember, task, user } from "@/lib/db/schema"
+import { booking, bookingEventType, project, projectMember, task, user } from "@/lib/db/schema"
 import {
   TASK_PRIORITIES,
   TASK_STATUSES,
@@ -98,7 +98,10 @@ type CreateProjectInput = {
 type CreateProjectProposalInput = {
   name: string
   notes?: string
+  bookingId: string
 }
+
+const PROJECT_PROPOSAL_BOOKING_TAG = "[PROJECT_PROPOSAL_ID:"
 
 async function getDefaultProposalLead() {
   const [adminLead] = await db
@@ -456,6 +459,62 @@ export async function createProjectProposalAsClient(
   }
 
   const adminLead = await getDefaultProposalLead()
+  const [consultation] = await db
+    .select({
+      id: booking.id,
+      ownerUserId: booking.ownerUserId,
+      attendeeUserId: booking.attendeeUserId,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+      status: booking.status,
+      internalNotes: booking.internalNotes,
+      eventTypeTitle: bookingEventType.title,
+      eventTypeStatus: bookingEventType.status,
+    })
+    .from(booking)
+    .innerJoin(bookingEventType, eq(booking.eventTypeId, bookingEventType.id))
+    .where(eq(booking.id, input.bookingId))
+    .limit(1)
+
+  if (!consultation) {
+    throw new Error("Consultation booking not found")
+  }
+
+  if (consultation.attendeeUserId !== currentUser.id) {
+    throw new Error("The selected booking does not belong to your account")
+  }
+
+  if (consultation.ownerUserId !== adminLead.id) {
+    throw new Error("Booking must be scheduled with the proposal lead")
+  }
+
+  if (consultation.status !== "pending" && consultation.status !== "confirmed") {
+    throw new Error("Booking is no longer active")
+  }
+
+  if (consultation.eventTypeStatus !== "active") {
+    throw new Error("Booking event type is no longer available")
+  }
+
+  if (consultation.startsAt.getTime() < Date.now()) {
+    throw new Error("Please choose an upcoming consultation slot")
+  }
+
+  if (consultation.internalNotes?.includes(PROJECT_PROPOSAL_BOOKING_TAG)) {
+    throw new Error("This consultation booking is already linked to a project")
+  }
+
+  const baseNotes = input.notes?.trim()
+  const proposalNotes = [
+    baseNotes && baseNotes.length > 0 ? baseNotes : null,
+    `Consultation booking: ${consultation.eventTypeTitle}`,
+    `Booking reference: ${consultation.id}`,
+    `Starts at: ${consultation.startsAt.toISOString()}`,
+    `Ends at: ${consultation.endsAt.toISOString()}`,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join("\n\n")
+
   const slug = `${toSlug(input.name)}-${Date.now().toString(36)}`
 
   const [created] = await db
@@ -470,7 +529,7 @@ export async function createProjectProposalAsClient(
       endDate: null,
       projectLeadId: adminLead.id,
       clientId: currentUser.id,
-      notes: input.notes ?? null,
+      notes: proposalNotes,
       devLinks: null,
       credentials: null,
       createdById: currentUser.id,
@@ -494,6 +553,16 @@ export async function createProjectProposalAsClient(
       role: "client",
     },
   ])
+
+  await db
+    .update(booking)
+    .set({
+      internalNotes: consultation.internalNotes
+        ? `${consultation.internalNotes}\n${PROJECT_PROPOSAL_BOOKING_TAG}${projectId}]`
+        : `${PROJECT_PROPOSAL_BOOKING_TAG}${projectId}]`,
+      updatedAt: new Date(),
+    })
+    .where(eq(booking.id, consultation.id))
 
   return projectId
 }

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, lt, ne, sql } from "drizzle-orm"
 
 import {
   DEFAULT_BOOKING_AVAILABILITY_WINDOWS,
@@ -48,8 +48,17 @@ export type BookingAvailabilityInput = {
   scheduleId?: string
   name?: string
   timezone: string
+  isDefault?: boolean
+  isActive?: boolean
   windows: BookingAvailabilityWindowInput[]
   overrides?: BookingAvailabilityOverrideInput[]
+}
+
+export type BookingAvailabilityCreateInput = {
+  name: string
+  timezone?: string
+  cloneFromScheduleId?: string | null
+  setAsDefault?: boolean
 }
 
 export type BookingAppConnectionInput = {
@@ -127,6 +136,12 @@ export type BookingEventTypeInput = {
 function assertAdminBookingAccess(currentUser: SessionUser) {
   if (!isAdmin(currentUser.role)) {
     throw new Error("Only admins can manage bookings")
+  }
+}
+
+function assertClientBookingAccess(currentUser: SessionUser) {
+  if (currentUser.role !== "client") {
+    throw new Error("Only clients can book consultation slots")
   }
 }
 
@@ -300,6 +315,37 @@ async function ensureScheduleBelongsToUser(userId: string, scheduleId: string) {
   }
 
   return schedule
+}
+
+async function resolveUniqueScheduleName(
+  userId: string,
+  value: string,
+  excludeId?: string,
+) {
+  const baseName = value.trim() || "Working hours"
+  let candidate = baseName
+  let suffix = 2
+
+  while (true) {
+    const [existing] = await db
+      .select({ id: bookingAvailabilitySchedule.id })
+      .from(bookingAvailabilitySchedule)
+      .where(
+        and(
+          eq(bookingAvailabilitySchedule.userId, userId),
+          eq(bookingAvailabilitySchedule.name, candidate),
+          excludeId ? ne(bookingAvailabilitySchedule.id, excludeId) : undefined,
+        ),
+      )
+      .limit(1)
+
+    if (!existing) {
+      return candidate
+    }
+
+    candidate = `${baseName} ${suffix}`
+    suffix += 1
+  }
 }
 
 async function resolveUniqueEventTypeSlug(
@@ -537,13 +583,111 @@ export async function ensureDefaultBookingAvailabilityForAdmin(currentUser: Sess
     throw new Error("Unable to resolve admin availability")
   }
 
-  return primarySchedule
+  if (!primarySchedule.isDefault) {
+    await db
+      .update(bookingAvailabilitySchedule)
+      .set({ isDefault: true, updatedAt: new Date() })
+      .where(eq(bookingAvailabilitySchedule.id, primarySchedule.id))
+  }
+
+  return {
+    ...primarySchedule,
+    isDefault: true,
+  }
 }
 
 export async function listBookingAvailabilitySchedulesForAdmin(currentUser: SessionUser) {
   assertAdminBookingAccess(currentUser)
   await ensureDefaultBookingAvailabilityForAdmin(currentUser)
   return hydrateAvailabilitySchedules(currentUser.id)
+}
+
+export async function createBookingAvailabilityScheduleForAdmin(
+  currentUser: SessionUser,
+  input: BookingAvailabilityCreateInput,
+) {
+  assertAdminBookingAccess(currentUser)
+  await ensureDefaultBookingAvailabilityForAdmin(currentUser)
+
+  const sourceScheduleId = input.cloneFromScheduleId ?? null
+  const sourceSchedule = sourceScheduleId
+    ? (await hydrateAvailabilitySchedules(currentUser.id)).find(
+        (schedule) => schedule.id === sourceScheduleId,
+      ) ?? null
+    : null
+
+  if (sourceScheduleId && !sourceSchedule) {
+    throw new Error("Schedule to copy was not found")
+  }
+
+  const name = await resolveUniqueScheduleName(currentUser.id, input.name)
+  const timezone =
+    input.timezone?.trim() ||
+    sourceSchedule?.timezone ||
+    "UTC"
+  const windowsSource =
+    sourceSchedule?.windows.length
+      ? sourceSchedule.windows
+      : DEFAULT_BOOKING_AVAILABILITY_WINDOWS
+  const overridesSource = sourceSchedule?.overrides ?? []
+
+  const [created] = await db.transaction(async (tx) => {
+    if (input.setAsDefault) {
+      await tx
+        .update(bookingAvailabilitySchedule)
+        .set({ isDefault: false, updatedAt: new Date() })
+        .where(eq(bookingAvailabilitySchedule.userId, currentUser.id))
+    }
+
+    const [result] = await tx
+      .insert(bookingAvailabilitySchedule)
+      .values({
+        userId: currentUser.id,
+        name,
+        timezone,
+        isDefault: Boolean(input.setAsDefault),
+        isActive: true,
+      })
+      .$returningId()
+
+    const scheduleId = result?.id
+    if (!scheduleId) {
+      throw new Error("Unable to create availability schedule")
+    }
+
+    await tx.insert(bookingAvailabilityWindow).values(
+      windowsSource.map((window, index) => ({
+        scheduleId,
+        dayOfWeek: window.dayOfWeek,
+        startMinute: window.startMinute,
+        endMinute: window.endMinute,
+        position: window.position ?? index,
+      })),
+    )
+
+    if (overridesSource.length > 0) {
+      await tx.insert(bookingAvailabilityOverride).values(
+        overridesSource.map((override) => ({
+          scheduleId,
+          date: override.date,
+          kind: override.kind,
+          startMinute: override.startMinute,
+          endMinute: override.endMinute,
+          reason: override.reason,
+        })),
+      )
+    }
+
+    return [result]
+  })
+
+  const scheduleId = created?.id
+  if (!scheduleId) {
+    throw new Error("Availability schedule was created but could not be loaded")
+  }
+
+  const schedules = await hydrateAvailabilitySchedules(currentUser.id)
+  return schedules.find((schedule) => schedule.id === scheduleId) ?? null
 }
 
 export async function updateBookingAvailabilityForAdmin(
@@ -559,14 +703,38 @@ export async function updateBookingAvailabilityForAdmin(
 
   const windows = normalizeAvailabilityWindows(input.windows)
   const overrides = normalizeAvailabilityOverrides(input.overrides)
+  const shouldBecomeDefault = input.isDefault === true
+  const name = input.name?.trim()
+    ? await resolveUniqueScheduleName(
+        currentUser.id,
+        input.name,
+        schedule.id,
+      )
+    : schedule.name
 
   await db.transaction(async (tx) => {
+    if (shouldBecomeDefault) {
+      await tx
+        .update(bookingAvailabilitySchedule)
+        .set({ isDefault: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(bookingAvailabilitySchedule.userId, currentUser.id),
+            ne(bookingAvailabilitySchedule.id, schedule.id),
+          ),
+        )
+    }
+
     await tx
       .update(bookingAvailabilitySchedule)
       .set({
-        name: input.name?.trim() || schedule.name,
+        name,
         timezone: input.timezone,
-        isDefault: true,
+        isDefault: shouldBecomeDefault ? true : schedule.isDefault,
+        isActive:
+          typeof input.isActive === "boolean"
+            ? input.isActive
+            : schedule.isActive,
         updatedAt: new Date(),
       })
       .where(eq(bookingAvailabilitySchedule.id, schedule.id))
@@ -606,6 +774,51 @@ export async function updateBookingAvailabilityForAdmin(
 
   const schedules = await hydrateAvailabilitySchedules(currentUser.id)
   return schedules.find((item) => item.id === schedule.id) ?? null
+}
+
+export async function deleteBookingAvailabilityScheduleForAdmin(
+  currentUser: SessionUser,
+  scheduleId: string,
+) {
+  assertAdminBookingAccess(currentUser)
+  await ensureDefaultBookingAvailabilityForAdmin(currentUser)
+
+  const schedules = await hydrateAvailabilitySchedules(currentUser.id)
+  const schedule = schedules.find((item) => item.id === scheduleId)
+
+  if (!schedule) {
+    throw new Error("Availability schedule not found")
+  }
+
+  if (schedules.length === 1) {
+    throw new Error("At least one availability schedule must remain")
+  }
+
+  const [linkedEventType] = await db
+    .select({ id: bookingEventType.id })
+    .from(bookingEventType)
+    .where(eq(bookingEventType.availabilityScheduleId, scheduleId))
+    .limit(1)
+
+  if (linkedEventType) {
+    throw new Error("This availability is already assigned to an event type")
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(bookingAvailabilitySchedule)
+      .where(eq(bookingAvailabilitySchedule.id, scheduleId))
+
+    if (schedule.isDefault) {
+      const fallback = schedules.find((item) => item.id !== scheduleId)
+      if (fallback) {
+        await tx
+          .update(bookingAvailabilitySchedule)
+          .set({ isDefault: true, updatedAt: new Date() })
+          .where(eq(bookingAvailabilitySchedule.id, fallback.id))
+      }
+    }
+  })
 }
 
 export async function listBookingAppConnectionsForAdmin(currentUser: SessionUser) {
@@ -1131,6 +1344,915 @@ export async function listBookingsForAdmin(currentUser: SessionUser) {
       confirmed: rows.filter((item) => item.status === "confirmed").length,
       cancelled: rows.filter((item) => item.status === "cancelled").length,
     },
+  }
+}
+
+type DateParts = {
+  year: number
+  month: number
+  day: number
+}
+
+type MinuteRange = {
+  startMinute: number
+  endMinute: number
+}
+
+type ResolvedClientBookableEvent = {
+  adminLead: {
+    id: string
+    name: string
+    bookingPageTitle: string | null
+    bookingPageDescription: string | null
+  }
+  eventType: typeof bookingEventType.$inferSelect
+  schedule: typeof bookingAvailabilitySchedule.$inferSelect
+  windows: typeof bookingAvailabilityWindow.$inferSelect[]
+  overrides: typeof bookingAvailabilityOverride.$inferSelect[]
+  location: typeof bookingEventTypeLocation.$inferSelect | null
+}
+
+type ClientSlotComputationInput = {
+  fromDate?: string
+  days: number
+  durationMinutes: number
+}
+
+type ClientSlotComputationResult = {
+  timezone: string
+  selectedDurationMinutes: number
+  days: Array<{
+    date: string
+    label: string
+    slots: Array<{
+      startsAt: Date
+      endsAt: Date
+    }>
+  }>
+}
+
+const SLOT_STEP_MINUTES = 15
+const ACTIVE_BOOKING_STATUSES: Array<(typeof booking.$inferSelect)["status"]> = [
+  "pending",
+  "confirmed",
+]
+
+function normalizeTimeZone(value: string | null | undefined) {
+  const fallback = "UTC"
+  const candidate = value?.trim()
+
+  if (!candidate) {
+    return fallback
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date())
+    return candidate
+  } catch {
+    return fallback
+  }
+}
+
+function parseDateKey(value: string | undefined): DateParts | null {
+  if (!value) {
+    return null
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null
+  }
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return null
+  }
+
+  return { year, month, day }
+}
+
+function toDateKey(parts: DateParts) {
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(
+    2,
+    "0",
+  )}-${String(parts.day).padStart(2, "0")}`
+}
+
+function addDaysToDateParts(parts: DateParts, days: number): DateParts {
+  const anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days))
+  return {
+    year: anchor.getUTCFullYear(),
+    month: anchor.getUTCMonth() + 1,
+    day: anchor.getUTCDate(),
+  }
+}
+
+function getDatePartsInTimeZone(reference: Date, timeZone: string): DateParts {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+  const parts = formatter.formatToParts(reference)
+
+  const year = Number(parts.find((part) => part.type === "year")?.value ?? "0")
+  const month = Number(parts.find((part) => part.type === "month")?.value ?? "1")
+  const day = Number(parts.find((part) => part.type === "day")?.value ?? "1")
+
+  return { year, month, day }
+}
+
+function getTimeZoneOffsetMinutes(reference: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(reference)
+
+  const token = parts.find((part) => part.type === "timeZoneName")?.value ?? "GMT"
+  if (token === "GMT" || token === "UTC") {
+    return 0
+  }
+
+  const match = /^GMT([+-])(\d{1,2})(?::?(\d{2}))?$/.exec(token)
+  if (!match) {
+    return 0
+  }
+
+  const sign = match[1] === "-" ? -1 : 1
+  const hours = Number(match[2] ?? "0")
+  const minutes = Number(match[3] ?? "0")
+
+  return sign * (hours * 60 + minutes)
+}
+
+function zonedDateTimeToUtc(parts: DateParts, minuteOfDay: number, timeZone: string) {
+  const normalizedMinute = Math.max(0, Math.min(24 * 60, Math.round(minuteOfDay)))
+  const hour = Math.floor(normalizedMinute / 60)
+  const minute = normalizedMinute % 60
+
+  let utcTime = Date.UTC(parts.year, parts.month - 1, parts.day, hour, minute, 0)
+  const initialOffset = getTimeZoneOffsetMinutes(new Date(utcTime), timeZone)
+  utcTime -= initialOffset * 60 * 1000
+  const correctedOffset = getTimeZoneOffsetMinutes(new Date(utcTime), timeZone)
+
+  if (correctedOffset !== initialOffset) {
+    utcTime += (initialOffset - correctedOffset) * 60 * 1000
+  }
+
+  return new Date(utcTime)
+}
+
+function mergeMinuteRanges(ranges: MinuteRange[]) {
+  if (ranges.length === 0) {
+    return []
+  }
+
+  const sorted = [...ranges]
+    .map((range) => ({
+      startMinute: Math.max(0, Math.min(24 * 60, Math.round(range.startMinute))),
+      endMinute: Math.max(0, Math.min(24 * 60, Math.round(range.endMinute))),
+    }))
+    .filter((range) => range.startMinute < range.endMinute)
+    .sort((left, right) => {
+      if (left.startMinute !== right.startMinute) {
+        return left.startMinute - right.startMinute
+      }
+
+      return left.endMinute - right.endMinute
+    })
+
+  const merged: MinuteRange[] = []
+
+  for (const range of sorted) {
+    const previous = merged.at(-1)
+
+    if (!previous || range.startMinute > previous.endMinute) {
+      merged.push({ ...range })
+      continue
+    }
+
+    previous.endMinute = Math.max(previous.endMinute, range.endMinute)
+  }
+
+  return merged
+}
+
+function subtractMinuteRange(ranges: MinuteRange[], blocked: MinuteRange) {
+  if (blocked.startMinute >= blocked.endMinute) {
+    return ranges
+  }
+
+  const next: MinuteRange[] = []
+  for (const range of ranges) {
+    if (blocked.endMinute <= range.startMinute || blocked.startMinute >= range.endMinute) {
+      next.push(range)
+      continue
+    }
+
+    if (blocked.startMinute > range.startMinute) {
+      next.push({
+        startMinute: range.startMinute,
+        endMinute: blocked.startMinute,
+      })
+    }
+
+    if (blocked.endMinute < range.endMinute) {
+      next.push({
+        startMinute: blocked.endMinute,
+        endMinute: range.endMinute,
+      })
+    }
+  }
+
+  return mergeMinuteRanges(next)
+}
+
+function applyAvailabilityOverrides(
+  baseWindows: MinuteRange[],
+  dayOverrides: typeof bookingAvailabilityOverride.$inferSelect[],
+) {
+  let effective = mergeMinuteRanges(baseWindows)
+
+  for (const override of dayOverrides) {
+    if (override.kind === "unavailable") {
+      if (override.startMinute === null || override.endMinute === null) {
+        return []
+      }
+
+      effective = subtractMinuteRange(effective, {
+        startMinute: override.startMinute,
+        endMinute: override.endMinute,
+      })
+      continue
+    }
+
+    if (override.startMinute === null || override.endMinute === null) {
+      continue
+    }
+
+    effective = mergeMinuteRanges(
+      effective.concat({
+        startMinute: override.startMinute,
+        endMinute: override.endMinute,
+      }),
+    )
+  }
+
+  return effective
+}
+
+function resolveEventTypeDurationMinutes(
+  eventType: typeof bookingEventType.$inferSelect,
+  requestedDurationMinutes?: number,
+) {
+  const baseDuration = Math.max(5, Math.round(eventType.durationMinutes))
+  const options = Array.from(
+    new Set(
+      [
+        baseDuration,
+        ...(eventType.allowMultipleDurations
+          ? (eventType.durationOptions ?? [])
+          : []),
+      ]
+        .map((value) => Math.round(value))
+        .filter((value) => Number.isFinite(value) && value >= 5 && value <= 8 * 60),
+    ),
+  ).sort((left, right) => left - right)
+
+  if (options.length === 0) {
+    return baseDuration
+  }
+
+  if (!eventType.allowMultipleDurations) {
+    return baseDuration
+  }
+
+  if (
+    typeof requestedDurationMinutes === "number" &&
+    options.includes(Math.round(requestedDurationMinutes))
+  ) {
+    return Math.round(requestedDurationMinutes)
+  }
+
+  return options.includes(baseDuration) ? baseDuration : options[0]
+}
+
+async function getDefaultProposalLeadForClientBooking() {
+  const [adminLead] = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      bookingPageTitle: user.bookingPageTitle,
+      bookingPageDescription: user.bookingPageDescription,
+      bookingEnabled: user.bookingEnabled,
+    })
+    .from(user)
+    .where(and(eq(user.role, "admin"), eq(user.isActive, true)))
+    .orderBy(asc(user.createdAt), asc(user.name))
+    .limit(1)
+
+  if (!adminLead || !adminLead.bookingEnabled) {
+    throw new Error("No active admin is available for booking")
+  }
+
+  return adminLead
+}
+
+async function resolveBookableEventTypeForClient(
+  currentUser: SessionUser,
+  eventTypeId: string,
+): Promise<ResolvedClientBookableEvent> {
+  assertClientBookingAccess(currentUser)
+
+  const adminLead = await getDefaultProposalLeadForClientBooking()
+  const [eventType] = await db
+    .select()
+    .from(bookingEventType)
+    .where(
+      and(
+        eq(bookingEventType.id, eventTypeId),
+        eq(bookingEventType.userId, adminLead.id),
+        eq(bookingEventType.status, "active"),
+        eq(bookingEventType.isPublic, true),
+      ),
+    )
+    .limit(1)
+
+  if (!eventType) {
+    throw new Error("Bookable event type not found")
+  }
+
+  const [defaultSchedule] = await db
+    .select({
+      id: bookingAvailabilitySchedule.id,
+      timezone: bookingAvailabilitySchedule.timezone,
+      isActive: bookingAvailabilitySchedule.isActive,
+    })
+    .from(bookingAvailabilitySchedule)
+    .where(
+      and(
+        eq(bookingAvailabilitySchedule.userId, adminLead.id),
+        eq(bookingAvailabilitySchedule.isDefault, true),
+      ),
+    )
+    .orderBy(asc(bookingAvailabilitySchedule.createdAt))
+    .limit(1)
+
+  const scheduleId = eventType.availabilityScheduleId ?? defaultSchedule?.id
+  if (!scheduleId) {
+    throw new Error("No availability schedule is configured for this event type")
+  }
+
+  const [schedule] = await db
+    .select()
+    .from(bookingAvailabilitySchedule)
+    .where(
+      and(
+        eq(bookingAvailabilitySchedule.id, scheduleId),
+        eq(bookingAvailabilitySchedule.userId, adminLead.id),
+      ),
+    )
+    .limit(1)
+
+  if (!schedule || !schedule.isActive) {
+    throw new Error("This event type is not currently accepting bookings")
+  }
+
+  const [windows, overrides, locations] = await Promise.all([
+    db
+      .select()
+      .from(bookingAvailabilityWindow)
+      .where(eq(bookingAvailabilityWindow.scheduleId, schedule.id))
+      .orderBy(
+        asc(bookingAvailabilityWindow.dayOfWeek),
+        asc(bookingAvailabilityWindow.position),
+      ),
+    db
+      .select()
+      .from(bookingAvailabilityOverride)
+      .where(eq(bookingAvailabilityOverride.scheduleId, schedule.id))
+      .orderBy(asc(bookingAvailabilityOverride.date)),
+    db
+      .select()
+      .from(bookingEventTypeLocation)
+      .where(
+        and(
+          eq(bookingEventTypeLocation.eventTypeId, eventType.id),
+          eq(bookingEventTypeLocation.isActive, true),
+        ),
+      )
+      .orderBy(
+        desc(bookingEventTypeLocation.isDefault),
+        asc(bookingEventTypeLocation.position),
+      ),
+  ])
+
+  return {
+    adminLead: {
+      id: adminLead.id,
+      name: adminLead.name,
+      bookingPageTitle: adminLead.bookingPageTitle,
+      bookingPageDescription: adminLead.bookingPageDescription,
+    },
+    eventType,
+    schedule,
+    windows,
+    overrides,
+    location: locations[0] ?? null,
+  }
+}
+
+function formatDayLabel(parts: DateParts, timeZone: string) {
+  const anchor = zonedDateTimeToUtc(parts, 12 * 60, timeZone)
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone,
+  }).format(anchor)
+}
+
+async function computeClientSlotsForResolvedEvent(
+  resolved: ResolvedClientBookableEvent,
+  input: ClientSlotComputationInput,
+): Promise<ClientSlotComputationResult> {
+  const timezone = normalizeTimeZone(resolved.schedule.timezone)
+  const durationMinutes = resolveEventTypeDurationMinutes(
+    resolved.eventType,
+    input.durationMinutes,
+  )
+  const normalizedDays = Math.max(1, Math.min(31, Math.round(input.days)))
+  const now = new Date()
+  const earliestStart = new Date(
+    now.getTime() + resolved.eventType.bookingNoticeMinutes * 60 * 1000,
+  )
+  const latestStart = new Date(
+    now.getTime() + resolved.eventType.bookingWindowDays * 24 * 60 * 60 * 1000,
+  )
+
+  const fromParts =
+    parseDateKey(input.fromDate) ?? getDatePartsInTimeZone(now, timezone)
+  const rangeStart = zonedDateTimeToUtc(fromParts, 0, timezone)
+  const rangeEnd = zonedDateTimeToUtc(
+    addDaysToDateParts(fromParts, normalizedDays),
+    0,
+    timezone,
+  )
+
+  const existingBookings = await db
+    .select({
+      eventTypeId: booking.eventTypeId,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+      status: booking.status,
+    })
+    .from(booking)
+    .where(
+      and(
+        eq(booking.ownerUserId, resolved.adminLead.id),
+        inArray(booking.status, ACTIVE_BOOKING_STATUSES),
+        lt(booking.startsAt, rangeEnd),
+        gt(booking.endsAt, rangeStart),
+      ),
+    )
+    .orderBy(asc(booking.startsAt))
+
+  const blockedIntervals = existingBookings.map((item) => ({
+    startsAt: new Date(
+      item.startsAt.getTime() - resolved.eventType.bufferBeforeMinutes * 60 * 1000,
+    ),
+    endsAt: new Date(
+      item.endsAt.getTime() + resolved.eventType.bufferAfterMinutes * 60 * 1000,
+    ),
+  }))
+
+  const maxPerDay = resolved.eventType.maxBookingsPerDay
+  const eventTypeDayCounts = new Map<string, number>()
+
+  if (typeof maxPerDay === "number" && maxPerDay > 0) {
+    for (const item of existingBookings) {
+      if (item.eventTypeId !== resolved.eventType.id) {
+        continue
+      }
+
+      const key = toDateKey(getDatePartsInTimeZone(item.startsAt, timezone))
+      eventTypeDayCounts.set(key, (eventTypeDayCounts.get(key) ?? 0) + 1)
+    }
+  }
+
+  const windowsByDay = new Map<number, MinuteRange[]>()
+  for (const window of resolved.windows) {
+    const current = windowsByDay.get(window.dayOfWeek) ?? []
+    current.push({
+      startMinute: window.startMinute,
+      endMinute: window.endMinute,
+    })
+    windowsByDay.set(window.dayOfWeek, current)
+  }
+
+  const overridesByDate = new Map<string, typeof bookingAvailabilityOverride.$inferSelect[]>()
+  for (const override of resolved.overrides) {
+    const key = override.date.toISOString().slice(0, 10)
+    const current = overridesByDate.get(key) ?? []
+    current.push(override)
+    overridesByDate.set(key, current)
+  }
+
+  const dayBuckets: ClientSlotComputationResult["days"] = []
+
+  for (let index = 0; index < normalizedDays; index += 1) {
+    const dayParts = addDaysToDateParts(fromParts, index)
+    const dayKey = toDateKey(dayParts)
+    const dayOfWeek = new Date(
+      Date.UTC(dayParts.year, dayParts.month - 1, dayParts.day),
+    ).getUTCDay()
+
+    if (
+      typeof maxPerDay === "number" &&
+      maxPerDay > 0 &&
+      (eventTypeDayCounts.get(dayKey) ?? 0) >= maxPerDay
+    ) {
+      continue
+    }
+
+    const baseWindows = mergeMinuteRanges(windowsByDay.get(dayOfWeek) ?? [])
+    const effectiveWindows = applyAvailabilityOverrides(
+      baseWindows,
+      overridesByDate.get(dayKey) ?? [],
+    )
+
+    if (effectiveWindows.length === 0) {
+      continue
+    }
+
+    const slots: Array<{ startsAt: Date; endsAt: Date }> = []
+
+    for (const window of effectiveWindows) {
+      const latestStartMinute = window.endMinute - durationMinutes
+      if (latestStartMinute < window.startMinute) {
+        continue
+      }
+
+      for (
+        let minute = window.startMinute;
+        minute <= latestStartMinute;
+        minute += SLOT_STEP_MINUTES
+      ) {
+        const startsAt = zonedDateTimeToUtc(dayParts, minute, timezone)
+        const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000)
+
+        if (startsAt < earliestStart || startsAt > latestStart) {
+          continue
+        }
+
+        const overlapsExisting = blockedIntervals.some(
+          (interval) => startsAt < interval.endsAt && endsAt > interval.startsAt,
+        )
+        if (overlapsExisting) {
+          continue
+        }
+
+        slots.push({ startsAt, endsAt })
+      }
+    }
+
+    if (slots.length === 0) {
+      continue
+    }
+
+    dayBuckets.push({
+      date: dayKey,
+      label: formatDayLabel(dayParts, timezone),
+      slots,
+    })
+  }
+
+  return {
+    timezone,
+    selectedDurationMinutes: durationMinutes,
+    days: dayBuckets,
+  }
+}
+
+export async function listBookableEventTypesForClient(currentUser: SessionUser) {
+  assertClientBookingAccess(currentUser)
+
+  const adminLead = await getDefaultProposalLeadForClientBooking()
+  const eventTypes = await db
+    .select({
+      id: bookingEventType.id,
+      title: bookingEventType.title,
+      description: bookingEventType.description,
+      durationMinutes: bookingEventType.durationMinutes,
+      allowMultipleDurations: bookingEventType.allowMultipleDurations,
+      durationOptions: bookingEventType.durationOptions,
+      availabilityScheduleId: bookingEventType.availabilityScheduleId,
+    })
+    .from(bookingEventType)
+    .where(
+      and(
+        eq(bookingEventType.userId, adminLead.id),
+        eq(bookingEventType.status, "active"),
+        eq(bookingEventType.isPublic, true),
+      ),
+    )
+    .orderBy(asc(bookingEventType.title))
+
+  if (eventTypes.length === 0) {
+    return {
+      admin: {
+        id: adminLead.id,
+        name: adminLead.name,
+        bookingPageTitle: adminLead.bookingPageTitle,
+        bookingPageDescription: adminLead.bookingPageDescription,
+      },
+      eventTypes: [] as Array<{
+        id: string
+        title: string
+        description: string | null
+        durationMinutes: number
+        availableDurations: number[]
+        timezone: string
+        locationLabel: string | null
+        locationKind: string | null
+      }>,
+    }
+  }
+
+  const scheduleIds = Array.from(
+    new Set(
+      eventTypes
+        .map((eventType) => eventType.availabilityScheduleId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  )
+
+  const [defaultSchedule, schedules, locations] = await Promise.all([
+    db
+      .select({
+        id: bookingAvailabilitySchedule.id,
+        timezone: bookingAvailabilitySchedule.timezone,
+      })
+      .from(bookingAvailabilitySchedule)
+      .where(
+        and(
+          eq(bookingAvailabilitySchedule.userId, adminLead.id),
+          eq(bookingAvailabilitySchedule.isDefault, true),
+        ),
+      )
+      .orderBy(asc(bookingAvailabilitySchedule.createdAt))
+      .limit(1),
+    scheduleIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: bookingAvailabilitySchedule.id,
+            timezone: bookingAvailabilitySchedule.timezone,
+          })
+          .from(bookingAvailabilitySchedule)
+          .where(inArray(bookingAvailabilitySchedule.id, scheduleIds)),
+    db
+      .select({
+        eventTypeId: bookingEventTypeLocation.eventTypeId,
+        label: bookingEventTypeLocation.label,
+        kind: bookingEventTypeLocation.kind,
+      })
+      .from(bookingEventTypeLocation)
+      .where(
+        and(
+          inArray(
+            bookingEventTypeLocation.eventTypeId,
+            eventTypes.map((eventType) => eventType.id),
+          ),
+          eq(bookingEventTypeLocation.isActive, true),
+        ),
+      )
+      .orderBy(
+        asc(bookingEventTypeLocation.eventTypeId),
+        desc(bookingEventTypeLocation.isDefault),
+        asc(bookingEventTypeLocation.position),
+      ),
+  ])
+
+  const timezoneByScheduleId = new Map(
+    schedules.map((schedule) => [schedule.id, normalizeTimeZone(schedule.timezone)]),
+  )
+  const defaultTimezone = normalizeTimeZone(defaultSchedule[0]?.timezone)
+
+  const locationByEventTypeId = new Map<string, { label: string; kind: string }>()
+  for (const location of locations) {
+    if (!locationByEventTypeId.has(location.eventTypeId)) {
+      locationByEventTypeId.set(location.eventTypeId, {
+        label: location.label,
+        kind: location.kind,
+      })
+    }
+  }
+
+  return {
+    admin: {
+      id: adminLead.id,
+      name: adminLead.name,
+      bookingPageTitle: adminLead.bookingPageTitle,
+      bookingPageDescription: adminLead.bookingPageDescription,
+    },
+    eventTypes: eventTypes.map((eventType) => {
+      const fallbackDurations = [Math.max(5, Math.round(eventType.durationMinutes))]
+      const availableDurations = Array.from(
+        new Set(
+          [
+            ...fallbackDurations,
+            ...(eventType.allowMultipleDurations
+              ? (eventType.durationOptions ?? [])
+              : []),
+          ]
+            .map((value) => Math.round(value))
+            .filter((value) => Number.isFinite(value) && value >= 5 && value <= 8 * 60),
+        ),
+      ).sort((left, right) => left - right)
+
+      const location = locationByEventTypeId.get(eventType.id)
+
+      return {
+        id: eventType.id,
+        title: eventType.title,
+        description: eventType.description,
+        durationMinutes: Math.max(5, Math.round(eventType.durationMinutes)),
+        availableDurations:
+          availableDurations.length > 0 ? availableDurations : fallbackDurations,
+        timezone:
+          timezoneByScheduleId.get(eventType.availabilityScheduleId ?? "") ??
+          defaultTimezone,
+        locationLabel: location?.label ?? null,
+        locationKind: location?.kind ?? null,
+      }
+    }),
+  }
+}
+
+export async function listAvailableBookingSlotsForClient(
+  currentUser: SessionUser,
+  input: {
+    eventTypeId: string
+    durationMinutes?: number
+    fromDate?: string
+    days?: number
+  },
+) {
+  assertClientBookingAccess(currentUser)
+
+  const resolved = await resolveBookableEventTypeForClient(
+    currentUser,
+    input.eventTypeId,
+  )
+  const slotData = await computeClientSlotsForResolvedEvent(resolved, {
+    fromDate: input.fromDate,
+    days: input.days ?? 14,
+    durationMinutes: resolveEventTypeDurationMinutes(
+      resolved.eventType,
+      input.durationMinutes,
+    ),
+  })
+
+  return {
+    admin: resolved.adminLead,
+    eventType: {
+      id: resolved.eventType.id,
+      title: resolved.eventType.title,
+      description: resolved.eventType.description,
+      durationMinutes: resolved.eventType.durationMinutes,
+      allowMultipleDurations: resolved.eventType.allowMultipleDurations,
+      durationOptions: resolved.eventType.durationOptions ?? null,
+    },
+    timezone: slotData.timezone,
+    selectedDurationMinutes: slotData.selectedDurationMinutes,
+    days: slotData.days,
+  }
+}
+
+export async function createBookingForClient(
+  currentUser: SessionUser,
+  input: {
+    eventTypeId: string
+    startsAt: Date
+    durationMinutes?: number
+    attendeeTimezone?: string | null
+  },
+) {
+  assertClientBookingAccess(currentUser)
+
+  const resolved = await resolveBookableEventTypeForClient(
+    currentUser,
+    input.eventTypeId,
+  )
+  const durationMinutes = resolveEventTypeDurationMinutes(
+    resolved.eventType,
+    input.durationMinutes,
+  )
+  const requestedStart = new Date(input.startsAt)
+
+  if (Number.isNaN(requestedStart.getTime())) {
+    throw new Error("Invalid booking start time")
+  }
+
+  const requestDayKey = toDateKey(
+    getDatePartsInTimeZone(requestedStart, normalizeTimeZone(resolved.schedule.timezone)),
+  )
+  const slotData = await computeClientSlotsForResolvedEvent(resolved, {
+    fromDate: requestDayKey,
+    days: 1,
+    durationMinutes,
+  })
+  const matchedSlot = slotData.days
+    .flatMap((day) => day.slots)
+    .find((slot) => slot.startsAt.getTime() === requestedStart.getTime())
+
+  if (!matchedSlot) {
+    throw new Error("Selected slot is no longer available")
+  }
+
+  const [attendee] = await db
+    .select({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      timezone: user.timezone,
+    })
+    .from(user)
+    .where(eq(user.id, currentUser.id))
+    .limit(1)
+
+  const [created] = await db
+    .insert(booking)
+    .values({
+      ownerUserId: resolved.adminLead.id,
+      eventTypeId: resolved.eventType.id,
+      attendeeUserId: currentUser.id,
+      createdByUserId: currentUser.id,
+      appConnectionId: resolved.location?.appConnectionId ?? null,
+      source: "authenticated",
+      status: "confirmed",
+      title: resolved.eventType.title,
+      attendeeName: attendee?.name ?? currentUser.name,
+      attendeeEmail: attendee?.email ?? currentUser.email,
+      attendeePhone: attendee?.phone ?? null,
+      attendeeTimezone:
+        input.attendeeTimezone?.trim() ||
+        attendee?.timezone ||
+        normalizeTimeZone(resolved.schedule.timezone),
+      locationKind: resolved.location?.kind ?? null,
+      locationLabel: resolved.location?.label ?? null,
+      locationValue: resolved.location?.value ?? null,
+      meetingUrl:
+        resolved.location?.kind === "custom_link" ||
+        resolved.location?.kind === "google_meet" ||
+        resolved.location?.kind === "zoom"
+          ? resolved.location?.value ?? null
+          : null,
+      startsAt: matchedSlot.startsAt,
+      endsAt: matchedSlot.endsAt,
+      confirmedAt: new Date(),
+      manageToken: crypto.randomUUID(),
+    })
+    .$returningId()
+
+  const bookingId = created?.id
+  if (!bookingId) {
+    throw new Error("Unable to create booking")
+  }
+
+  return {
+    id: bookingId,
+    eventTypeId: resolved.eventType.id,
+    eventTypeTitle: resolved.eventType.title,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timezone: normalizeTimeZone(resolved.schedule.timezone),
+    ownerUserId: resolved.adminLead.id,
+    ownerName: resolved.adminLead.name,
+    locationLabel: resolved.location?.label ?? null,
+    locationKind: resolved.location?.kind ?? null,
+    meetingUrl:
+      resolved.location?.kind === "custom_link" ||
+      resolved.location?.kind === "google_meet" ||
+      resolved.location?.kind === "zoom"
+        ? resolved.location?.value ?? null
+        : null,
   }
 }
 

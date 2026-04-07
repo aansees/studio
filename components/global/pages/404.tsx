@@ -47,7 +47,7 @@ export function NoProjectsYet() {
     <EmptyPage
       media={<Image src={"/alert.png"} alt="Alert" height={500} width={500} />}
       title="No Projects Yet"
-      description="No projects exist yet. Start a new project and it will appear here once your request is created."
+      description="No projects exist yet. Start a new project, book the consultation slot, then submit your request."
       actions={
         <>
           <Button asChild>

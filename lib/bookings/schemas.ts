@@ -37,8 +37,21 @@ export const bookingAvailabilitySchema = z.object({
   scheduleId: z.string().optional(),
   name: z.string().trim().min(2).max(191).optional(),
   timezone: z.string().trim().min(1).max(64),
+  isDefault: z.boolean().optional(),
+  isActive: z.boolean().optional(),
   windows: z.array(bookingAvailabilityWindowSchema),
   overrides: z.array(bookingAvailabilityOverrideSchema).optional(),
+})
+
+export const bookingAvailabilityCreateSchema = z.object({
+  name: z.string().trim().min(2).max(191),
+  timezone: z.string().trim().min(1).max(64).optional(),
+  cloneFromScheduleId: z.string().trim().min(1).nullish(),
+  setAsDefault: z.boolean().optional(),
+})
+
+export const bookingAvailabilityDeleteSchema = z.object({
+  scheduleId: z.string().trim().min(1),
 })
 
 export const bookingAppConnectionSchema = z.object({
@@ -111,4 +124,22 @@ export const bookingEventTypeSchema = z.object({
   locations: z.array(bookingEventTypeLocationSchema).optional(),
   calendars: z.array(bookingEventTypeCalendarSchema).optional(),
   questions: z.array(bookingEventTypeQuestionSchema).optional(),
+})
+
+export const clientBookingSlotQuerySchema = z.object({
+  eventTypeId: z.string().trim().min(1),
+  durationMinutes: z.coerce.number().int().min(5).max(8 * 60).optional(),
+  fromDate: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  days: z.coerce.number().int().min(1).max(31).optional(),
+})
+
+export const clientBookingCreateSchema = z.object({
+  eventTypeId: z.string().trim().min(1),
+  startsAt: z.coerce.date(),
+  durationMinutes: z.coerce.number().int().min(5).max(8 * 60).optional(),
+  attendeeTimezone: z.string().trim().max(64).nullish(),
 })

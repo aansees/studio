@@ -37,7 +37,7 @@ function getHeaderState(
     return { section: "Projects" };
   }
   if (pathname === "/projects/new") {
-    return { section: "Projects", title: "New Proposal" };
+    return { section: "Projects", title: "Project Intake" };
   }
   if (pathname === "/team") {
     return { section: "Team" };

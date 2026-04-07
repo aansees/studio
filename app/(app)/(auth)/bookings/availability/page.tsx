@@ -1,14 +1,28 @@
 import { BookingAvailabilityEditor } from "@/components/layout/dashboard/booking-availability-editor"
 import { requireSession } from "@/lib/session"
-import { ensureDefaultBookingAvailabilityForAdmin } from "@/lib/services/bookings"
+import { listBookingAvailabilitySchedulesForAdmin } from "@/lib/services/bookings"
 
-export default async function BookingAvailabilityPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    schedule?: string
+  }>
+}
+
+export default async function BookingAvailabilityPage({ searchParams }: PageProps) {
   const { user } = await requireSession(["admin"])
-  const schedule = await ensureDefaultBookingAvailabilityForAdmin(user)
+  const schedules = await listBookingAvailabilitySchedulesForAdmin(user)
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const initialSelectedScheduleId =
+    typeof resolvedSearchParams?.schedule === "string"
+      ? resolvedSearchParams.schedule
+      : null
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <BookingAvailabilityEditor initialSchedule={schedule} />
+      <BookingAvailabilityEditor
+        initialSchedules={schedules}
+        initialSelectedScheduleId={initialSelectedScheduleId}
+      />
     </div>
   )
 }

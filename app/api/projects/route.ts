@@ -28,6 +28,7 @@ const createProjectSchema = z.object({
 const createProposalSchema = z.object({
   name: z.string().min(2),
   notes: z.string().optional(),
+  bookingId: z.string().min(1),
 })
 
 export async function GET() {

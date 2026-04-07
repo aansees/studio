@@ -36,6 +36,15 @@ export default async function BookingEventTypeDetailPage({
           id: schedule.id,
           name: schedule.name,
           timezone: schedule.timezone,
+          isDefault: schedule.isDefault,
+          isActive: schedule.isActive,
+          windows: schedule.windows.map((window) => ({
+            id: window.id,
+            dayOfWeek: window.dayOfWeek,
+            startMinute: window.startMinute,
+            endMinute: window.endMinute,
+            position: window.position,
+          })),
         }))}
         appConnections={appConnections.map((connection) => ({
           id: connection.id,
