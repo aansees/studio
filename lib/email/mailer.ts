@@ -1,5 +1,4 @@
-import nodemailer from "nodemailer"
-import { render } from "@react-email/render"
+import { Resend } from "resend"
 
 import { env } from "@/lib/env"
 import { AppEmailTemplate } from "@/lib/email/template"
@@ -15,25 +14,7 @@ type SendAppMailArgs = {
   ctaUrl?: string
 }
 
-const hasSmtpConfig =
-  Boolean(env.SMTP_HOST) &&
-  Boolean(env.SMTP_PORT) &&
-  Boolean(env.SMTP_USER) &&
-  Boolean(env.SMTP_PASS) &&
-  Boolean(env.SMTP_FROM)
-
-const transporter =
-  hasSmtpConfig && env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS
-    ? nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_PORT === 465,
-        auth: {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASS,
-        },
-      })
-    : null
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
 
 export async function sendAppMail({
   to,
@@ -45,13 +26,16 @@ export async function sendAppMail({
   ctaLabel,
   ctaUrl,
 }: SendAppMailArgs) {
-  if (!transporter || !env.SMTP_FROM) {
-    console.info("SMTP is not configured; email skipped", { to, subject, preview })
+  if (!resend || !env.RESEND_FROM) {
+    console.info("Resend is not configured; email skipped", { to, subject, preview })
     return
   }
 
-  const html = await render(
-    AppEmailTemplate({
+  const { error } = await resend.emails.send({
+    from: env.RESEND_FROM,
+    to,
+    subject,
+    react: AppEmailTemplate({
       preview,
       title,
       intro,
@@ -59,12 +43,9 @@ export async function sendAppMail({
       ctaLabel,
       ctaUrl,
     }),
-  )
-
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to,
-    subject,
-    html,
   })
+
+  if (error) {
+    throw new Error(`Failed to send email via Resend: ${error.message}`)
+  }
 }

@@ -1,6 +1,6 @@
 # Ancs Studio
 
-Production-oriented agency project management platform built with Next.js 16, Better Auth, Drizzle ORM, MySQL, Upstash Redis/Realtime, Nodemailer, React Email, and shadcn/ui components.
+Production-oriented agency project management platform built with Next.js 16, Better Auth, Drizzle ORM, MySQL, Upstash Redis/Realtime, Resend, React Email, and shadcn/ui components.
 
 ## Stack
 
@@ -9,7 +9,7 @@ Production-oriented agency project management platform built with Next.js 16, Be
 - Better Auth (`email/password`, social providers, passkey, 2FA)
 - Drizzle ORM + MySQL (`mysql2`)
 - Upstash Redis + Upstash Realtime
-- Nodemailer + React Email
+- Resend + React Email
 - Tailwind CSS + shadcn/ui component architecture
 
 ## Roles and Access Model
@@ -68,7 +68,8 @@ Optional but recommended:
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 - `CHAT_FLUSH_API_KEY`
-- SMTP provider variables
+- `RESEND_API_KEY`
+- `RESEND_FROM` (for example `Ancs Studio <noreply@ancsstudio.com>`)
 
 ### 2. Database + Admin Bootstrap (Docker)
 

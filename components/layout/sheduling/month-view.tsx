@@ -166,7 +166,7 @@ export function MonthView({
   });
 
   return (
-    <TooltipProvider delayDuration={120}>
+    <TooltipProvider delay={120}>
       <div className="contents" data-slot="month-view">
       <div className="grid grid-cols-7 border-border/70 border-b">
         {weekdays.map((day) => (
@@ -699,9 +699,7 @@ export function MonthView({
               if (onDaySelect && dayStatus === "FULL") {
                 return (
                   <Tooltip key={day.toString()}>
-                    <TooltipTrigger asChild>
-                      {cell}
-                    </TooltipTrigger>
+                    <TooltipTrigger render={cell} />
                     <TooltipContent>
                       {fullDayTooltip}
                     </TooltipContent>

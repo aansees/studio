@@ -511,14 +511,15 @@ export function EventCalendar({
               {showCalendarSystemToggle && (
                 <ToggleGroup
                   aria-label="Calendar system"
-                  onValueChange={(value) => {
-                    if (value === "gregorian" || value === "nepali") {
-                      setSystem(value);
+                  onValueChange={(values) => {
+                    const nextSystem = values[0];
+
+                    if (nextSystem === "gregorian" || nextSystem === "nepali") {
+                      setSystem(nextSystem);
                     }
                   }}
                   size="sm"
-                  type="single"
-                  value={activeCalendarSystem}
+                  value={[activeCalendarSystem]}
                   variant="outline"
                 >
                   <ToggleGroupItem aria-label="Gregorian (AD)" value="gregorian">
