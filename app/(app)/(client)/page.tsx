@@ -274,7 +274,7 @@ export default function HomePage() {
             </div>
             <AnimatedButton
               label="View Projects"
-              route="/projects"
+              route="/work"
               animateOnScroll={false}
               delay={heroButtonDelay}
             />
@@ -379,7 +379,7 @@ export default function HomePage() {
                   interactive product experiments from recent client work.
                 </h3>
               </Copy>
-              <AnimatedButton label="Browse Projects" route="/projects" />
+              <AnimatedButton label="Browse Projects" route="/work" />
             </div>
           </div>
         </div>

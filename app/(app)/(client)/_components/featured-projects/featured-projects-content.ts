@@ -1,4 +1,4 @@
-import { projectsData } from "../../projects/projects";
+import { projectsData } from "../../work/projects";
 
 const featuredProjectsContent = projectsData.slice(0, 4).map((project) => ({
   info: project.featuredInfo,

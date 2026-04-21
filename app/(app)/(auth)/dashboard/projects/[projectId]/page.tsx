@@ -21,7 +21,7 @@ import {
   getProjectByIdForUser,
   getProjectAnalytics,
   listProjectMembersForUser,
-} from "@/lib/services/dashboard/projects";
+} from "@/lib/services/projects";
 import { projectTaskSummary } from "@/lib/services/tasks";
 import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
 import { listProjectTasksForUser } from "@/lib/services/tasks";

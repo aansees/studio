@@ -285,7 +285,7 @@ export default function Menu() {
                 </Link>
               </div>
               <div className="link">
-                <Link href="/projects" onClick={(event) => handleLinkClick(event, "/projects")}>
+                <Link href="/work" onClick={(event) => handleLinkClick(event, "/work")}>
                   <h2>Projects</h2>
                 </Link>
               </div>

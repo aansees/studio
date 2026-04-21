@@ -85,10 +85,10 @@ export default function Footer() {
                   <h3>Studio</h3>
                 </Link>
                 <Link
-                  href="/projects"
+                  href="/work"
                   onClick={(event) => {
                     event.preventDefault();
-                    navigateWithTransition("/projects");
+                    navigateWithTransition("/work");
                   }}
                 >
                   <h3>Projects</h3>
