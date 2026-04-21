@@ -132,7 +132,7 @@ export function ProjectDetailsEditor({
       }
 
       toast.success("Project deleted")
-      router.push("/projects")
+      router.push("/dashboard/projects")
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete project"

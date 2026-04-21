@@ -33,10 +33,10 @@ function getHeaderState(
   if (pathname === "/dashboard") {
     return { section: "Dashboard" };
   }
-  if (pathname === "/projects") {
+  if (pathname === "/dashboard/projects") {
     return { section: "Projects" };
   }
-  if (pathname === "/projects/new") {
+  if (pathname === "/dashboard/projects/new") {
     return { section: "Projects", title: "Project Intake" };
   }
   if (pathname === "/team") {
@@ -71,7 +71,7 @@ function getHeaderState(
     };
   }
 
-  if (pathname.startsWith("/projects/")) {
+  if (pathname.startsWith("/dashboard/projects/")) {
     const parts = pathname.split("/").filter(Boolean);
     const projectId = parts[1];
     const projectName = projectsById[projectId] ?? "Project";
@@ -133,7 +133,7 @@ export function SiteHeader({
   );
   const { section, title } = getHeaderState(pathname, projectsById, tasksById);
   const showProposalAction =
-    userRole === "client" && normalizePathname(pathname) !== "/projects/new";
+    userRole === "client" && normalizePathname(pathname) !== "/dashboard/projects/new";
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -152,7 +152,7 @@ export function SiteHeader({
         </div>
         {showProposalAction ? (
           <Button asChild>
-            <Link href="/projects/new">
+            <Link href="/dashboard/projects/new">
               <Sparkle className="h-4 w-4 rounded-full bg-white fill-primary text-white" />
               Start New Project
             </Link>

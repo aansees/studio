@@ -37,7 +37,7 @@ export function ProjectTaskCalendar({
       allowCreate={false}
       events={calendarEvents}
       initialView="month"
-      onEventSelectReadOnly={(event) => router.push(`/projects/${projectId}/tasks/${event.id}`)}
+      onEventSelectReadOnly={(event) => router.push(`/dashboard/projects/${projectId}/tasks/${event.id}`)}
     />
   );
 }

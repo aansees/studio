@@ -20,7 +20,7 @@ export function ProjectDocsLauncher({
   canViewInternalDocs?: boolean;
 }) {
   const router = useRouter();
-  const href = `/projects/${projectId}/plan`;
+  const href = `/dashboard/projects/${projectId}/plan`;
 
   return (
     <Frame>

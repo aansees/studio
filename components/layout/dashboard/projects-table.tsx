@@ -173,7 +173,7 @@ export function ProjectsTable({
                 <TableRow key={item.id}>
                   <TableCell>
                     <Link
-                      href={`/projects/${item.id}`}
+                      href={`/dashboard/projects/${item.id}`}
                       className="underline-offset-4 hover:underline"
                     >
                       {item.name}

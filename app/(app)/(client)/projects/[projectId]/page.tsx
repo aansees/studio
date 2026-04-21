@@ -8,8 +8,8 @@ import Copy from "../../_components/copy/copy";
 import { getProjectBySlug } from "../projects";
 
 export default function ProjectDetailPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const params = useParams<{ projectId: string }>();
+  const slug = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
   const project = slug ? getProjectBySlug(slug) : undefined;
 
   if (!project) {

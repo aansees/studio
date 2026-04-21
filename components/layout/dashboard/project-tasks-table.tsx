@@ -156,7 +156,7 @@ function ProjectTaskStatusSection({
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        href={`/projects/${row.projectId}/tasks/${row.id}`}
+                        href={`/dashboard/projects/${row.projectId}/tasks/${row.id}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
                         {row.title}

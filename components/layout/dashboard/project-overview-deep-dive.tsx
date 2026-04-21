@@ -91,7 +91,7 @@ export function ProjectOverviewDeepDive({
           <h3 className="text-sm font-medium">Project Team</h3>
           {projectManager ? (
             <Button asChild size="sm" variant="outline">
-              <Link href={`/projects/${projectId}/settings#members`}>
+              <Link href={`/dashboard/projects/${projectId}/settings#members`}>
                 <PlusIcon className="size-4" />
                 Add members
               </Link>
@@ -146,7 +146,7 @@ export function ProjectOverviewDeepDive({
           <h3 className="text-sm font-medium">Project Plan & Resources</h3>
           {!showEmbeddedWorkspace ? (
             <Button asChild size="sm" variant="outline">
-              <Link href={`/projects/${projectId}/plan`}>
+              <Link href={`/dashboard/projects/${projectId}/plan`}>
                 {projectManager ? "Edit workspace" : "View workspace"}
               </Link>
             </Button>

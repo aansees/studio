@@ -573,7 +573,7 @@ export function ProjectProposalForm({
       }
 
       toast.success("Proposal submitted");
-      router.push(`/projects/${payload.projectId}`);
+      router.push(`/dashboard/projects/${payload.projectId}`);
       router.refresh();
     } catch (error) {
       toast.error(

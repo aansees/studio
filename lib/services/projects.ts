@@ -708,7 +708,7 @@ export async function updateProjectByManager(
               preview: "Your project is complete",
               intro: `Your project "${existing.name}" has been marked complete.`,
               ctaLabel: "View project",
-              ctaUrl: `/projects/${existing.id}`,
+              ctaUrl: `/dashboard/projects/${existing.id}`,
             },
           }),
         ),
@@ -1130,7 +1130,7 @@ export async function getProjectAnalytics(projectId: string): Promise<ProjectAna
 
       return {
         id: taskItem.id,
-        href: `/projects/${projectId}/tasks/${taskItem.id}`,
+        href: `/dashboard/projects/${projectId}/tasks/${taskItem.id}`,
         title: taskItem.title,
         sortDate: anchorDate,
         dateLabel: format(anchorDate, "MMMM d"),
@@ -1155,7 +1155,7 @@ export async function getProjectAnalytics(projectId: string): Promise<ProjectAna
     .filter((taskItem) => taskItem.status === "done" && taskItem.completedAt)
     .map((taskItem) => ({
       id: taskItem.id,
-      href: `/projects/${projectId}/tasks/${taskItem.id}`,
+      href: `/dashboard/projects/${projectId}/tasks/${taskItem.id}`,
       title: taskItem.title,
       sortDate: taskItem.completedAt as Date,
       dateLabel: format(taskItem.completedAt as Date, "MMMM d"),

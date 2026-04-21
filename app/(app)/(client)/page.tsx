@@ -9,7 +9,6 @@ import { useGSAP } from "@gsap/react";
 import { useLenis } from "lenis/react";
 import AnimatedButton from "./_components/animated-button/animated-button";
 import FeaturedProjects from "./_components/featured-projects/featured-projects";
-// import ClientReviews from "./_components/client-reviews/client-reviews";
 import Copy from "./_components/copy/copy";
 
 function shouldShowHomePreloader() {

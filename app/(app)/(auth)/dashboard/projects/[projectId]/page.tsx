@@ -21,7 +21,7 @@ import {
   getProjectByIdForUser,
   getProjectAnalytics,
   listProjectMembersForUser,
-} from "@/lib/services/projects";
+} from "@/lib/services/dashboard/projects";
 import { projectTaskSummary } from "@/lib/services/tasks";
 import { resolveTaskTimelineStartDate } from "@/lib/tasks/timeline";
 import { listProjectTasksForUser } from "@/lib/services/tasks";
@@ -59,7 +59,7 @@ export default async function ProjectDetailsPage({
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link href={`/projects/${projectId}/chat`}>Open chats</Link>
+            <Link href={`/dashboard/projects/${projectId}/chat`}>Open chats</Link>
           </Button>
         </div>
 
@@ -191,7 +191,7 @@ export default async function ProjectDetailsPage({
           </AvatarGroup>
           {projectManager ? (
             <Button asChild variant="outline" size="sm">
-              <Link href={`/projects/${projectId}/settings#members`}>
+              <Link href={`/dashboard/projects/${projectId}/settings#members`}>
                 Invite
               </Link>
             </Button>
@@ -208,7 +208,7 @@ export default async function ProjectDetailsPage({
             </div>
             <div className="flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
-                <Link href={`/projects/${projectId}/details`}>
+                <Link href={`/dashboard/projects/${projectId}/details`}>
                   More
                   <ChevronRightIcon className="size-4" />
                 </Link>

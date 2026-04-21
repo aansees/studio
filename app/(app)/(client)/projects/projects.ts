@@ -44,7 +44,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Brand website and campaign CMS for a premium commerce team",
     clientImage: "/spaces/client-1.jpeg",
     clientName: "Nova Retail",
-    route: "/spaces/nova-commerce",
+    route: "/projects/nova-commerce",
     featuredInfo: "A conversion-focused website built for launches, drops, and paid traffic",
     featuredDescription:
       "We replaced a brittle marketing stack with a sharp, reusable Next.js site that lets the team ship campaigns, land product stories, and keep performance under control.",
@@ -104,7 +104,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Operations system for approvals, handoffs, and reporting",
     clientImage: "/spaces/client-2.jpeg",
     clientName: "Pulse Logistics",
-    route: "/spaces/pulse-ops",
+    route: "/projects/pulse-ops",
     featuredInfo: "A staff-facing platform that replaced spreadsheets and status ping-pong",
     featuredDescription:
       "Pulse Ops unified approvals, task ownership, and live reporting into one internal product so operations teams could stop stitching together spreadsheets, chat threads, and manual updates.",
@@ -164,7 +164,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Offline-first Android app for field teams working on site",
     clientImage: "/spaces/client-3.jpeg",
     clientName: "FieldSync",
-    route: "/spaces/fieldsync-android",
+    route: "/projects/fieldsync-android",
     featuredInfo: "An Android product built for real conditions, not perfect connectivity",
     featuredDescription:
       "We designed FieldSync around the reality of low-signal environments, repetitive tasks, and fast on-site decisions so crews could capture work once and sync later.",
@@ -224,7 +224,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Interactive launch experience for a music-tech product drop",
     clientImage: "/spaces/client-4.jpeg",
     clientName: "Signal Audio",
-    route: "/spaces/signal-live",
+    route: "/projects/signal-live",
     featuredInfo: "A motion-heavy interactive site that still stays readable and fast",
     featuredDescription:
       "Signal Live combined product storytelling, motion choreography, and launch-timed interaction to create a digital release experience with energy but without visual noise.",
@@ -284,7 +284,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Client portal and internal workspace for a growing service business",
     clientImage: "/spaces/client-5.jpeg",
     clientName: "Atlas Partners",
-    route: "/spaces/atlas-hq",
+    route: "/projects/atlas-hq",
     featuredInfo: "A shared system for clients, delivery teams, and account leads",
     featuredDescription:
       "Atlas HQ brought scattered updates, files, and timelines into one product so clients could self-serve progress while the internal team worked from the same operational view.",
@@ -344,7 +344,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Learning platform with onboarding, progress tracking, and support flows",
     clientImage: "/spaces/client-6.jpeg",
     clientName: "Lattice Academy",
-    route: "/spaces/lattice-learn",
+    route: "/projects/lattice-learn",
     featuredInfo: "A learning experience built to reduce drop-off after signup",
     featuredDescription:
       "Lattice Learn combined marketing entry points, onboarding design, and platform structure into one connected journey so users did not fall out between signup and activation.",
@@ -404,7 +404,7 @@ export const projectsData: ProjectItem[] = [
     subtitle: "Interactive kiosk and live dashboard for a public exhibit",
     clientImage: "/spaces/client-7.jpeg",
     clientName: "Orbit Labs",
-    route: "/spaces/orbit-experience",
+    route: "/projects/orbit-experience",
     featuredInfo: "A public-facing interactive system with a controlled operator layer behind it",
     featuredDescription:
       "Orbit Experience joined a visitor-facing touchscreen with a live control surface so the exhibit could feel playful for the audience and dependable for the team operating it.",

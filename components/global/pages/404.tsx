@@ -51,10 +51,10 @@ export function NoProjectsYet() {
       actions={
         <>
           <Button asChild>
-            <Link href="/projects/new">Start New Project</Link>
+            <Link href="/dashboard/projects/new">Start New Project</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/projects">Open Projects</Link>
+            <Link href="/dashboard/projects">Open Projects</Link>
           </Button>
         </>
       }

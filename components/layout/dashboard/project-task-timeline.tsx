@@ -187,7 +187,7 @@ export function ProjectTaskTimeline({
             {timelineCards.map((item) => (
               <Link
                 key={item.row.id}
-                href={`/projects/${item.row.projectId}/tasks/${item.row.id}`}
+                href={`/dashboard/projects/${item.row.projectId}/tasks/${item.row.id}`}
                 className="absolute z-10"
                 style={{
                   left: `calc((100% / 7) * ${item.startColumn} + 16px)`,
@@ -260,7 +260,7 @@ export function ProjectTaskTimeline({
             {unscheduledRows.map((row) => (
               <Link
                 key={row.id}
-                href={`/projects/${row.projectId}/tasks/${row.id}`}
+                href={`/dashboard/projects/${row.projectId}/tasks/${row.id}`}
                 className="rounded-xl border p-3 text-sm transition-colors hover:bg-muted/30"
               >
                 <div className="font-medium">{row.title}</div>

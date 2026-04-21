@@ -81,7 +81,7 @@ function getPrimaryNav(role: UserRole) {
   if (role === "admin") {
     return [
       { title: "Dashboard", href: "/dashboard", icon: <LayoutDashboardIcon /> },
-      { title: "Projects", href: "/projects", icon: <FolderIcon /> },
+      { title: "Projects", href: "/dashboard/projects", icon: <FolderIcon /> },
       { title: "Team", href: "/team", icon: <UsersIcon /> },
       { title: "Event Types", href: "/bookings/event-types", icon: <CalendarDaysIcon /> },
       { title: "Bookings", href: "/bookings", icon: <CalendarIcon /> },
@@ -92,7 +92,7 @@ function getPrimaryNav(role: UserRole) {
 
   return [
     { title: "Dashboard", href: "/dashboard", icon: <LayoutDashboardIcon /> },
-    { title: "Projects", href: "/projects", icon: <FolderIcon /> },
+    { title: "Projects", href: "/dashboard/projects", icon: <FolderIcon /> },
     // { title: "Settings", href: "/settings", icon: <Settings2Icon /> },
   ];
 }
@@ -106,12 +106,12 @@ function getProjectLinks(
     return [
       {
         title: "Overview",
-        href: `/projects/${projectId}`,
+        href: `/dashboard/projects/${projectId}`,
         icon: <FolderIcon />,
       },
       {
         title: "Chat",
-        href: `/projects/${projectId}/chat`,
+        href: `/dashboard/projects/${projectId}/chat`,
         icon: <MessageSquareIcon />,
       },
     ];
@@ -120,22 +120,22 @@ function getProjectLinks(
   const links = [
     {
       title: "Tasks",
-      href: `/projects/${projectId}/tasks`,
+      href: `/dashboard/projects/${projectId}/tasks`,
       icon: <ListChecksIcon />,
     },
     {
       title: "Analytics",
-      href: `/projects/${projectId}/analytics`,
+      href: `/dashboard/projects/${projectId}/analytics`,
       icon: <ChartColumnIcon />,
     },
     {
       title: "Calendar",
-      href: `/projects/${projectId}/calendar`,
+      href: `/dashboard/projects/${projectId}/calendar`,
       icon: <CalendarIcon />,
     },
     {
       title: "Settings",
-      href: `/projects/${projectId}/settings`,
+      href: `/dashboard/projects/${projectId}/settings`,
       icon: <Settings2Icon />,
     },
   ];
@@ -143,7 +143,7 @@ function getProjectLinks(
   if (canOpenChat) {
     links.push({
       title: "Chat",
-      href: `/projects/${projectId}/chat`,
+      href: `/dashboard/projects/${projectId}/chat`,
       icon: <MessageSquareIcon />,
     });
   }
@@ -274,11 +274,11 @@ export function AppSidebar({
                                 asChild
                                 isActive={
                                   currentPath ===
-                                  `/projects/${task.projectId}/tasks/${task.id}`
+                                  `/dashboard/projects/${task.projectId}/tasks/${task.id}`
                                 }
                               >
                                 <Link
-                                  href={`/projects/${task.projectId}/tasks/${task.id}`}
+                                  href={`/dashboard/projects/${task.projectId}/tasks/${task.id}`}
                                 >
                                   <CircleDotIcon className="size-3" />
                                   <span className="truncate">{task.title}</span>
@@ -309,8 +309,8 @@ export function AppSidebar({
               ) : (
                 projects.map((project) => {
                   const projectActive =
-                    currentPath === `/projects/${project.id}` ||
-                    currentPath.startsWith(`/projects/${project.id}/`);
+                    currentPath === `/dashboard/projects/${project.id}` ||
+                    currentPath.startsWith(`/dashboard/projects/${project.id}/`);
                   const isOpen = projectOpenState[project.id] ?? projectActive;
                   const links = getProjectLinks(
                     user.role,
