@@ -18,16 +18,16 @@ const config = {
 };
 
 const spotlightItems: SpotlightItem[] = [
-  { name: "Courtyard Stillness", img: "/spotlight/spotlight-img-1.jpg" },
-  { name: "Blue Horizon", img: "/spotlight/spotlight-img-2.jpg" },
-  { name: "Stone Quiet", img: "/spotlight/spotlight-img-3.jpg" },
-  { name: "Amber Niche", img: "/spotlight/spotlight-img-4.jpg" },
-  { name: "Earthen Shelf", img: "/spotlight/spotlight-img-5.jpg" },
-  { name: "Reflective White", img: "/spotlight/spotlight-img-6.jpg" },
-  { name: "Desert Edge", img: "/spotlight/spotlight-img-7.jpg" },
-  { name: "Soft Passage", img: "/spotlight/spotlight-img-8.jpg" },
-  { name: "Water Column", img: "/spotlight/spotlight-img-9.jpg" },
-  { name: "Golden Retreat", img: "/spotlight/spotlight-img-10.jpg" },
+  { name: "Launch Websites", img: "/spotlight/spotlight-img-1.jpg" },
+  { name: "Operations Systems", img: "/spotlight/spotlight-img-2.jpg" },
+  { name: "Android Products", img: "/spotlight/spotlight-img-3.jpg" },
+  { name: "Interactive Drops", img: "/spotlight/spotlight-img-4.jpg" },
+  { name: "Client Portals", img: "/spotlight/spotlight-img-5.jpg" },
+  { name: "Onboarding Flows", img: "/spotlight/spotlight-img-6.jpg" },
+  { name: "Dashboard Surfaces", img: "/spotlight/spotlight-img-7.jpg" },
+  { name: "Campaign Systems", img: "/spotlight/spotlight-img-8.jpg" },
+  { name: "Realtime Control", img: "/spotlight/spotlight-img-9.jpg" },
+  { name: "Product Experiences", img: "/spotlight/spotlight-img-10.jpg" },
 ];
 
 export default function Spotlight() {
@@ -360,7 +360,7 @@ export default function Spotlight() {
               introTextElementsRef.current[0] = element;
             }}
           >
-            <p>Beneath</p>
+            <p>Strategy</p>
           </div>
           <div
             className="spotlight-intro-text"
@@ -368,7 +368,7 @@ export default function Spotlight() {
               introTextElementsRef.current[1] = element;
             }}
           >
-            <p>Beyond</p>
+            <p>Execution</p>
           </div>
         </div>
         <div className="spotlight-bg-img">
@@ -380,7 +380,7 @@ export default function Spotlight() {
       </div>
       <div className="spotlight-images" ref={imagesContainerRef}></div>
       <div className="spotlight-header" ref={spotlightHeaderRef}>
-        <p>Discover</p>
+        <p>Capabilities</p>
       </div>
       <div className="spotlight-outline"></div>
     </section>

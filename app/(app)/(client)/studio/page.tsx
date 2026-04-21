@@ -3,7 +3,6 @@
 
 import "./studio.css";
 import HowWeWork from "../_components/how-we-work/how-we-work";
-import Spotlight from "../_components/spotlight/spotlight";
 import Copy from "../_components/copy/copy";
 
 export default function StudioPage() {
@@ -14,18 +13,18 @@ export default function StudioPage() {
           <div className="studio-hero-col">
             <Copy delay={0.85}>
               <p>
-                We see design as more than construction. It is an ongoing
-                dialogue between people, material, and place, shaped with care,
-                and built to endure.
+                We are a compact agency that blends brand thinking, product
+                design, and engineering into one shipping team.
               </p>
             </Copy>
           </div>
           <div className="studio-hero-col">
             <Copy delay={0.85}>
               <h2>
-                Our studio exists to create spaces that feel honest, lived in,
-                and quietly transformative. Every project begins with listening
-                and ends with an environment.
+                ANCS Studio helps companies ship polished digital experiences
+                without the drag of fragmented teams. We work across websites,
+                internal systems, interactive launches, client portals, and
+                Android products.
               </h2>
             </Copy>
             <div className="studio-hero-hero-img">
@@ -39,32 +38,32 @@ export default function StudioPage() {
           <div className="more-facts-items">
             <div className="fact">
               <Copy delay={0.1}>
-                <p>Models crafted</p>
-                <h2>120+</h2>
+                <p>Projects shipped</p>
+                <h2>48+</h2>
               </Copy>
             </div>
             <div className="fact">
               <Copy delay={0.2}>
-                <p>Materials explored</p>
-                <h2>60</h2>
+                <p>Systems designed</p>
+                <h2>16</h2>
               </Copy>
             </div>
             <div className="fact">
               <Copy delay={0.3}>
-                <p>Workshops hosted</p>
-                <h2>25+</h2>
+                <p>Android releases</p>
+                <h2>12</h2>
               </Copy>
             </div>
             <div className="fact">
               <Copy delay={0.4}>
-                <p>Hours logged</p>
-                <h2>3k+</h2>
+                <p>Client teams supported</p>
+                <h2>30+</h2>
               </Copy>
             </div>
             <div className="fact">
               <Copy delay={0.5}>
-                <p>Prototypes build</p>
-                <h2>724</h2>
+                <p>Automations delivered</p>
+                <h2>90</h2>
               </Copy>
             </div>
           </div>
@@ -75,7 +74,6 @@ export default function StudioPage() {
           <HowWeWork />
         </div>
       </section>
-      {/* <Spotlight /> */}
     </div>
   );
 }

@@ -7,14 +7,12 @@ interface ClickSparkProps {
 
 const ClickSpark: React.FC<ClickSparkProps> = ({ activeOn }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const rootRef = useRef<HTMLElement | null>(null);
 
   const setSparkPosition = (e: MouseEvent) => {
-    if (!svgRef.current || !rootRef.current) return;
+    if (!svgRef.current) return;
 
-    const rect = rootRef.current.getBoundingClientRect();
-    svgRef.current.style.left = `${e.clientX - rect.left - svgRef.current.clientWidth / 2}px`;
-    svgRef.current.style.top = `${e.clientY - rect.top - svgRef.current.clientHeight / 2}px`;
+    svgRef.current.style.left = `${e.clientX}px`;
+    svgRef.current.style.top = `${e.clientY}px`;
   };
 
   const animateSpark = () => {
@@ -47,8 +45,6 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ activeOn }) => {
   };
 
   useEffect(() => {
-    rootRef.current = document.documentElement;
-
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Element | null;
       if (activeOn && target && !target.matches(activeOn)) return;
@@ -56,14 +52,23 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ activeOn }) => {
       animateSpark();
     };
 
-    rootRef.current.addEventListener("click", handleClick);
+    document.addEventListener("click", handleClick);
     return () => {
-      rootRef.current?.removeEventListener("click", handleClick);
+      document.removeEventListener("click", handleClick);
     };
   }, [activeOn]);
 
   return (
-    <div style={{ display: "contents" }}>
+    <div
+      aria-hidden="true"
+      style={{
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+        position: "fixed",
+        zIndex: 999999999,
+      }}
+    >
       <svg
         ref={svgRef}
         width="30"
@@ -76,9 +81,10 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ activeOn }) => {
         style={{
           pointerEvents: "none",
           position: "absolute",
-          zIndex: 999999999,
-          rotate: "-20deg",
-          stroke: "rgb(--foreground)",
+          left: 0,
+          top: 0,
+          stroke: "var(--foreground)",
+          transform: "translate(-50%, -50%) rotate(-20deg)",
         }}
         className="dark:stroke-white stroke-black"
       >

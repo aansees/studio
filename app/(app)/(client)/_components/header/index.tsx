@@ -7,7 +7,6 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { useViewTransition } from "../use-view-transition";
 import AnimatedButton from "../animated-button/animated-button";
 import Link from "next/link";
 
@@ -15,7 +14,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function Header() {
   const topBarRef = useRef<HTMLDivElement | null>(null);
-  const { navigateWithTransition } = useViewTransition();
 
   useEffect(() => {
     const topBar = topBarRef.current;
@@ -75,11 +73,11 @@ export default function Header() {
           className="font-otis-mono text-[0.875rem] font-medium uppercase leading-[1.125] text-[var(--otis-bg)]"
           href="/"
         >
-          Ancs ✦ Studio
+          ANCS STUDIO
         </Link>
       </div>
       <div className="top-bar-cta">
-        <AnimatedButton label="Reserve" route="/connect" animate={false} />
+        <AnimatedButton label="Start Project" route="/connect" animate={false} />
       </div>
     </div>
   );

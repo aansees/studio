@@ -14,7 +14,7 @@ export default function ConnectPage() {
           <div className="contact-col">
             <div className="contact-hero-header">
               <Copy delay={0.85}>
-                <h1>All spaces begin with intention</h1>
+                <h1>Big digital projects begin with a sharp brief</h1>
               </Copy>
             </div>
             <div className="contact-copy-year">
@@ -33,29 +33,28 @@ export default function ConnectPage() {
               </div>
               <div className="contact-info-block">
                 <Copy delay={1}>
-                  <p>New Commissions</p>
+                  <p>New Projects</p>
                   <p>build@ancs.studio</p>
                   <p>+1 (872) 441-2086</p>
                 </Copy>
               </div>
               <div className="contact-info-block">
                 <Copy delay={1.15}>
-                  <p>Studio Address</p>
-                  <p>18 Cordova Lane</p>
-                  <p>Seattle, WA 98101</p>
+                  <p>What We Build</p>
+                  <p>Websites and systems</p>
+                  <p>Android apps and interactive launches</p>
                 </Copy>
               </div>
               <div className="contact-info-block">
                 <Copy delay={1.3}>
-                  <p>Social</p>
-                  <p>Instagram</p>
-                  <p>Are.na</p>
-                  <p>LinkedIn</p>
+                  <p>Base</p>
+                  <p>Seattle, WA</p>
+                  <p>Remote worldwide</p>
                 </Copy>
               </div>
             </div>
             <div className="contact-img">
-              <img src="/contact/contact-img.jpg" alt="Ancs Studio workspace" />
+              <img src="/contact/contact-img.jpg" alt="Ancs Studio project planning" />
             </div>
           </div>
         </div>

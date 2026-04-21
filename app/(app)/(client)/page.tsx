@@ -261,20 +261,21 @@ export default function HomePage() {
           <div className="hero-content">
             <div className="hero-header">
               <Copy animateOnScroll={false} delay={heroTitleDelay}>
-                <h1>Designing spaces with calm structure and lasting character</h1>
+                <h1>Impressive websites, systems, Android apps, and interactive launches.</h1>
               </Copy>
             </div>
             <div className="hero-tagline">
               <Copy animateOnScroll={false} delay={heroTaglineDelay}>
                 <p>
-                  At Ancs Studio, we shape interiors and environments that
-                  balance material warmth, clean lines, and everyday comfort.
+                  We partner with ambitious teams to design and build digital
+                  products that look sharp, move fast, and stay useful long
+                  after launch.
                 </p>
               </Copy>
             </div>
             <AnimatedButton
-              label="Discover More"
-              route="/studio"
+              label="View Projects"
+              route="/projects"
               animateOnScroll={false}
               delay={heroButtonDelay}
             />
@@ -287,46 +288,45 @@ export default function HomePage() {
             <Copy delay={0.1}>
               <h1>
                 <span className="spacer">&nbsp;</span>
-                At Ancs Studio, every project starts with context and intent,
-                then evolves into spaces that feel precise, warm, and built to
-                age beautifully.
+                Ancs Studio is a digital agency for brands and product teams
+                that need websites, internal systems, mobile apps, and
+                interactive experiences with real engineering behind the polish.
               </h1>
             </Copy>
           </div>
           <div className="what-we-do-content">
             <div className="what-we-do-col">
               <Copy delay={0.1}>
-                <p>How we work</p>
+                <p>What we build</p>
               </Copy>
 
               <Copy delay={0.15}>
                 <p className="lg">
-                  We move from concept to completion through close collaboration,
-                  thoughtful iteration, and disciplined execution. The result is
-                  an environment that feels coherent, useful, and deeply lived
-                  in.
+                  From launch sites and conversion funnels to operations
+                  dashboards, Android apps, and internal platforms, we shape
+                  the interface, define the system, and ship the build.
                 </p>
               </Copy>
             </div>
             <div className="what-we-do-col">
               <div className="what-we-do-tags" ref={tagsRef}>
                 <div className="what-we-do-tag">
-                  <h3>Quiet</h3>
+                  <h3>Websites</h3>
                 </div>
                 <div className="what-we-do-tag">
-                  <h3>View</h3>
+                  <h3>Systems</h3>
                 </div>
                 <div className="what-we-do-tag">
-                  <h3>Tactile</h3>
+                  <h3>Interactive</h3>
                 </div>
                 <div className="what-we-do-tag">
-                  <h3>Light-forward</h3>
+                  <h3>Android</h3>
                 </div>
                 <div className="what-we-do-tag">
-                  <h3>Slow design</h3>
+                  <h3>Dashboards</h3>
                 </div>
                 <div className="what-we-do-tag">
-                  <h3>Modular rhythm</h3>
+                  <h3>Automation</h3>
                 </div>
               </div>
             </div>
@@ -337,12 +337,12 @@ export default function HomePage() {
         <div className="container">
           <div className="featured-projects-header-callout">
             <Copy delay={0.1}>
-              <p>Featured work</p>
+              <p>Selected work</p>
             </Copy>
           </div>
           <div className="featured-projects-header">
             <Copy delay={0.15}>
-              <h2>Selected spaces from recent studio projects</h2>
+              <h2>Recent launches, systems, and product builds</h2>
             </Copy>
           </div>
         </div>
@@ -358,8 +358,8 @@ export default function HomePage() {
               <div className="gallery-callout-img gallery-callout-img-2">
                 <img src="/gallery-callout/gallery-callout-2.jpg" alt="" />
                 <div className="gallery-callout-img-content">
-                  <h3>800+</h3>
-                  <p>Project Images</p>
+                  <h3>60+</h3>
+                  <p>Screens Shipped</p>
                 </div>
               </div>
             </div>
@@ -376,12 +376,11 @@ export default function HomePage() {
             <div className="gallery-callout-copy">
               <Copy delay={0.1}>
                 <h3>
-                  Explore moments from our archive, from material details to
-                  full-room compositions, and see how each project balances
-                  atmosphere, function, and craft.
+                  Explore launch websites, admin surfaces, Android flows, and
+                  interactive product experiments from recent client work.
                 </h3>
               </Copy>
-              <AnimatedButton label="View Spaces" route="/spaces" />
+              <AnimatedButton label="Browse Projects" route="/projects" />
             </div>
           </div>
         </div>

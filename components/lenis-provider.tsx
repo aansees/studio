@@ -34,6 +34,7 @@ export default function LenisProvider({ children }: LenisProviderProps) {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     window.scrollTo(0, 0);
+    lenisRef.current?.resize();
     lenisRef.current?.scrollTo(0, {
       immediate: true,
       force: true,
@@ -59,6 +60,7 @@ export default function LenisProvider({ children }: LenisProviderProps) {
       const lenis = createLenis(isMobile);
       lenis.on("scroll", ScrollTrigger.update);
       lenisRef.current = lenis;
+      lenis.resize();
 
       // Sync Lenis to the real top-of-page position on creation so it cannot
       // later re-apply a stale restored scroll value on first interaction.
@@ -117,10 +119,12 @@ export default function LenisProvider({ children }: LenisProviderProps) {
     resetScrollPosition();
 
     const frameId = window.requestAnimationFrame(() => {
+      lenisRef.current?.resize();
       resetScrollPosition();
       ScrollTrigger.refresh();
     });
     const timeoutId = window.setTimeout(() => {
+      lenisRef.current?.resize();
       resetScrollPosition();
       ScrollTrigger.refresh();
     }, 50);

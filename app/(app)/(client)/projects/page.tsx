@@ -1,13 +1,13 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import "./spaces.css";
+import "./projects.css";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Copy from "../_components/copy/copy";
 import { useViewTransition } from "../_components/use-view-transition";
-import { spacesData } from "./spaces";
+import { projectsData } from "./projects";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -93,10 +93,14 @@ export default function SpacesPage() {
     <div className="page spaces">
       <section className="spaces-header">
         <div className="container">
-          <div className="prop-col"></div>
+          <div className="prop-col">
+            <Copy delay={0.9}>
+              <p>Selected work</p>
+            </Copy>
+          </div>
           <div className="prop-col">
             <Copy delay={1}>
-              <h1>Timeless Spaces</h1>
+              <h1>Selected Projects</h1>
             </Copy>
             <div className="prop-filters">
               <div className="filter default">
@@ -106,17 +110,22 @@ export default function SpacesPage() {
               </div>
               <div className="filter">
                 <Copy delay={1.1}>
-                  <p className="lg">Residential</p>
+                  <p className="lg">Websites</p>
                 </Copy>
               </div>
               <div className="filter">
                 <Copy delay={1.2}>
-                  <p className="lg">Commercial</p>
+                  <p className="lg">Systems</p>
                 </Copy>
               </div>
               <div className="filter">
                 <Copy delay={1.3}>
-                  <p className="lg">Hospitality</p>
+                  <p className="lg">Android</p>
+                </Copy>
+              </div>
+              <div className="filter">
+                <Copy delay={1.4}>
+                  <p className="lg">Interactive</p>
                 </Copy>
               </div>
             </div>
@@ -125,39 +134,39 @@ export default function SpacesPage() {
       </section>
       <section className="spaces-list">
         <div className="container" ref={spacesRef}>
-          {spacesData.map((space) => (
+          {projectsData.map((project) => (
             <a
-              key={space.id}
-              href={space.route}
+              key={project.id}
+              href={project.route}
               className="space"
               onClick={(event) => {
                 event.preventDefault();
-                navigateWithTransition(space.route);
+                navigateWithTransition(project.route);
               }}
             >
               <div className="space-img">
-                <img src={space.image} alt={space.name} />
+                <img src={project.image} alt={project.name} />
               </div>
               <div className="space-info">
                 <div className="prop-info-col">
                   <div className="prop-date">
-                    <p>{space.date}</p>
+                    <p>{project.date}</p>
                   </div>
                 </div>
                 <div className="prop-info-col">
                   <div className="prop-info-sub-col">
                     <div className="prop-name">
-                      <h3>{space.name}</h3>
-                      <p className="lg">{space.location}</p>
+                      <h3>{project.name}</h3>
+                      <p className="lg">{project.subtitle}</p>
                     </div>
                   </div>
                   <div className="prop-info-sub-col">
                     <div className="prop-client">
                       <div className="prop-client-img">
-                        <img src={space.clientImage} alt={space.clientName} />
+                        <img src={project.clientImage} alt={project.clientName} />
                       </div>
                       <div className="prop-client-name">
-                        <p>{space.clientName}</p>
+                        <p>{project.clientName}</p>
                       </div>
                     </div>
                   </div>

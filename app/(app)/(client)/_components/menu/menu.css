@@ -5,6 +5,7 @@
   width: 100vw;
   height: 100svh;
   clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
   background-color: var(--base-500);
   overflow: hidden;
   padding: 1rem;

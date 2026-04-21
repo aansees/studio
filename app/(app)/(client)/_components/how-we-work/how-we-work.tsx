@@ -120,13 +120,13 @@ export default function HowWeWork() {
           <div className="how-we-work-header-content">
             <div className="how-we-work-header-callout">
               <Copy delay={0.1}>
-                <p>Process in focus</p>
+                <p>How we ship</p>
               </Copy>
             </div>
             <Copy delay={0.15}>
               <h3>
-                From first sketches to final details, our process is shaped to
-                bring clarity and rhythm
+                Our process keeps strategy, interface, motion, and engineering
+                aligned from kickoff to release
               </h3>
             </Copy>
             <div className="how-we-work-steps" ref={stepsRef}>
@@ -157,12 +157,12 @@ export default function HowWeWork() {
           </div>
           <div className="how-we-work-card-copy">
             <div className="how-we-work-card-index-label">
-              <h3>Discovery / Context</h3>
+              <h3>Discovery / Audit</h3>
             </div>
             <p className="md">
-              We begin with listening and study. Site, climate, and daily
-              routines inform the brief so we can define aims, constraints, and
-              measures of success with clarity.
+              We start by mapping the business problem, current tooling, user
+              friction, and launch constraints. That gives us a brief grounded
+              in reality, not assumptions.
             </p>
           </div>
         </div>
@@ -172,12 +172,12 @@ export default function HowWeWork() {
           </div>
           <div className="how-we-work-card-copy">
             <div className="how-we-work-card-index-label">
-              <h3>Principles / Direction</h3>
+              <h3>Structure / Direction</h3>
             </div>
             <p className="md">
-              We set guiding principles for light, massing, and flow. Quick
-              models and diagrams test options and reveal the direction that
-              best serves the brief.
+              We define information hierarchy, system boundaries, and page or
+              product structure. Wireframes and quick prototypes help us prove
+              the direction before visual polish begins.
             </p>
           </div>
         </div>
@@ -187,12 +187,12 @@ export default function HowWeWork() {
           </div>
           <div className="how-we-work-card-copy">
             <div className="how-we-work-card-index-label">
-              <h3>Detail / Coordination</h3>
+              <h3>Design / Motion</h3>
             </div>
             <p className="md">
-              We develop drawings and specifications across structure, services,
-              and joinery. Materials and samples are reviewed in natural light
-              while budget and timeline stay in view.
+              We turn the structure into a crisp interface system with strong
+              typography, motion rules, reusable components, and the practical
+              states real products need.
             </p>
           </div>
         </div>
@@ -202,12 +202,12 @@ export default function HowWeWork() {
           </div>
           <div className="how-we-work-card-copy">
             <div className="how-we-work-card-index-label">
-              <h3>Build / Handover</h3>
+              <h3>Build / Launch</h3>
             </div>
             <p className="md">
-              We oversee construction with care and precision. After final
-              review and finishing, we hand over a space that is ready to live
-              in, complete with guidance for long term care.
+              We ship the production build, connect the moving parts, and leave
+              teams with something maintainable. Launch is the handoff point,
+              not the point where clarity stops.
             </p>
           </div>
         </div>

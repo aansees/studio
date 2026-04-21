@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import gsap from "gsap";
 import { CustomEase } from "gsap/CustomEase";
@@ -16,11 +17,36 @@ export default function Menu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isNearPageBottom, setIsNearPageBottom] = useState(false);
+  const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
   const splitTextRefs = useRef<SplitText[]>([]);
   const lenis = useLenis();
   const { navigateWithTransition } = useViewTransition();
+
+  const resetMenuState = useCallback(() => {
+    const menu = menuRef.current;
+
+    setIsOpen(false);
+    setIsAnimating(false);
+    setIsNavigating(false);
+    document.body.classList.remove("menu-open");
+
+    if (!menu) {
+      return;
+    }
+
+    gsap.killTweensOf(menu);
+    gsap.set(menu, {
+      clipPath: "circle(0% at 50% 50%)",
+      pointerEvents: "none",
+    });
+
+    splitTextRefs.current.forEach((split) => {
+      gsap.killTweensOf(split.lines as HTMLElement[]);
+      gsap.set(split.lines as HTMLElement[], { y: "120%" });
+    });
+  }, []);
 
   useEffect(() => {
     const updateMenuBtnVisibility = () => {
@@ -49,6 +75,10 @@ export default function Menu() {
       document.body.classList.remove("menu-open");
     };
   }, []);
+
+  useEffect(() => {
+    resetMenuState();
+  }, [pathname, resetMenuState]);
 
   useEffect(() => {
     if (!lenis) {
@@ -84,6 +114,7 @@ export default function Menu() {
 
     gsap.set(menu, {
       clipPath: "circle(0% at 50% 50%)",
+      pointerEvents: "none",
     });
 
     const h2Elements = menu.querySelectorAll("h2");
@@ -223,6 +254,7 @@ export default function Menu() {
       document.body.classList.remove("menu-open");
 
       if (menuRef.current) {
+        gsap.killTweensOf(menuRef.current);
         menuRef.current.style.pointerEvents = "none";
       }
 
@@ -244,7 +276,7 @@ export default function Menu() {
             <div className="links">
               <div className="link">
                 <Link href="/" onClick={(event) => handleLinkClick(event, "/")}>
-                  <h2>Index</h2>
+                  <h2>Home</h2>
                 </Link>
               </div>
               <div className="link">
@@ -253,21 +285,13 @@ export default function Menu() {
                 </Link>
               </div>
               <div className="link">
-                <Link href="/spaces" onClick={(event) => handleLinkClick(event, "/spaces")}>
-                  <h2>Spaces</h2>
-                </Link>
-              </div>
-              <div className="link">
-                <Link
-                  href="/sample-space"
-                  onClick={(event) => handleLinkClick(event, "/sample-space")}
-                >
-                  <h2>Sample Space</h2>
+                <Link href="/projects" onClick={(event) => handleLinkClick(event, "/projects")}>
+                  <h2>Projects</h2>
                 </Link>
               </div>
               <div className="link">
                 <Link href="/connect" onClick={(event) => handleLinkClick(event, "/connect")}>
-                  <h2>Contact</h2>
+                  <h2>Connect</h2>
                 </Link>
               </div>
             </div>
@@ -276,14 +300,14 @@ export default function Menu() {
             <div className="socials">
               <div className="sub-col">
                 <div className="menu-meta menu-commissions">
-                  <p>Commissions</p>
+                  <p>New Business</p>
                   <p>build@ancs.studio</p>
                   <p>+1 (872) 441-2086</p>
                 </div>
                 <div className="menu-meta">
-                  <p>Studio Address</p>
-                  <p>18 Cordova Lane</p>
-                  <p>Seattle, WA 98101</p>
+                  <p>What We Build</p>
+                  <p>Websites and systems</p>
+                  <p>Android apps and interactive launches</p>
                 </div>
               </div>
               <div className="sub-col">

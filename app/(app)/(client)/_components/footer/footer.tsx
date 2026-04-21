@@ -59,7 +59,7 @@ export default function Footer() {
                 </Copy>
               </div>
               <Copy delay={0.2}>
-                <h2>Spaces made simple, thoughtful, lasting.</h2>
+                <h2>Websites, systems, apps, and interfaces built to perform.</h2>
               </Copy>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default function Footer() {
                     navigateWithTransition("/");
                   }}
                 >
-                  <h3>Index</h3>
+                  <h3>Home</h3>
                 </Link>
                 <Link
                   href="/studio"
@@ -85,22 +85,13 @@ export default function Footer() {
                   <h3>Studio</h3>
                 </Link>
                 <Link
-                  href="/spaces"
+                  href="/projects"
                   onClick={(event) => {
                     event.preventDefault();
-                    navigateWithTransition("/spaces");
+                    navigateWithTransition("/projects");
                   }}
                 >
-                  <h3>Our Spaces</h3>
-                </Link>
-                <Link
-                  href="/sample-space"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    navigateWithTransition("/sample-space");
-                  }}
-                >
-                  <h3>One Installation</h3>
+                  <h3>Projects</h3>
                 </Link>
                 <Link
                   href="/connect"
@@ -135,23 +126,32 @@ export default function Footer() {
           <div className="footer-meta-col">
             <Copy delay={0.1}>
               <p>
-                We believe design is not decoration but the quiet structure that
-                shapes experience.
+                We help teams turn ambitious briefs into clean launches,
+                practical systems, and digital experiences that stay usable
+                after handoff.
               </p>
             </Copy>
           </div>
         </div>
       </div>
       <div className="footer-outro">
-        <div className="container">
+        <div className="container pb-0!">
           <div className="footer-header">
-            <img src="/logos/ancs-studio-footer-logo.svg" alt="Ancs Studio logo" />
+            <h1
+              className="font-otis-display uppercase text-center italic leading-[0.95]"
+              style={{ fontSize: "15vw" }}
+            >
+              Ancs Studio
+            </h1>
           </div>
           <div className="footer-copyright">
             <p>
-              Developed by - <span>Admin12121</span>
+              Developed by -{" "}
+              <a href="https://admin12121.com" target="_blank" className="font-otis-display">
+                Admin12121
+              </a>
             </p>
-            <p>This website is using cookies.</p>
+            <p>Built for ambitious product and brand teams.</p>
             <p>All rights reserved &copy; {currentYear}</p>
           </div>
         </div>
