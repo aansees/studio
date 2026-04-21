@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Raleway } from "next/font/google";
 import localFont from "next/font/local";
 import LenisProvider from "@/components/lenis-provider";
 import ClickSpark from "@/components/global/cursor-sparklin";
-import { RealtimeProvider } from "@/lib/realtime-client";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -59,12 +58,11 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${editorialNew.variable} ${greatVibes.variable} ${mondwest.variable} antialiased`}
       >
-        <RealtimeProvider api={{ url: "/api/realtime", withCredentials: true }}>
+        
           <LenisProvider>
             {children}
             <ClickSpark />
           </LenisProvider>
-        </RealtimeProvider>
         <Toaster />
       </body>
     </html>

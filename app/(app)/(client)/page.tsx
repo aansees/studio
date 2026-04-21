@@ -1,897 +1,391 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { CustomEase } from "gsap/CustomEase";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
-import {
-  AboutDescriptionSection,
-  ContactCtaSection,
-  FeaturedWorkSection,
-  HeroSection,
-  ServicesHeaderSection,
-  ServicesStackSection,
-  TransitionOverlay,
-  featuredCardPositionsLarge,
-  featuredCardPositionsSmall,
-  heroImagePaths,
-} from "./_components";
-import {
-  markHomeEntryOverlayPlayed,
-  shouldPlayHomeEntryOverlay,
-} from "./_components/document-entry-state";
+import { CustomEase } from "gsap/CustomEase";
+import { useGSAP } from "@gsap/react";
+import { useLenis } from "lenis/react";
+import AnimatedButton from "./_components/animated-button/animated-button";
+import FeaturedProjects from "./_components/featured-projects/featured-projects";
+// import ClientReviews from "./_components/client-reviews/client-reviews";
+import Copy from "./_components/copy/copy";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger, CustomEase, SplitText);
-CustomEase.create("hop", "0.85, 0, 0.15, 1");
-
-export default function Page() {
-  const [shouldRunPreloader] = useState(() => shouldPlayHomeEntryOverlay("/"));
-  const rootRef = useRef<HTMLElement>(null);
-  const heroImageRef = useRef<HTMLImageElement>(null);
-  const isPreloaderActiveRef = useRef(shouldRunPreloader);
-  const isHeroImageFrozenRef = useRef(!shouldRunPreloader);
-  const scrollYRef = useRef(0);
-  const bodyStylesRef = useRef<{
-    backgroundColor: string;
-    color: string;
-    overflow: string;
-    position: string;
-    top: string;
-    width: string;
-    htmlOverflow: string;
-  } | null>(null);
-
-  function setBodyLockState(shouldLock: boolean) {
-    const initialStyles = bodyStylesRef.current;
-
-    if (!initialStyles) {
-      return;
-    }
-
-    document.documentElement.style.overflow = shouldLock
-      ? "hidden"
-      : initialStyles.htmlOverflow;
-    document.body.style.overflow = shouldLock ? "hidden" : initialStyles.overflow;
-    document.body.style.position = shouldLock ? "fixed" : initialStyles.position;
-    document.body.style.top = shouldLock
-      ? `-${scrollYRef.current}px`
-      : initialStyles.top;
-    document.body.style.width = shouldLock ? "100%" : initialStyles.width;
+function shouldShowHomePreloader() {
+  if (typeof window === "undefined") {
+    return false;
   }
 
-  useEffect(() => {
-    if (!shouldRunPreloader) {
-      return;
+  try {
+    const navigationEntry =
+      performance.getEntriesByType("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+
+    if (!navigationEntry?.name) {
+      return true;
     }
 
-    markHomeEntryOverlayPlayed();
-  }, [shouldRunPreloader]);
+    const initialDocumentUrl = new URL(navigationEntry.name);
+    return initialDocumentUrl.pathname === window.location.pathname;
+  } catch {
+    return true;
+  }
+}
+
+gsap.registerPlugin(ScrollTrigger, CustomEase);
+CustomEase.create("hop", "0.9, 0, 0.1, 1");
+
+export default function HomePage() {
+  const tagsRef = useRef<HTMLDivElement>(null);
+  const [showPreloader, setShowPreloader] = useState(false);
+  const [useIntroHeroTiming, setUseIntroHeroTiming] = useState(false);
+  const [loaderAnimating, setLoaderAnimating] = useState(false);
+  const lenis = useLenis();
 
   useEffect(() => {
-    const { style } = document.body;
-    bodyStylesRef.current = {
-      backgroundColor: style.backgroundColor,
-      color: style.color,
-      overflow: style.overflow,
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      htmlOverflow: document.documentElement.style.overflow,
-    };
-
-    style.backgroundColor = "#edf1e8";
-    style.color = "#141414";
-
-    return () => {
-      const initialStyles = bodyStylesRef.current;
-
-      if (!initialStyles) {
-        return;
-      }
-
-      style.backgroundColor = initialStyles.backgroundColor;
-      style.color = initialStyles.color;
-      style.overflow = initialStyles.overflow;
-      style.position = initialStyles.position;
-      style.top = initialStyles.top;
-      style.width = initialStyles.width;
-      document.documentElement.style.overflow = initialStyles.htmlOverflow;
-    };
+    const shouldShow = shouldShowHomePreloader();
+    setShowPreloader(shouldShow);
+    setUseIntroHeroTiming(shouldShow);
   }, []);
 
   useEffect(() => {
-    if (!shouldRunPreloader) {
+    if (!lenis) {
       return;
     }
 
-    const initialStyles = bodyStylesRef.current;
-
-    if (!initialStyles) {
+    if (loaderAnimating) {
+      lenis.stop();
       return;
     }
 
-    scrollYRef.current = 0;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    window.scrollTo(0, 0);
-    document.body.style.position = "fixed";
-    document.body.style.top = "0px";
-    document.body.style.width = "100%";
-  }, [shouldRunPreloader]);
+    lenis.start();
+  }, [lenis, loaderAnimating]);
 
-  useEffect(() => {
-    heroImagePaths.forEach((path) => {
-      const image = new Image();
-      image.src = path;
+  useGSAP(() => {
+    const tl = gsap.timeline({
+      delay: 0.3,
+      defaults: {
+        ease: "hop",
+      },
     });
-  }, []);
 
-  useEffect(() => {
-    const heroImage = heroImageRef.current;
+    if (showPreloader) {
+      setLoaderAnimating(true);
+      const counts = document.querySelectorAll(".count");
 
-    if (!heroImage) {
-      return;
+      counts.forEach((count, index) => {
+        const digits = count.querySelectorAll(".digit h1");
+
+        tl.to(
+          digits,
+          {
+            y: "0%",
+            duration: 1,
+            stagger: 0.075,
+          },
+          index * 1,
+        );
+
+        tl.to(
+          digits,
+          {
+            y: "-100%",
+            duration: 1,
+            stagger: 0.075,
+          },
+          index * 1 + 1,
+        );
+      });
+
+      tl.to(".spinner", {
+        opacity: 0,
+        duration: 0.3,
+      });
+
+      tl.to(
+        ".word h1",
+        {
+          y: "0%",
+          duration: 1,
+        },
+        "<",
+      );
+
+      tl.to(".divider", {
+        scaleY: "100%",
+        duration: 1,
+        onComplete: () => {
+          gsap.to(".divider", { opacity: 0, duration: 0.3, delay: 0.3 });
+        },
+      });
+
+      tl.to("#word-1 h1", {
+        y: "100%",
+        duration: 1,
+        delay: 0.3,
+      });
+
+      tl.to(
+        "#word-2 h1",
+        {
+          y: "-100%",
+          duration: 1,
+        },
+        "<",
+      );
+
+      tl.to(
+        ".block",
+        {
+          clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
+          duration: 1,
+          stagger: 0.1,
+          delay: 0.75,
+          onStart: () => {
+            gsap.to(".hero-img", { scale: 1, duration: 2, ease: "hop" });
+          },
+          onComplete: () => {
+            gsap.set(".loader", { pointerEvents: "none" });
+            setLoaderAnimating(false);
+            setShowPreloader(false);
+          },
+        },
+        "<",
+      );
     }
-
-    let currentImageIndex = 0;
-    const syncHeroImages = (path: string) => {
-      if (heroImageRef.current) {
-        heroImageRef.current.src = path;
-      }
-    };
-
-    syncHeroImages(heroImagePaths[currentImageIndex]);
-
-    const intervalId = window.setInterval(() => {
-      if (isHeroImageFrozenRef.current) {
-        return;
-      }
-
-      currentImageIndex = (currentImageIndex + 1) % heroImagePaths.length;
-      syncHeroImages(heroImagePaths[currentImageIndex]);
-    }, 250);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
+  }, [showPreloader]);
 
   useGSAP(
     () => {
-      const root = rootRef.current;
-
-      if (!root) {
+      if (!tagsRef.current) {
         return;
       }
 
-      const preloaderRoot = root.querySelector<HTMLElement>("[data-preloader-root]");
-      const preloaderPanel = root.querySelector<HTMLElement>("[data-preloader-panel]");
-      const preloaderCounter = root.querySelector<HTMLElement>(
-        "[data-preloader-counter]",
-      );
-      const preloaderCopyTrack = root.querySelector<HTMLElement>(
-        "[data-preloader-copy-track]",
-      );
-      const preloaderGallery = root.querySelector<HTMLElement>(
-        "[data-preloader-gallery]",
-      );
-      const preloaderCenterSlot = root.querySelector<HTMLElement>(
-        "[data-preloader-center-slot]",
-      );
-      const preloaderImages = gsap.utils.toArray<HTMLElement>(
-        "[data-preloader-image]",
-      );
-      const heroTitles = gsap.utils.toArray<HTMLElement>("[data-preloader-title]");
-      const heroFrame = root.querySelector<HTMLElement>("[data-hero-frame]");
-      const heroHolder = root.querySelector<HTMLElement>("[data-hero-holder]");
-      const media = gsap.matchMedia();
-      const splitHeroTitles = heroTitles.map(
-        (title) =>
-          new SplitText(title, {
-            type: "words",
-            mask: "words",
-            wordsClass: "preloader-word",
-          }),
-      );
-      const heroTitleWords = splitHeroTitles.flatMap((title) =>
-        title.words.map((word) => word as HTMLElement),
-      );
-      const heroTitleWordMasks = heroTitleWords
-        .map((word) => word.parentElement)
-        .filter((mask): mask is HTMLElement => Boolean(mask));
+      const tags = tagsRef.current.querySelectorAll(".what-we-do-tag");
+      gsap.set(tags, { opacity: 0, x: -40 });
 
-      gsap.set(heroTitleWordMasks, {
-        paddingLeft: "0.08em",
-        paddingRight: "0.08em",
-        marginLeft: "-0.08em",
-        marginRight: "-0.08em",
+      ScrollTrigger.create({
+        trigger: tagsRef.current,
+        start: "top 90%",
+        once: true,
+        animation: gsap.to(tags, {
+          opacity: 1,
+          x: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power3.out",
+        }),
       });
-
-      type PreloaderCardMetrics = {
-        left: number;
-        top: number;
-        width: number;
-        height: number;
-        rotation: number;
-        borderRadius: string;
-        borderWidth: string;
-      };
-
-      type HeroFrameTarget = {
-        left: number;
-        top: number;
-        width: number;
-        height: number;
-        rotation: number;
-        borderRadius: string;
-        borderWidth: string;
-      };
-
-      let startHeroMotion = () => {};
-      let measureHeroFrameTarget: () => HeroFrameTarget | null = () => null;
-      let getPreloaderCardMetrics: (gapOverride?: string) => PreloaderCardMetrics =
-        () => {
-          const width =
-            window.innerWidth <= 1000
-              ? Math.max(Math.min(window.innerWidth * 0.2, 200), 88)
-              : Math.max(Math.min(window.innerWidth * 0.1, 180), 120);
-          const height = width * 1.4;
-
-          return {
-            left: window.innerWidth / 2 - width / 2,
-            top: window.innerHeight / 2 - height / 2,
-            width,
-            height,
-            rotation: 0,
-            borderRadius: "0px",
-            borderWidth: "1px",
-          };
-        };
-      let setHeroFrameToPreloaderState: (
-        metrics?: PreloaderCardMetrics,
-      ) => void = () => {};
-
-      if (heroFrame && heroHolder) {
-        const breakpoints = [
-          { maxWidth: 1000, movementMultiplier: 450 },
-          { maxWidth: 1100, movementMultiplier: 500 },
-          { maxWidth: 1200, movementMultiplier: 550 },
-          { maxWidth: 1300, movementMultiplier: 600 },
-        ];
-
-        const getMovementMultiplier = () => {
-          const width = window.innerWidth;
-
-          for (const breakpoint of breakpoints) {
-            if (width <= breakpoint.maxWidth) {
-              return breakpoint.movementMultiplier;
-            }
-          }
-
-          return 650;
-        };
-
-        const animationState = {
-          yPercent: -110,
-          scale: 0.25,
-          rotation: -15,
-          targetMouseX: 0,
-          currentMouseX: 0,
-          movementMultiplier: getMovementMultiplier(),
-        };
-
-        let heroAnimationFrame = 0;
-        let isHeroMotionRunning = false;
-
-        const renderHeroFrame = () => {
-          const scaledMovementMultiplier =
-            (1 - animationState.scale) * animationState.movementMultiplier;
-          const maxHorizontalMovement =
-            !isPreloaderActiveRef.current &&
-            window.innerWidth >= 900 &&
-            animationState.scale < 0.95
-              ? animationState.targetMouseX * scaledMovementMultiplier
-              : 0;
-
-          animationState.currentMouseX = gsap.utils.interpolate(
-            animationState.currentMouseX,
-            maxHorizontalMovement,
-            isPreloaderActiveRef.current ? 0.12 : 0.05,
-          );
-
-          gsap.set(heroFrame, {
-            x: animationState.currentMouseX,
-            yPercent: animationState.yPercent,
-            scale: animationState.scale,
-            rotation: animationState.rotation,
-            autoAlpha: 1,
-            transformOrigin: "center center",
-          });
-
-          heroAnimationFrame = window.requestAnimationFrame(renderHeroFrame);
-        };
-
-        const handleMouseMove = (event: globalThis.MouseEvent) => {
-          if (isPreloaderActiveRef.current) {
-            return;
-          }
-
-          animationState.targetMouseX =
-            (event.clientX / window.innerWidth - 0.5) * 2;
-        };
-
-        const handleHeroResize = () => {
-          animationState.movementMultiplier = getMovementMultiplier();
-
-          if (window.innerWidth < 900) {
-            animationState.targetMouseX = 0;
-          }
-
-          if (isPreloaderActiveRef.current) {
-            setHeroFrameToPreloaderState();
-          }
-        };
-
-        getPreloaderCardMetrics = (gapOverride?: string) => {
-          const currentGap = preloaderGallery
-            ? window.getComputedStyle(preloaderGallery).gap
-            : null;
-
-          if (preloaderGallery && currentGap && gapOverride) {
-            gsap.set(preloaderGallery, { gap: gapOverride });
-          }
-
-          const slotRect = preloaderCenterSlot?.getBoundingClientRect();
-
-          if (preloaderGallery && currentGap && gapOverride) {
-            gsap.set(preloaderGallery, { gap: currentGap });
-          }
-
-          if (slotRect) {
-            return {
-              left: slotRect.left,
-              top: slotRect.top,
-              width: slotRect.width,
-              height: slotRect.height,
-              rotation: 0,
-              borderRadius: "0px",
-              borderWidth: "1px",
-            };
-          }
-
-          const width =
-            window.innerWidth <= 1000
-              ? Math.max(Math.min(window.innerWidth * 0.2, 200), 88)
-              : Math.max(Math.min(window.innerWidth * 0.1, 180), 120);
-          const height = width * 1.4;
-
-          return {
-            left: window.innerWidth / 2 - width / 2,
-            top: window.innerHeight / 2 - height / 2,
-            width,
-            height,
-            rotation: 0,
-            borderRadius: "0px",
-            borderWidth: "1px",
-          };
-        };
-
-        measureHeroFrameTarget = () => {
-          gsap.set(heroFrame, {
-            clearProps:
-              "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
-            x: 0,
-            y: 0,
-            xPercent: 0,
-            yPercent: 0,
-            scale: 1,
-            rotation: 0,
-            autoAlpha: 1,
-            transformOrigin: "center center",
-          });
-
-          const layoutRect = heroFrame.getBoundingClientRect();
-          const styles = window.getComputedStyle(heroFrame);
-          const naturalBorderRadius = parseFloat(styles.borderTopLeftRadius) || 0;
-          const naturalBorderWidth = parseFloat(styles.borderTopWidth) || 0;
-
-          gsap.set(heroFrame, {
-            x: 0,
-            y: 0,
-            xPercent: 0,
-            yPercent: animationState.yPercent,
-            scale: animationState.scale,
-            rotation: animationState.rotation,
-            autoAlpha: 1,
-            transformOrigin: "center center",
-          });
-
-          const finalBounds = heroFrame.getBoundingClientRect();
-          const centerX = finalBounds.left + finalBounds.width / 2;
-          const centerY = finalBounds.top + finalBounds.height / 2;
-          const visibleWidth = layoutRect.width * animationState.scale;
-          const visibleHeight = layoutRect.height * animationState.scale;
-
-          return {
-            left: centerX - visibleWidth / 2,
-            top: centerY - visibleHeight / 2,
-            width: visibleWidth,
-            height: visibleHeight,
-            rotation: animationState.rotation,
-            borderRadius: `${naturalBorderRadius * animationState.scale}px`,
-            borderWidth: `${Math.max(naturalBorderWidth * animationState.scale, 1)}px`,
-          };
-        };
-
-        setHeroFrameToPreloaderState = (metrics = getPreloaderCardMetrics()) => {
-
-          gsap.set(heroFrame, {
-            position: "fixed",
-            left: metrics.left,
-            top: metrics.top,
-            width: metrics.width,
-            height: metrics.height,
-            x: 0,
-            y: 0,
-            xPercent: 0,
-            yPercent: 0,
-            scale: 1,
-            rotation: metrics.rotation,
-            zIndex: 100001,
-            autoAlpha: 1,
-            pointerEvents: "none",
-            borderRadius: metrics.borderRadius,
-            borderWidth: metrics.borderWidth,
-            borderColor: "var(--otis-bg)",
-            transformOrigin: "center center",
-          });
-        };
-
-        startHeroMotion = () => {
-          if (isHeroMotionRunning) {
-            return;
-          }
-
-          isHeroMotionRunning = true;
-          document.addEventListener("mousemove", handleMouseMove);
-          window.addEventListener("resize", handleHeroResize);
-          renderHeroFrame();
-        };
-
-        const heroScrollTrigger = ScrollTrigger.create({
-          trigger: heroHolder,
-          start: "top bottom",
-          end: "top top",
-          onUpdate: (self) => {
-            const progress = self.progress;
-
-            animationState.yPercent = -110 + 110 * progress;
-            animationState.scale = 0.25 + 0.75 * progress;
-            animationState.rotation = -15 + 15 * progress;
-          },
-        });
-
-        if (!shouldRunPreloader) {
-          isPreloaderActiveRef.current = false;
-          isHeroImageFrozenRef.current = true;
-          gsap.set(heroFrame, {
-            clearProps:
-              "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
-            x: 0,
-            y: 0,
-            xPercent: 0,
-            yPercent: animationState.yPercent,
-            scale: animationState.scale,
-            rotation: animationState.rotation,
-            autoAlpha: 1,
-            transformOrigin: "center center",
-          });
-          startHeroMotion();
-        }
-
-        media.add("all", () => {
-          return () => {
-            heroScrollTrigger.kill();
-            isHeroMotionRunning = false;
-            document.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("resize", handleHeroResize);
-            window.cancelAnimationFrame(heroAnimationFrame);
-          };
-        });
-      }
-
-      if (
-        preloaderRoot &&
-        preloaderPanel &&
-        preloaderCounter &&
-        preloaderCopyTrack &&
-        preloaderGallery &&
-        preloaderCenterSlot &&
-        heroFrame &&
-        preloaderImages.length > 0
-      ) {
-        const counterValue = { value: 0 };
-        const preloaderCompactGap = window.innerWidth <= 1000 ? "1vw" : "0.75vw";
-        const initialSlotMetrics = getPreloaderCardMetrics();
-        const compactSlotMetrics = getPreloaderCardMetrics(preloaderCompactGap);
-        const heroFrameTarget = measureHeroFrameTarget();
-
-        gsap.set(preloaderImages, {
-          yPercent: 50,
-          scale: 0.5,
-          autoAlpha: 0,
-          clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-          transformOrigin: "center center",
-        });
-        gsap.set(preloaderPanel, {
-          clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-        });
-        gsap.set(preloaderCopyTrack, {
-          y: "1.25rem",
-        });
-        gsap.set(heroTitleWords, {
-          yPercent: 100,
-        });
-        setHeroFrameToPreloaderState(initialSlotMetrics);
-        gsap.set(heroFrame, {
-          yPercent: 50,
-          scale: 0.5,
-          autoAlpha: 0,
-          rotation: 0,
-          borderRadius: "0px",
-          borderWidth: "1px",
-        });
-
-        const counterTl = gsap.timeline({ delay: 0.5 });
-        const overlayCopyTl = gsap.timeline({ delay: 0.75 });
-        const revealTl = gsap.timeline({
-          delay: 0.5,
-          onComplete: () => {
-            isPreloaderActiveRef.current = false;
-            isHeroImageFrozenRef.current = false;
-            gsap.set(preloaderRoot, {
-              autoAlpha: 0,
-              pointerEvents: "none",
-            });
-            startHeroMotion();
-            setBodyLockState(false);
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            window.scrollTo(0, 0);
-            window.requestAnimationFrame(() => {
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-              window.scrollTo(0, 0);
-            });
-          },
-        });
-
-        counterTl.to(counterValue, {
-          value: 100,
-          duration: 5,
-          ease: "power2.out",
-          onUpdate: () => {
-            preloaderCounter.textContent = Math.floor(counterValue.value).toString();
-          },
-        });
-
-        overlayCopyTl
-          .to(preloaderCopyTrack, {
-            y: "0rem",
-            duration: 0.75,
-            ease: "hop",
-          })
-          .to(preloaderCopyTrack, {
-            y: "-1.25rem",
-            duration: 0.75,
-            ease: "hop",
-            delay: 0.75,
-          })
-          .to(preloaderCopyTrack, {
-            y: "-2.5rem",
-            duration: 0.75,
-            ease: "hop",
-            delay: 0.75,
-          })
-          .to(preloaderCopyTrack, {
-            y: "-3.75rem",
-            duration: 0.75,
-            ease: "hop",
-            delay: 1,
-          });
-
-        revealTl
-          .to(preloaderImages, {
-            yPercent: 0,
-            autoAlpha: 1,
-            stagger: 0.05,
-            duration: 1,
-            ease: "hop",
-          })
-          .to(
-            heroFrame,
-            {
-              yPercent: 0,
-              autoAlpha: 1,
-              duration: 1,
-              ease: "hop",
-            },
-            "<",
-          )
-          .to(preloaderGallery, {
-            gap: preloaderCompactGap,
-            duration: 1,
-            delay: 0.45,
-            ease: "hop",
-          })
-          .to(
-            heroFrame,
-            {
-              left: compactSlotMetrics.left,
-              top: compactSlotMetrics.top,
-              width: compactSlotMetrics.width,
-              height: compactSlotMetrics.height,
-              scale: 1,
-              duration: 1,
-              ease: "hop",
-            },
-            "<",
-          )
-          .to(
-            preloaderImages,
-            {
-              scale: 1,
-              duration: 1,
-              ease: "hop",
-            },
-            "<",
-          )
-          .to(preloaderImages, {
-            clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
-            duration: 0.85,
-            stagger: 0.1,
-            ease: "hop",
-          })
-          .add(() => {
-            isHeroImageFrozenRef.current = true;
-          })
-          .to(
-            heroFrame,
-            {
-              left: () => heroFrameTarget?.left ?? 0,
-              top: () => heroFrameTarget?.top ?? 0,
-              width: () => heroFrameTarget?.width ?? heroFrame.offsetWidth,
-              height: () => heroFrameTarget?.height ?? heroFrame.offsetHeight,
-              rotation: () => heroFrameTarget?.rotation ?? -15,
-              borderRadius: () => heroFrameTarget?.borderRadius ?? "0.5em",
-              borderWidth: () => heroFrameTarget?.borderWidth ?? "1px",
-              borderColor: "var(--otis-fg)",
-              duration: 1.05,
-              ease: "hop",
-            },
-            ">",
-          )
-          .add(() => {
-            gsap.set(heroFrame, {
-              clearProps:
-                "position,left,top,width,height,zIndex,pointerEvents,borderWidth,borderRadius,borderColor",
-              x: 0,
-              y: 0,
-              xPercent: 0,
-              yPercent: -110,
-              scale: 0.25,
-              rotation: -15,
-              autoAlpha: 1,
-              transformOrigin: "center center",
-            });
-          })
-          .to(preloaderPanel, {
-            clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
-            duration: 1,
-            ease: "hop",
-          }, "-=0.55")
-          .to(
-            heroTitleWords,
-            {
-              yPercent: 0,
-              duration: 0.75,
-              stagger: 0.1,
-              ease: "power3.out",
-            },
-            "-=0.5",
-          );
-      }
-
-      media.add("(min-width: 1001px)", () => {
-        const cleanupTweens: Array<gsap.core.Animation | ScrollTrigger> = [];
-        const featuredSection = root.querySelector<HTMLElement>(
-          "[data-featured-section]",
-        );
-        const featuredTitlesTrack = root.querySelector<HTMLElement>(
-          "[data-featured-titles]",
-        );
-        const featuredCards = gsap.utils.toArray<HTMLElement>(
-          "[data-featured-image-card]",
-        );
-        const indicators = gsap.utils.toArray<HTMLElement>(
-          "[data-featured-indicator]",
-        );
-        const services = gsap.utils.toArray<HTMLElement>("[data-service-card]");
-        const contactCta = root.querySelector<HTMLElement>("[data-contact-cta]");
-
-        if (featuredSection && featuredTitlesTrack && featuredCards.length > 0) {
-          const positions =
-            window.innerWidth >= 1600
-              ? featuredCardPositionsLarge
-              : featuredCardPositionsSmall;
-
-          featuredCards.forEach((card, index) => {
-            const position = positions[index];
-            gsap.set(card, {
-              x: position.x,
-              y: position.y,
-              z: -1500,
-              scale: 0,
-            });
-          });
-
-          cleanupTweens.push(
-            ScrollTrigger.create({
-              trigger: featuredSection,
-              start: "top top",
-              end: () => `+=${window.innerHeight * 5}px`,
-              pin: true,
-              scrub: 1,
-              invalidateOnRefresh: true,
-              onUpdate: (self) => {
-                const moveDistance = window.innerWidth * 4;
-                gsap.set(featuredTitlesTrack, {
-                  x: -moveDistance * self.progress,
-                });
-
-                featuredCards.forEach((card, index) => {
-                  const staggerOffset = index * 0.075;
-                  const scaledProgress = (self.progress - staggerOffset) * 2;
-                  const individualProgress = Math.max(
-                    0,
-                    Math.min(1, scaledProgress),
-                  );
-                  const newZ = -1500 + 3000 * individualProgress;
-                  const scale = Math.max(
-                    0,
-                    Math.min(1, individualProgress * 10),
-                  );
-
-                  gsap.set(card, {
-                    z: newZ,
-                    scale,
-                  });
-                });
-
-                const progressPerIndicator = 1 / indicators.length;
-
-                indicators.forEach((indicator, index) => {
-                  const indicatorStart = index * progressPerIndicator;
-                  gsap.to(indicator, {
-                    opacity: self.progress > indicatorStart ? 1 : 0.2,
-                    duration: 0.3,
-                    overwrite: "auto",
-                  });
-                });
-              },
-            }),
-          );
-        }
-
-        if (services.length > 0 && contactCta) {
-          cleanupTweens.push(
-            ScrollTrigger.create({
-              trigger: services[0],
-              start: "top 50%",
-              endTrigger: services[services.length - 1],
-              end: "top 150%",
-            }),
-          );
-
-          services.forEach((service, index) => {
-            const isLastServiceCard = index === services.length - 1;
-            const serviceCardInner =
-              service.querySelector<HTMLElement>("[data-service-card-inner]");
-
-            if (!serviceCardInner || isLastServiceCard) {
-              return;
-            }
-
-            cleanupTweens.push(
-              ScrollTrigger.create({
-                trigger: service,
-                start: "top 45%",
-                endTrigger: contactCta,
-                end: "top 90%",
-                pin: true,
-                pinSpacing: false,
-              }),
-            );
-
-            cleanupTweens.push(
-              gsap.to(serviceCardInner, {
-                y: `-${(services.length - index) * 14}vh`,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: service,
-                  start: "top 45%",
-                  endTrigger: contactCta,
-                  end: "top 90%",
-                  scrub: true,
-                },
-              }),
-            );
-          });
-        }
-
-        return () => {
-          cleanupTweens.forEach((item) => {
-            item.kill();
-          });
-        };
-      });
-
-      ScrollTrigger.refresh();
-
-      return () => {
-        splitHeroTitles.forEach((title) => {
-          title.revert();
-        });
-        media.revert();
-      };
     },
-    { scope: rootRef },
+    { scope: tagsRef },
   );
 
-  const handleInternalLinkClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    target: string,
-  ) => {
-    if (isPreloaderActiveRef.current) {
-      event.preventDefault();
-      return;
-    }
-
-    event.preventDefault();
-
-    const scrollToTarget = () => {
-      if (target === "top") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-
-      document.getElementById(target)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    };
-
-    scrollToTarget();
-  };
+  const heroTitleDelay = useIntroHeroTiming ? 10 : 0.85;
+  const heroTaglineDelay = useIntroHeroTiming ? 10.15 : 1;
+  const heroButtonDelay = useIntroHeroTiming ? 10.3 : 1.15;
 
   return (
-    <main
-      ref={rootRef}
-      className="relative min-h-screen overflow-x-hidden bg-[var(--otis-bg)] text-[var(--otis-fg)] [--otis-accent1:#ed6a5a] [--otis-accent2:#f4f1bb] [--otis-accent3:#9bc1bc] [--otis-accent4:#5d576b] [--otis-bg:#edf1e8] [--otis-bg2:#d7dbd2] [--otis-fg:#141414]"
-    >
-      {shouldRunPreloader ? <TransitionOverlay /> : null}
+    <>
+      {showPreloader ? (
+        <div className="loader">
+          <div className="overlay">
+            <div className="block"></div>
+            <div className="block"></div>
+          </div>
+          <div className="intro-logo">
+            <div className="word" id="word-1">
+              <h1>
+                <span>ancs</span>
+              </h1>
+            </div>
+            <div className="word" id="word-2">
+              <h1>studio</h1>
+            </div>
+          </div>
+          <div className="divider"></div>
+          <div className="spinner-container">
+            <div className="spinner"></div>
+          </div>
+          <div className="counter">
+            <div className="count">
+              <div className="digit">
+                <h1>0</h1>
+              </div>
+              <div className="digit">
+                <h1>0</h1>
+              </div>
+            </div>
+            <div className="count">
+              <div className="digit">
+                <h1>2</h1>
+              </div>
+              <div className="digit">
+                <h1>7</h1>
+              </div>
+            </div>
+            <div className="count">
+              <div className="digit">
+                <h1>6</h1>
+              </div>
+              <div className="digit">
+                <h1>5</h1>
+              </div>
+            </div>
+            <div className="count">
+              <div className="digit">
+                <h1>9</h1>
+              </div>
+              <div className="digit">
+                <h1>8</h1>
+              </div>
+            </div>
+            <div className="count">
+              <div className="digit">
+                <h1>9</h1>
+              </div>
+              <div className="digit">
+                <h1>9</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <section className="hero">
+        {/* <div className="hero-bg">
+          <img className="hero-img" src="/home/hero.jpg" alt="" />
+        </div> */}
+        <div className="hero-gradient"></div>
+        <div className="container">
+          <div className="hero-content">
+            <div className="hero-header">
+              <Copy animateOnScroll={false} delay={heroTitleDelay}>
+                <h1>Designing spaces with calm structure and lasting character</h1>
+              </Copy>
+            </div>
+            <div className="hero-tagline">
+              <Copy animateOnScroll={false} delay={heroTaglineDelay}>
+                <p>
+                  At Ancs Studio, we shape interiors and environments that
+                  balance material warmth, clean lines, and everyday comfort.
+                </p>
+              </Copy>
+            </div>
+            <AnimatedButton
+              label="Discover More"
+              route="/studio"
+              animateOnScroll={false}
+              delay={heroButtonDelay}
+            />
+          </div>
+        </div>
+      </section>
+      <section className="what-we-do">
+        <div className="container">
+          <div className="what-we-do-header">
+            <Copy delay={0.1}>
+              <h1>
+                <span className="spacer">&nbsp;</span>
+                At Ancs Studio, every project starts with context and intent,
+                then evolves into spaces that feel precise, warm, and built to
+                age beautifully.
+              </h1>
+            </Copy>
+          </div>
+          <div className="what-we-do-content">
+            <div className="what-we-do-col">
+              <Copy delay={0.1}>
+                <p>How we work</p>
+              </Copy>
 
-      <div className="relative w-screen overflow-x-hidden">
-        <HeroSection heroImageRef={heroImageRef} />
-        <AboutDescriptionSection />
-        <ServicesHeaderSection />
-        <ServicesStackSection />
-        <ContactCtaSection />
-      </div>
-    </main>
+              <Copy delay={0.15}>
+                <p className="lg">
+                  We move from concept to completion through close collaboration,
+                  thoughtful iteration, and disciplined execution. The result is
+                  an environment that feels coherent, useful, and deeply lived
+                  in.
+                </p>
+              </Copy>
+            </div>
+            <div className="what-we-do-col">
+              <div className="what-we-do-tags" ref={tagsRef}>
+                <div className="what-we-do-tag">
+                  <h3>Quiet</h3>
+                </div>
+                <div className="what-we-do-tag">
+                  <h3>View</h3>
+                </div>
+                <div className="what-we-do-tag">
+                  <h3>Tactile</h3>
+                </div>
+                <div className="what-we-do-tag">
+                  <h3>Light-forward</h3>
+                </div>
+                <div className="what-we-do-tag">
+                  <h3>Slow design</h3>
+                </div>
+                <div className="what-we-do-tag">
+                  <h3>Modular rhythm</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="featured-projects-container">
+        <div className="container">
+          <div className="featured-projects-header-callout">
+            <Copy delay={0.1}>
+              <p>Featured work</p>
+            </Copy>
+          </div>
+          <div className="featured-projects-header">
+            <Copy delay={0.15}>
+              <h2>Selected spaces from recent studio projects</h2>
+            </Copy>
+          </div>
+        </div>
+        <FeaturedProjects />
+      </section>
+      <section className="gallery-callout">
+        <div className="container">
+          <div className="gallery-callout-col">
+            <div className="gallery-callout-row">
+              <div className="gallery-callout-img gallery-callout-img-1">
+                <img src="/gallery-callout/gallery-callout-1.jpg" alt="" />
+              </div>
+              <div className="gallery-callout-img gallery-callout-img-2">
+                <img src="/gallery-callout/gallery-callout-2.jpg" alt="" />
+                <div className="gallery-callout-img-content">
+                  <h3>800+</h3>
+                  <p>Project Images</p>
+                </div>
+              </div>
+            </div>
+            <div className="gallery-callout-row">
+              <div className="gallery-callout-img gallery-callout-img-3">
+                <img src="/gallery-callout/gallery-callout-3.jpg" alt="" />
+              </div>
+              <div className="gallery-callout-img gallery-callout-img-4">
+                <img src="/gallery-callout/gallery-callout-4.jpg" alt="" />
+              </div>
+            </div>
+          </div>
+          <div className="gallery-callout-col">
+            <div className="gallery-callout-copy">
+              <Copy delay={0.1}>
+                <h3>
+                  Explore moments from our archive, from material details to
+                  full-room compositions, and see how each project balances
+                  atmosphere, function, and craft.
+                </h3>
+              </Copy>
+              <AnimatedButton label="View Spaces" route="/spaces" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
