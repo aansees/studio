@@ -5,6 +5,7 @@ import { z } from "zod"
 import { db } from "@/lib/db"
 import { user as userTable } from "@/lib/db/schema"
 import { errorResponse } from "@/lib/http"
+import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
 import { requireApiSession } from "@/lib/session"
 
 const updateProfileSchema = z.object({
@@ -30,6 +31,11 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const { user } = await requireApiSession()
+    await requireApiRateLimit({
+      key: `me:update:${user.id}`,
+      limit: 20,
+      windowSeconds: 60,
+    })
     const body = updateProfileSchema.parse(await request.json())
 
     await db

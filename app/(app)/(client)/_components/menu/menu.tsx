@@ -77,7 +77,8 @@ export default function Menu() {
   }, []);
 
   useEffect(() => {
-    resetMenuState();
+    const timeout = window.setTimeout(resetMenuState, 0);
+    return () => window.clearTimeout(timeout);
   }, [pathname, resetMenuState]);
 
   useEffect(() => {

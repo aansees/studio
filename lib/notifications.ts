@@ -37,15 +37,23 @@ export async function createNotification({
   })
 
   if (email) {
-    await sendAppMail({
-      to: email.to,
-      subject: email.subject,
-      preview: email.preview,
-      title,
-      intro: email.intro,
-      lines: email.lines,
-      ctaLabel: email.ctaLabel,
-      ctaUrl: email.ctaUrl,
-    })
+    try {
+      await sendAppMail({
+        to: email.to,
+        subject: email.subject,
+        preview: email.preview,
+        title,
+        intro: email.intro,
+        lines: email.lines,
+        ctaLabel: email.ctaLabel,
+        ctaUrl: email.ctaUrl,
+      })
+    } catch (error) {
+      console.error("Notification email delivery failed", {
+        userId,
+        event,
+        error,
+      })
+    }
   }
 }

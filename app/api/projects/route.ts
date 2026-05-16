@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
+import { clientBookingCreateSchema } from "@/lib/bookings/schemas"
 import { PROJECT_PRIORITIES, PROJECT_STATUSES } from "@/lib/constants/domain"
 import { errorResponse } from "@/lib/http"
+import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
 import { requireApiSession } from "@/lib/session"
 import {
   createProjectAsAdmin,
@@ -28,7 +30,8 @@ const createProjectSchema = z.object({
 const createProposalSchema = z.object({
   name: z.string().min(2),
   notes: z.string().optional(),
-  bookingId: z.string().min(1),
+  bookingId: z.string().min(1).optional(),
+  bookingRequest: clientBookingCreateSchema.optional(),
 })
 
 export async function GET() {
@@ -44,6 +47,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { user } = await requireApiSession(["admin", "client"])
+    await requireApiRateLimit({
+      key: `projects:create:${user.id}`,
+      limit: user.role === "admin" ? 60 : 8,
+      windowSeconds: 60,
+    })
     const rawBody = await request.json()
     const projectId =
       user.role === "admin"

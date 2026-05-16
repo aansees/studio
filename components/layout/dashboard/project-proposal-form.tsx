@@ -18,7 +18,6 @@ import {
   Clock3Icon,
   Columns3,
   ExternalLinkIcon,
-  FileTextIcon,
   GlobeIcon,
   Grid3x3,
   Sparkle,
@@ -38,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Frame, FramePanel } from "@/components/ui/frame";
+import { Frame } from "@/components/ui/frame";
 import { RiGoogleFill } from "@remixicon/react";
 
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -563,7 +562,24 @@ export function ProjectProposalForm({
         body: JSON.stringify({
           name: title.trim(),
           notes: notes.trim() || undefined,
-          bookingId: bookedConsultation.id,
+          ...(bookedConsultation.id.startsWith("draft:")
+            ? {
+                bookingRequest: {
+                  eventTypeId: bookedConsultation.eventTypeId,
+                  startsAt: bookedConsultation.startsAt,
+                  durationMinutes: Math.max(
+                    5,
+                    Math.round(
+                      (new Date(bookedConsultation.endsAt).getTime() -
+                        new Date(bookedConsultation.startsAt).getTime()) /
+                        60_000,
+                    ),
+                  ),
+                  attendeeTimezone:
+                    Intl.DateTimeFormat().resolvedOptions().timeZone,
+                },
+              }
+            : { bookingId: bookedConsultation.id }),
         }),
       });
 
@@ -592,29 +608,30 @@ export function ProjectProposalForm({
     setBookingPending(true);
 
     try {
-      const response = await fetch("/api/bookings/client", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          eventTypeId: selectedEventTypeId,
-          startsAt: selectedSlotStart,
-          durationMinutes: selectedDurationMinutes,
-          attendeeTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-      });
+      const selectedSlot = slotsData?.days
+        .flatMap((day) => day.slots)
+        .find((slot) => slot.startsAt === selectedSlotStart);
 
-      const payload = (await response.json().catch(() => null)) as {
-        data?: BookedConsultation;
-        error?: string;
-      } | null;
-
-      if (!response.ok || !payload?.data) {
-        throw new Error(payload?.error ?? "Unable to book consultation");
+      if (!selectedSlot || !selectedEventType) {
+        throw new Error("Select an available consultation time");
       }
 
-      setBookedConsultation(payload.data);
-      setSelectedDate(payload.data.startsAt.slice(0, 10));
-      setSelectedSlotStart(payload.data.startsAt);
+      const draftConsultation: BookedConsultation = {
+        id: `draft:${selectedEventTypeId}:${selectedSlot.startsAt}`,
+        eventTypeId: selectedEventTypeId,
+        eventTypeTitle: selectedEventType.title,
+        startsAt: selectedSlot.startsAt,
+        endsAt: selectedSlot.endsAt,
+        timezone: timeZone,
+        ownerName: bookingSetup?.admin.name ?? "Admin",
+        locationLabel: selectedEventType.locationLabel,
+        locationKind: selectedEventType.locationKind,
+        meetingUrl: null,
+      };
+
+      setBookedConsultation(draftConsultation);
+      setSelectedDate(draftConsultation.startsAt.slice(0, 10));
+      setSelectedSlotStart(draftConsultation.startsAt);
       toast.success("Consultation booked");
     } catch (error) {
       toast.error(
@@ -791,19 +808,22 @@ export function ProjectProposalForm({
                       <span className="text-muted-foreground">
                         Add to calendar
                       </span>
-                      {[<RiGoogleFill/>, "Outlook", "Office 365", "Yahoo"].map(
-                        (item, index) => (
+                      {[
+                        { key: "google", label: <RiGoogleFill /> },
+                        { key: "outlook", label: "Outlook" },
+                        { key: "office-365", label: "Office 365" },
+                        { key: "yahoo", label: "Yahoo" },
+                      ].map((item) => (
                           <Button
-                            key={index}
+                            key={item.key}
                             type="button"
                             size={"icon"}
                             variant={"secondary"}
                             className="rounded-md border border-border/60 px-2 py-1 text-[11px] text-muted-foreground transition hover:text-foreground"
                           >
-                            {item}
+                            {item.label}
                           </Button>
-                        ),
-                      )}
+                      ))}
                     </div>
                   </Frame>
 
@@ -871,15 +891,27 @@ export function ProjectProposalForm({
 
                       <Toolbar className={"p-0.5"}>
                         <ToggleGroup
+                          aria-label="Time format"
                           className="border-none p-0"
-                          defaultValue={["left"]}
+                          onValueChange={(values) => {
+                            const nextFormat = values[0];
+
+                            if (nextFormat === "12h") {
+                              setUseTwentyFourHour(false);
+                            }
+
+                            if (nextFormat === "24h") {
+                              setUseTwentyFourHour(true);
+                            }
+                          }}
+                          value={[useTwentyFourHour ? "24h" : "12h"]}
                         >
                           <Tooltip>
                             <TooltipTrigger
                               render={
                                 <ToolbarButton
-                                  aria-label="Align left"
-                                  render={<ToggleGroupItem value="left" />}
+                                  aria-label="Use 12-hour time"
+                                  render={<ToggleGroupItem value="12h" />}
                                 >
                                   12h
                                 </ToolbarButton>
@@ -891,11 +923,11 @@ export function ProjectProposalForm({
                             <TooltipTrigger
                               render={
                                 <ToolbarButton
-                                  aria-label="Align center"
+                                  aria-label="Use 24-hour time"
                                   render={
                                     <ToggleGroupItem
-                                      aria-label="Toggle center"
-                                      value="center"
+                                      aria-label="Use 24-hour time"
+                                      value="24h"
                                     />
                                   }
                                 >
@@ -910,15 +942,27 @@ export function ProjectProposalForm({
 
                       <Toolbar className={"p-0.5"}>
                         <ToggleGroup
+                          aria-label="Booking view"
                           className="border-none p-0"
-                          defaultValue={["left"]}
+                          onValueChange={(values) => {
+                            const nextView = values[0];
+
+                            if (
+                              nextView === "day" ||
+                              nextView === "timeline" ||
+                              nextView === "list"
+                            ) {
+                              setBookingView(nextView);
+                            }
+                          }}
+                          value={[bookingView]}
                         >
                           <Tooltip>
                             <TooltipTrigger
                               render={
                                 <ToolbarButton
-                                  aria-label="Align left"
-                                  render={<ToggleGroupItem value="left" />}
+                                  aria-label="Monthly view"
+                                  render={<ToggleGroupItem value="day" />}
                                 >
                                   <Calendar />
                                 </ToolbarButton>
@@ -933,11 +977,11 @@ export function ProjectProposalForm({
                             <TooltipTrigger
                               render={
                                 <ToolbarButton
-                                  aria-label="Align center"
+                                  aria-label="Weekly view"
                                   render={
                                     <ToggleGroupItem
-                                      aria-label="Toggle center"
-                                      value="center"
+                                      aria-label="Weekly view"
+                                      value="timeline"
                                     />
                                   }
                                 >
@@ -954,11 +998,11 @@ export function ProjectProposalForm({
                             <TooltipTrigger
                               render={
                                 <ToolbarButton
-                                  aria-label="Align right"
+                                  aria-label="Column view"
                                   render={
                                     <ToggleGroupItem
-                                      aria-label="Toggle right"
-                                      value="right"
+                                      aria-label="Column view"
+                                      value="list"
                                     />
                                   }
                                 >

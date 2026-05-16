@@ -427,6 +427,81 @@ export async function bulkDeleteTasksAsAdmin(currentUser: SessionUser, taskIds: 
   return taskIds.length
 }
 
+export async function bulkUpdateTaskStatusAsAdmin(
+  currentUser: SessionUser,
+  taskIds: string[],
+  status: typeof task.$inferInsert.status,
+) {
+  if (!isAdmin(currentUser.role)) {
+    throw new Error("Only admins can update tasks")
+  }
+
+  const normalizedTaskIds = Array.from(
+    new Set(taskIds.map((taskId) => taskId.trim()).filter(Boolean)),
+  )
+  if (normalizedTaskIds.length === 0) return 0
+
+  const existingTasks = await db
+    .select({
+      id: task.id,
+      title: task.title,
+      projectId: task.projectId,
+    })
+    .from(task)
+    .where(inArray(task.id, normalizedTaskIds))
+
+  if (existingTasks.length === 0) {
+    return 0
+  }
+
+  const now = new Date()
+  await db
+    .update(task)
+    .set({
+      status,
+      completedAt: status === "done" ? now : null,
+      startedAt: status === "in_progress" ? now : undefined,
+      updatedAt: now,
+    })
+    .where(inArray(task.id, existingTasks.map((item) => item.id)))
+
+  const affectedProjectIds = Array.from(
+    new Set(existingTasks.map((item) => item.projectId)),
+  )
+  await Promise.all(
+    affectedProjectIds.map((projectId) => recalculateProjectProgress(projectId)),
+  )
+
+  if (status === "done") {
+    const admins = await db
+      .select({ id: user.id, email: user.email })
+      .from(user)
+      .where(eq(user.role, "admin"))
+
+    await Promise.all(
+      existingTasks.flatMap((item) =>
+        admins.map((adminUser) =>
+          createNotification({
+            userId: adminUser.id,
+            event: "task_completed",
+            title: "Task completed",
+            body: `"${item.title}" was marked done by ${currentUser.name}.`,
+            metadata: { taskId: item.id, completedBy: currentUser.id },
+            email: {
+              to: adminUser.email,
+              subject: `Task completed: ${item.title}`,
+              preview: "A task has been completed",
+              intro: `${currentUser.name} marked "${item.title}" as complete.`,
+            },
+          }),
+        ),
+      ),
+    )
+  }
+
+  return existingTasks.length
+}
+
 export async function canUserChatOnTask(currentUser: SessionUser, taskId: string) {
   if (isAdmin(currentUser.role)) {
     return true

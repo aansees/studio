@@ -1,28 +1,29 @@
 import { NextResponse } from "next/server"
 
-import { clientBookingSlotQuerySchema } from "@/lib/bookings/schemas"
+import { publicBookingSlotQuerySchema } from "@/lib/bookings/schemas"
 import { errorResponse } from "@/lib/http"
-import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
-import { requireApiSession } from "@/lib/session"
-import { listAvailableBookingSlotsForClient } from "@/lib/services/bookings"
+import {
+  getRequestIp,
+  requireApiRateLimit,
+} from "@/lib/security/api-rate-limit"
+import { listAvailableBookingSlotsForPublic } from "@/lib/services/bookings"
 
 export async function GET(request: Request) {
   try {
-    const { user } = await requireApiSession(["client"])
     await requireApiRateLimit({
-      key: `bookings:client:slots:${user.id}`,
-      limit: 40,
+      key: `bookings:public:slots:${getRequestIp(request)}`,
+      limit: 30,
       windowSeconds: 60,
     })
     const url = new URL(request.url)
-    const query = clientBookingSlotQuerySchema.parse({
+    const query = publicBookingSlotQuerySchema.parse({
       eventTypeId: url.searchParams.get("eventTypeId") ?? "",
       durationMinutes: url.searchParams.get("durationMinutes") ?? undefined,
       fromDate: url.searchParams.get("fromDate") ?? undefined,
       days: url.searchParams.get("days") ?? undefined,
     })
 
-    const data = await listAvailableBookingSlotsForClient(user, query)
+    const data = await listAvailableBookingSlotsForPublic(query)
     return NextResponse.json({ data })
   } catch (error) {
     return errorResponse(error)

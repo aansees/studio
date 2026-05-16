@@ -143,3 +143,13 @@ export const clientBookingCreateSchema = z.object({
   durationMinutes: z.coerce.number().int().min(5).max(8 * 60).optional(),
   attendeeTimezone: z.string().trim().max(64).nullish(),
 })
+
+export const publicBookingSlotQuerySchema = clientBookingSlotQuerySchema
+
+export const publicBookingCreateSchema = clientBookingCreateSchema.extend({
+  attendeeName: z.string().trim().min(1).max(191),
+  attendeeEmail: z.string().trim().email().max(191),
+  attendeePhone: z.string().trim().max(64).nullish(),
+  answers: z.record(z.string(), z.unknown()).nullish(),
+  guests: z.array(z.string().trim().email().max(191)).max(10).nullish(),
+})

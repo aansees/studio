@@ -44,9 +44,13 @@ export default function HomePage() {
   const lenis = useLenis();
 
   useEffect(() => {
-    const shouldShow = shouldShowHomePreloader();
-    setShowPreloader(shouldShow);
-    setUseIntroHeroTiming(shouldShow);
+    const timeout = window.setTimeout(() => {
+      const shouldShow = shouldShowHomePreloader();
+      setShowPreloader(shouldShow);
+      setUseIntroHeroTiming(shouldShow);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {

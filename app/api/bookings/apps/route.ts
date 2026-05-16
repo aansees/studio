@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { bookingAppConnectionSchema } from "@/lib/bookings/schemas"
 import { errorResponse } from "@/lib/http"
+import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
 import { requireApiSession } from "@/lib/session"
 import {
   createBookingAppConnectionAsAdmin,
@@ -21,6 +22,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { user } = await requireApiSession(["admin"])
+    await requireApiRateLimit({
+      key: `bookings:apps:create:${user.id}`,
+      limit: 10,
+      windowSeconds: 60,
+    })
     const rawBody = await request.json()
     const connection = await createBookingAppConnectionAsAdmin(
       user,

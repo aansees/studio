@@ -776,6 +776,7 @@ export const booking = mysqlTable(
     id: varchar("id", { length: 191 }).primaryKey().$defaultFn(crypto.randomUUID),
     ownerUserId: varchar("ownerUserId", { length: 191 }).notNull(),
     eventTypeId: varchar("eventTypeId", { length: 191 }).notNull(),
+    projectId: varchar("projectId", { length: 191 }),
     attendeeUserId: varchar("attendeeUserId", { length: 191 }),
     createdByUserId: varchar("createdByUserId", { length: 191 }),
     appConnectionId: varchar("appConnectionId", { length: 191 }),
@@ -822,6 +823,13 @@ export const booking = mysqlTable(
       .onDelete("cascade")
       .onUpdate("cascade"),
     foreignKey({
+      columns: [table.projectId],
+      foreignColumns: [project.id],
+      name: "booking_project_fk",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
       columns: [table.attendeeUserId],
       foreignColumns: [user.id],
       name: "booking_attendee_fk",
@@ -844,9 +852,16 @@ export const booking = mysqlTable(
       .onUpdate("cascade"),
     index("booking_owner_idx").on(table.ownerUserId),
     index("booking_event_type_idx").on(table.eventTypeId),
+    uniqueIndex("booking_project_unique").on(table.projectId),
     index("booking_attendee_idx").on(table.attendeeUserId),
     index("booking_status_idx").on(table.status),
     index("booking_starts_at_idx").on(table.startsAt),
+    index("booking_owner_time_status_idx").on(
+      table.ownerUserId,
+      table.startsAt,
+      table.endsAt,
+      table.status,
+    ),
     uniqueIndex("booking_manage_token_unique").on(table.manageToken),
   ],
 )
@@ -901,6 +916,10 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   members: many(projectMember),
   tasks: many(task),
   chatMessages: many(projectChatMessage),
+  booking: one(booking, {
+    fields: [project.id],
+    references: [booking.projectId],
+  }),
 }))
 
 export const projectMemberRelations = relations(projectMember, ({ one }) => ({
@@ -1118,6 +1137,10 @@ export const bookingRelations = relations(booking, ({ one }) => ({
   eventType: one(bookingEventType, {
     fields: [booking.eventTypeId],
     references: [bookingEventType.id],
+  }),
+  project: one(project, {
+    fields: [booking.projectId],
+    references: [project.id],
   }),
   appConnection: one(bookingAppConnection, {
     fields: [booking.appConnectionId],

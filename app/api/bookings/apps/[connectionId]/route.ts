@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { bookingAppConnectionSchema } from "@/lib/bookings/schemas"
 import { errorResponse } from "@/lib/http"
+import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
 import { requireApiSession } from "@/lib/session"
 import {
   deleteBookingAppConnectionAsAdmin,
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { user } = await requireApiSession(["admin"])
+    await requireApiRateLimit({
+      key: `bookings:apps:update:${user.id}`,
+      limit: 20,
+      windowSeconds: 60,
+    })
     const { connectionId } = await context.params
     const rawBody = await request.json()
     const connection = await updateBookingAppConnectionAsAdmin(

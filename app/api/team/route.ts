@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { errorResponse } from "@/lib/http"
+import { requireApiRateLimit } from "@/lib/security/api-rate-limit"
 import { requireApiSession } from "@/lib/session"
 import { createDeveloperAsAdmin, listTeamAsAdmin } from "@/lib/services/team"
 
@@ -24,6 +25,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { user } = await requireApiSession(["admin"])
+    await requireApiRateLimit({
+      key: `team:create:${user.id}`,
+      limit: 10,
+      windowSeconds: 60,
+    })
     const body = createDeveloperSchema.parse(await request.json())
     const developerId = await createDeveloperAsAdmin(user, body)
     return NextResponse.json({ developerId }, { status: 201 })

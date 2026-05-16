@@ -26,6 +26,7 @@ import {
   bookingEventTypeQuestion,
   user,
 } from "@/lib/db/schema"
+import { badRequest, conflict, forbidden, notFound, unauthorized } from "@/lib/errors"
 import type { SessionUser } from "@/lib/session"
 import { isAdmin } from "@/lib/services/access-control"
 
@@ -133,15 +134,36 @@ export type BookingEventTypeInput = {
   questions?: BookingEventTypeQuestionInput[]
 }
 
+const bookingAppConnectionPublicColumns = {
+  id: bookingAppConnection.id,
+  userId: bookingAppConnection.userId,
+  provider: bookingAppConnection.provider,
+  status: bookingAppConnection.status,
+  accountEmail: bookingAppConnection.accountEmail,
+  accountLabel: bookingAppConnection.accountLabel,
+  externalAccountId: bookingAppConnection.externalAccountId,
+  externalCalendarId: bookingAppConnection.externalCalendarId,
+  externalCalendarName: bookingAppConnection.externalCalendarName,
+  scopes: bookingAppConnection.scopes,
+  metadata: bookingAppConnection.metadata,
+  supportsCalendar: bookingAppConnection.supportsCalendar,
+  supportsConferencing: bookingAppConnection.supportsConferencing,
+  canCheckConflicts: bookingAppConnection.canCheckConflicts,
+  canCreateEvents: bookingAppConnection.canCreateEvents,
+  lastSyncedAt: bookingAppConnection.lastSyncedAt,
+  createdAt: bookingAppConnection.createdAt,
+  updatedAt: bookingAppConnection.updatedAt,
+}
+
 function assertAdminBookingAccess(currentUser: SessionUser) {
   if (!isAdmin(currentUser.role)) {
-    throw new Error("Only admins can manage bookings")
+    throw forbidden("Only admins can manage bookings")
   }
 }
 
 function assertClientBookingAccess(currentUser: SessionUser) {
   if (currentUser.role !== "client") {
-    throw new Error("Only clients can book consultation slots")
+    throw forbidden("Only clients can book consultation slots")
   }
 }
 
@@ -825,7 +847,7 @@ export async function listBookingAppConnectionsForAdmin(currentUser: SessionUser
   assertAdminBookingAccess(currentUser)
 
   return db
-    .select()
+    .select(bookingAppConnectionPublicColumns)
     .from(bookingAppConnection)
     .where(eq(bookingAppConnection.userId, currentUser.id))
     .orderBy(
@@ -866,7 +888,7 @@ export async function createBookingAppConnectionAsAdmin(
   }
 
   const [connection] = await db
-    .select()
+    .select(bookingAppConnectionPublicColumns)
     .from(bookingAppConnection)
     .where(eq(bookingAppConnection.id, connectionId))
     .limit(1)
@@ -913,7 +935,7 @@ export async function updateBookingAppConnectionAsAdmin(
     .where(eq(bookingAppConnection.id, connectionId))
 
   const [updated] = await db
-    .select()
+    .select(bookingAppConnectionPublicColumns)
     .from(bookingAppConnection)
     .where(eq(bookingAppConnection.id, connectionId))
     .limit(1)
@@ -1391,6 +1413,30 @@ type ClientSlotComputationResult = {
   }>
 }
 
+export type ClientBookingCreateInput = {
+  eventTypeId: string
+  startsAt: Date
+  durationMinutes?: number
+  attendeeTimezone?: string | null
+}
+
+export type GuestBookingCreateInput = ClientBookingCreateInput & {
+  attendeeName: string
+  attendeeEmail: string
+  attendeePhone?: string | null
+  answers?: Record<string, unknown> | null
+  guests?: string[] | null
+}
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type BookingDatabase = typeof db | DbTransaction
+
+type CreateClientBookingOptions = {
+  tx?: DbTransaction
+  projectId?: string | null
+  internalNotes?: string | null
+}
+
 const SLOT_STEP_MINUTES = 15
 const ACTIVE_BOOKING_STATUSES: Array<(typeof booking.$inferSelect)["status"]> = [
   "pending",
@@ -1667,18 +1713,15 @@ async function getDefaultProposalLeadForClientBooking() {
     .limit(1)
 
   if (!adminLead || !adminLead.bookingEnabled) {
-    throw new Error("No active admin is available for booking")
+    throw notFound("No active admin is available for booking", "booking_lead_unavailable")
   }
 
   return adminLead
 }
 
-async function resolveBookableEventTypeForClient(
-  currentUser: SessionUser,
+async function resolveBookableEventType(
   eventTypeId: string,
 ): Promise<ResolvedClientBookableEvent> {
-  assertClientBookingAccess(currentUser)
-
   const adminLead = await getDefaultProposalLeadForClientBooking()
   const [eventType] = await db
     .select()
@@ -1694,7 +1737,7 @@ async function resolveBookableEventTypeForClient(
     .limit(1)
 
   if (!eventType) {
-    throw new Error("Bookable event type not found")
+    throw notFound("Bookable event type not found", "bookable_event_type_not_found")
   }
 
   const [defaultSchedule] = await db
@@ -1715,7 +1758,10 @@ async function resolveBookableEventTypeForClient(
 
   const scheduleId = eventType.availabilityScheduleId ?? defaultSchedule?.id
   if (!scheduleId) {
-    throw new Error("No availability schedule is configured for this event type")
+    throw notFound(
+      "No availability schedule is configured for this event type",
+      "booking_schedule_missing",
+    )
   }
 
   const [schedule] = await db
@@ -1730,7 +1776,10 @@ async function resolveBookableEventTypeForClient(
     .limit(1)
 
   if (!schedule || !schedule.isActive) {
-    throw new Error("This event type is not currently accepting bookings")
+    throw badRequest(
+      "This event type is not currently accepting bookings",
+      "booking_schedule_inactive",
+    )
   }
 
   const [windows, overrides, locations] = await Promise.all([
@@ -1775,6 +1824,34 @@ async function resolveBookableEventTypeForClient(
     overrides,
     location: locations[0] ?? null,
   }
+}
+
+async function resolveBookableEventTypeForClient(
+  currentUser: SessionUser,
+  eventTypeId: string,
+): Promise<ResolvedClientBookableEvent> {
+  assertClientBookingAccess(currentUser)
+  return resolveBookableEventType(eventTypeId)
+}
+
+async function resolveBookableEventTypeForGuest(
+  eventTypeId: string,
+): Promise<ResolvedClientBookableEvent> {
+  const resolved = await resolveBookableEventType(eventTypeId)
+
+  if (resolved.eventType.requireLogin) {
+    throw unauthorized("Login is required to book this event type")
+  }
+
+  if (!resolved.eventType.allowGuestBookings) {
+    throw forbidden("Guest bookings are disabled for this event type")
+  }
+
+  if (resolved.eventType.requireEmailVerification) {
+    throw forbidden("Email verification is required before booking this event type")
+  }
+
+  return resolved
 }
 
 function formatDayLabel(parts: DateParts, timeZone: string) {
@@ -1949,30 +2026,79 @@ async function computeClientSlotsForResolvedEvent(
   }
 }
 
-export async function listBookableEventTypesForClient(currentUser: SessionUser) {
-  assertClientBookingAccess(currentUser)
+function resolveBookingMeetingUrl(
+  location: typeof bookingEventTypeLocation.$inferSelect | null,
+) {
+  if (
+    location?.kind === "custom_link" ||
+    location?.kind === "google_meet" ||
+    location?.kind === "zoom"
+  ) {
+    return location.value ?? null
+  }
 
-  const adminLead = await getDefaultProposalLeadForClientBooking()
-  const eventTypes = await db
-    .select({
-      id: bookingEventType.id,
-      title: bookingEventType.title,
-      description: bookingEventType.description,
-      durationMinutes: bookingEventType.durationMinutes,
-      allowMultipleDurations: bookingEventType.allowMultipleDurations,
-      durationOptions: bookingEventType.durationOptions,
-      availabilityScheduleId: bookingEventType.availabilityScheduleId,
-    })
-    .from(bookingEventType)
+  return null
+}
+
+async function assertNoActiveBookingOverlap(
+  database: BookingDatabase,
+  input: {
+    ownerUserId: string
+    startsAt: Date
+    endsAt: Date
+  },
+) {
+  const [existing] = await database
+    .select({ id: booking.id })
+    .from(booking)
     .where(
       and(
-        eq(bookingEventType.userId, adminLead.id),
-        eq(bookingEventType.status, "active"),
-        eq(bookingEventType.isPublic, true),
+        eq(booking.ownerUserId, input.ownerUserId),
+        inArray(booking.status, ACTIVE_BOOKING_STATUSES),
+        lt(booking.startsAt, input.endsAt),
+        gt(booking.endsAt, input.startsAt),
       ),
     )
-    .orderBy(asc(bookingEventType.title))
+    .limit(1)
 
+  if (existing) {
+    throw conflict("Selected slot is no longer available", "booking_slot_taken")
+  }
+}
+
+async function insertBookingWithConflictGuard(
+  database: BookingDatabase,
+  values: typeof booking.$inferInsert,
+) {
+  await assertNoActiveBookingOverlap(database, {
+    ownerUserId: values.ownerUserId,
+    startsAt: values.startsAt,
+    endsAt: values.endsAt,
+  })
+
+  const [created] = await database.insert(booking).values(values).$returningId()
+  const bookingId = created?.id
+  if (!bookingId) {
+    throw new Error("Unable to create booking")
+  }
+
+  return bookingId
+}
+
+type BookableEventTypeListRecord = {
+  id: string
+  title: string
+  description: string | null
+  durationMinutes: number
+  allowMultipleDurations: boolean
+  durationOptions: number[] | null
+  availabilityScheduleId: string | null
+}
+
+async function buildBookableEventTypeList(
+  adminLead: ResolvedClientBookableEvent["adminLead"],
+  eventTypes: BookableEventTypeListRecord[],
+) {
   if (eventTypes.length === 0) {
     return {
       admin: {
@@ -2105,6 +2231,61 @@ export async function listBookableEventTypesForClient(currentUser: SessionUser) 
   }
 }
 
+export async function listBookableEventTypesForClient(currentUser: SessionUser) {
+  assertClientBookingAccess(currentUser)
+
+  const adminLead = await getDefaultProposalLeadForClientBooking()
+  const eventTypes = await db
+    .select({
+      id: bookingEventType.id,
+      title: bookingEventType.title,
+      description: bookingEventType.description,
+      durationMinutes: bookingEventType.durationMinutes,
+      allowMultipleDurations: bookingEventType.allowMultipleDurations,
+      durationOptions: bookingEventType.durationOptions,
+      availabilityScheduleId: bookingEventType.availabilityScheduleId,
+    })
+    .from(bookingEventType)
+    .where(
+      and(
+        eq(bookingEventType.userId, adminLead.id),
+        eq(bookingEventType.status, "active"),
+        eq(bookingEventType.isPublic, true),
+      ),
+    )
+    .orderBy(asc(bookingEventType.title))
+
+  return buildBookableEventTypeList(adminLead, eventTypes)
+}
+
+export async function listBookableEventTypesForPublic() {
+  const adminLead = await getDefaultProposalLeadForClientBooking()
+  const eventTypes = await db
+    .select({
+      id: bookingEventType.id,
+      title: bookingEventType.title,
+      description: bookingEventType.description,
+      durationMinutes: bookingEventType.durationMinutes,
+      allowMultipleDurations: bookingEventType.allowMultipleDurations,
+      durationOptions: bookingEventType.durationOptions,
+      availabilityScheduleId: bookingEventType.availabilityScheduleId,
+    })
+    .from(bookingEventType)
+    .where(
+      and(
+        eq(bookingEventType.userId, adminLead.id),
+        eq(bookingEventType.status, "active"),
+        eq(bookingEventType.isPublic, true),
+        eq(bookingEventType.allowGuestBookings, true),
+        eq(bookingEventType.requireLogin, false),
+        eq(bookingEventType.requireEmailVerification, false),
+      ),
+    )
+    .orderBy(asc(bookingEventType.title))
+
+  return buildBookableEventTypeList(adminLead, eventTypes)
+}
+
 export async function listAvailableBookingSlotsForClient(
   currentUser: SessionUser,
   input: {
@@ -2145,14 +2326,42 @@ export async function listAvailableBookingSlotsForClient(
   }
 }
 
+export async function listAvailableBookingSlotsForPublic(input: {
+  eventTypeId: string
+  durationMinutes?: number
+  fromDate?: string
+  days?: number
+}) {
+  const resolved = await resolveBookableEventTypeForGuest(input.eventTypeId)
+  const slotData = await computeClientSlotsForResolvedEvent(resolved, {
+    fromDate: input.fromDate,
+    days: input.days ?? 14,
+    durationMinutes: resolveEventTypeDurationMinutes(
+      resolved.eventType,
+      input.durationMinutes,
+    ),
+  })
+
+  return {
+    admin: resolved.adminLead,
+    eventType: {
+      id: resolved.eventType.id,
+      title: resolved.eventType.title,
+      description: resolved.eventType.description,
+      durationMinutes: resolved.eventType.durationMinutes,
+      allowMultipleDurations: resolved.eventType.allowMultipleDurations,
+      durationOptions: resolved.eventType.durationOptions ?? null,
+    },
+    timezone: slotData.timezone,
+    selectedDurationMinutes: slotData.selectedDurationMinutes,
+    days: slotData.days,
+  }
+}
+
 export async function createBookingForClient(
   currentUser: SessionUser,
-  input: {
-    eventTypeId: string
-    startsAt: Date
-    durationMinutes?: number
-    attendeeTimezone?: string | null
-  },
+  input: ClientBookingCreateInput,
+  options: CreateClientBookingOptions = {},
 ) {
   assertClientBookingAccess(currentUser)
 
@@ -2167,7 +2376,7 @@ export async function createBookingForClient(
   const requestedStart = new Date(input.startsAt)
 
   if (Number.isNaN(requestedStart.getTime())) {
-    throw new Error("Invalid booking start time")
+    throw badRequest("Invalid booking start time", "invalid_booking_start")
   }
 
   const requestDayKey = toDateKey(
@@ -2183,7 +2392,7 @@ export async function createBookingForClient(
     .find((slot) => slot.startsAt.getTime() === requestedStart.getTime())
 
   if (!matchedSlot) {
-    throw new Error("Selected slot is no longer available")
+    throw conflict("Selected slot is no longer available", "booking_slot_unavailable")
   }
 
   const [attendee] = await db
@@ -2197,44 +2406,38 @@ export async function createBookingForClient(
     .where(eq(user.id, currentUser.id))
     .limit(1)
 
-  const [created] = await db
-    .insert(booking)
-    .values({
-      ownerUserId: resolved.adminLead.id,
-      eventTypeId: resolved.eventType.id,
-      attendeeUserId: currentUser.id,
-      createdByUserId: currentUser.id,
-      appConnectionId: resolved.location?.appConnectionId ?? null,
-      source: "authenticated",
-      status: "confirmed",
-      title: resolved.eventType.title,
-      attendeeName: attendee?.name ?? currentUser.name,
-      attendeeEmail: attendee?.email ?? currentUser.email,
-      attendeePhone: attendee?.phone ?? null,
-      attendeeTimezone:
-        input.attendeeTimezone?.trim() ||
-        attendee?.timezone ||
-        normalizeTimeZone(resolved.schedule.timezone),
-      locationKind: resolved.location?.kind ?? null,
-      locationLabel: resolved.location?.label ?? null,
-      locationValue: resolved.location?.value ?? null,
-      meetingUrl:
-        resolved.location?.kind === "custom_link" ||
-        resolved.location?.kind === "google_meet" ||
-        resolved.location?.kind === "zoom"
-          ? resolved.location?.value ?? null
-          : null,
-      startsAt: matchedSlot.startsAt,
-      endsAt: matchedSlot.endsAt,
-      confirmedAt: new Date(),
-      manageToken: crypto.randomUUID(),
-    })
-    .$returningId()
-
-  const bookingId = created?.id
-  if (!bookingId) {
-    throw new Error("Unable to create booking")
+  const meetingUrl = resolveBookingMeetingUrl(resolved.location)
+  const insertValues: typeof booking.$inferInsert = {
+    ownerUserId: resolved.adminLead.id,
+    eventTypeId: resolved.eventType.id,
+    projectId: options.projectId ?? null,
+    attendeeUserId: currentUser.id,
+    createdByUserId: currentUser.id,
+    appConnectionId: resolved.location?.appConnectionId ?? null,
+    source: "authenticated",
+    status: "confirmed",
+    title: resolved.eventType.title,
+    attendeeName: attendee?.name ?? currentUser.name,
+    attendeeEmail: attendee?.email ?? currentUser.email,
+    attendeePhone: attendee?.phone ?? null,
+    attendeeTimezone:
+      input.attendeeTimezone?.trim() ||
+      attendee?.timezone ||
+      normalizeTimeZone(resolved.schedule.timezone),
+    locationKind: resolved.location?.kind ?? null,
+    locationLabel: resolved.location?.label ?? null,
+    locationValue: resolved.location?.value ?? null,
+    meetingUrl,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    confirmedAt: new Date(),
+    internalNotes: options.internalNotes ?? null,
+    manageToken: crypto.randomUUID(),
   }
+
+  const bookingId = options.tx
+    ? await insertBookingWithConflictGuard(options.tx, insertValues)
+    : await db.transaction((tx) => insertBookingWithConflictGuard(tx, insertValues))
 
   return {
     id: bookingId,
@@ -2247,12 +2450,83 @@ export async function createBookingForClient(
     ownerName: resolved.adminLead.name,
     locationLabel: resolved.location?.label ?? null,
     locationKind: resolved.location?.kind ?? null,
-    meetingUrl:
-      resolved.location?.kind === "custom_link" ||
-      resolved.location?.kind === "google_meet" ||
-      resolved.location?.kind === "zoom"
-        ? resolved.location?.value ?? null
-        : null,
+    meetingUrl,
+  }
+}
+
+export async function createBookingForGuest(input: GuestBookingCreateInput) {
+  const resolved = await resolveBookableEventTypeForGuest(input.eventTypeId)
+  const durationMinutes = resolveEventTypeDurationMinutes(
+    resolved.eventType,
+    input.durationMinutes,
+  )
+  const requestedStart = new Date(input.startsAt)
+
+  if (Number.isNaN(requestedStart.getTime())) {
+    throw badRequest("Invalid booking start time", "invalid_booking_start")
+  }
+
+  const timezone = normalizeTimeZone(resolved.schedule.timezone)
+  const requestDayKey = toDateKey(
+    getDatePartsInTimeZone(requestedStart, timezone),
+  )
+  const slotData = await computeClientSlotsForResolvedEvent(resolved, {
+    fromDate: requestDayKey,
+    days: 1,
+    durationMinutes,
+  })
+  const matchedSlot = slotData.days
+    .flatMap((day) => day.slots)
+    .find((slot) => slot.startsAt.getTime() === requestedStart.getTime())
+
+  if (!matchedSlot) {
+    throw conflict("Selected slot is no longer available", "booking_slot_unavailable")
+  }
+
+  const meetingUrl = resolveBookingMeetingUrl(resolved.location)
+  const manageToken = crypto.randomUUID()
+  const insertValues: typeof booking.$inferInsert = {
+    ownerUserId: resolved.adminLead.id,
+    eventTypeId: resolved.eventType.id,
+    attendeeUserId: null,
+    createdByUserId: null,
+    appConnectionId: resolved.location?.appConnectionId ?? null,
+    source: "guest",
+    status: "confirmed",
+    title: resolved.eventType.title,
+    attendeeName: input.attendeeName.trim(),
+    attendeeEmail: input.attendeeEmail.trim().toLowerCase(),
+    attendeePhone: input.attendeePhone?.trim() || null,
+    attendeeTimezone: input.attendeeTimezone?.trim() || timezone,
+    locationKind: resolved.location?.kind ?? null,
+    locationLabel: resolved.location?.label ?? null,
+    locationValue: resolved.location?.value ?? null,
+    meetingUrl,
+    answers: input.answers ?? null,
+    guests: input.guests ?? null,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    confirmedAt: new Date(),
+    manageToken,
+  }
+
+  const bookingId = await db.transaction((tx) =>
+    insertBookingWithConflictGuard(tx, insertValues),
+  )
+
+  return {
+    id: bookingId,
+    eventTypeId: resolved.eventType.id,
+    eventTypeTitle: resolved.eventType.title,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timezone,
+    ownerUserId: resolved.adminLead.id,
+    ownerName: resolved.adminLead.name,
+    locationLabel: resolved.location?.label ?? null,
+    locationKind: resolved.location?.kind ?? null,
+    meetingUrl,
+    manageToken,
   }
 }
 
