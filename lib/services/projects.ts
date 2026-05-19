@@ -109,6 +109,12 @@ type CreateProjectProposalInput = {
 
 const PROJECT_PROPOSAL_BOOKING_TAG = "[PROJECT_PROPOSAL_ID:"
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type StoredRichTextBlock = {
+  type?: string
+  content?: unknown
+  props?: Record<string, unknown>
+  children?: StoredRichTextBlock[]
+}
 
 async function getDefaultProposalLead() {
   const [adminLead] = await db
@@ -140,16 +146,48 @@ function buildProjectProposalNotes(input: {
   startsAt: Date
   endsAt: Date
 }) {
-  const baseNotes = input.notes?.trim()
-  return [
-    baseNotes && baseNotes.length > 0 ? baseNotes : null,
-    `Consultation booking: ${input.eventTypeTitle}`,
-    `Booking reference: ${input.bookingId}`,
-    `Starts at: ${input.startsAt.toISOString()}`,
-    `Ends at: ${input.endsAt.toISOString()}`,
+  const blocks = [
+    ...parseStoredRichTextBlocks(input.notes),
+    ...[
+      `Consultation booking: ${input.eventTypeTitle}`,
+      `Booking reference: ${input.bookingId}`,
+      `Starts at: ${input.startsAt.toISOString()}`,
+      `Ends at: ${input.endsAt.toISOString()}`,
+    ].map(toParagraphBlock),
   ]
-    .filter((value): value is string => Boolean(value))
-    .join("\n\n")
+
+  return JSON.stringify(blocks)
+}
+
+function parseStoredRichTextBlocks(
+  value: string | null | undefined,
+): StoredRichTextBlock[] {
+  const trimmed = value?.trim()
+  if (!trimmed) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (Array.isArray(parsed)) {
+      return parsed as StoredRichTextBlock[]
+    }
+  } catch {
+    // Legacy proposals can contain plain text notes.
+  }
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map(toParagraphBlock)
+}
+
+function toParagraphBlock(content: string): StoredRichTextBlock {
+  return {
+    type: "paragraph",
+    content,
+  }
 }
 
 async function insertProposalProject(

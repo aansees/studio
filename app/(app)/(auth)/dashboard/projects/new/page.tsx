@@ -27,6 +27,10 @@ export default async function NewProjectProposalPage() {
     <ProjectProposalForm
       bookingSetup={bookingSetup}
       bookingSetupError={bookingSetupError}
+      currentUser={{
+        email: user.email,
+        name: user.name,
+      }}
     />
   );
 }

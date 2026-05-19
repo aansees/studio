@@ -77,13 +77,87 @@ function documentHasContent(blocks: PartialBlock[]) {
   return blocks.some((block) => blockHasContent(block));
 }
 
+function textToParagraphBlocks(value: string): PartialBlock[] {
+  return value
+    .split(/\n{2,}/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map(
+      (segment) =>
+        ({ type: "paragraph" as const, content: segment }) as PartialBlock,
+    );
+}
+
+function extractLeadingJsonArray(
+  value: string,
+): { blocks: PartialBlock[]; remainder: string } | null {
+  const trimmed = value.trimStart();
+  if (!trimmed.startsWith("[")) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const char = trimmed[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "[") {
+      depth += 1;
+      continue;
+    }
+
+    if (char !== "]") {
+      continue;
+    }
+
+    depth -= 1;
+    if (depth !== 0) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed.slice(0, index + 1));
+      if (Array.isArray(parsed)) {
+        return {
+          blocks: parsed as PartialBlock[],
+          remainder: trimmed.slice(index + 1).trim(),
+        };
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function parseStoredDocument(value: string | null | undefined): PartialBlock[] {
   if (!value?.trim()) {
     return EMPTY_DOCUMENT;
   }
 
+  const trimmed = value.trim();
+
   try {
-    const parsed = JSON.parse(value);
+    const parsed = JSON.parse(trimmed);
     if (Array.isArray(parsed)) {
       return parsed as PartialBlock[];
     }
@@ -91,13 +165,17 @@ function parseStoredDocument(value: string | null | undefined): PartialBlock[] {
     // Fall back to a paragraph-based document for legacy plain text content.
   }
 
-  const paragraphs = value
-    .split(/\n{2,}/)
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-    .map(
-      (segment) => ({ type: "paragraph" as const, content: segment }) as PartialBlock,
-    );
+  const extracted = extractLeadingJsonArray(trimmed);
+  if (extracted) {
+    const blocks = [
+      ...extracted.blocks,
+      ...textToParagraphBlocks(extracted.remainder),
+    ];
+
+    return blocks.length > 0 ? blocks : EMPTY_DOCUMENT;
+  }
+
+  const paragraphs = textToParagraphBlocks(trimmed);
 
   return paragraphs.length > 0 ? paragraphs : EMPTY_DOCUMENT;
 }

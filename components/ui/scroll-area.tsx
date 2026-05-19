@@ -9,10 +9,12 @@ export function ScrollArea({
   children,
   scrollFade = false,
   scrollbarGutter = false,
+  hideScrollbars = false,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   scrollFade?: boolean;
   scrollbarGutter?: boolean;
+  hideScrollbars?: boolean;
 }): React.ReactElement {
   return (
     <ScrollAreaPrimitive.Root
@@ -32,8 +34,12 @@ export function ScrollArea({
         {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar orientation="vertical" />
-      <ScrollBar orientation="horizontal" />
-      <ScrollAreaPrimitive.Corner data-slot="scroll-area-corner" />
+      {!hideScrollbars ? (
+        <>
+          <ScrollBar orientation="horizontal" />
+          <ScrollAreaPrimitive.Corner data-slot="scroll-area-corner" />
+        </>
+      ) : null}
     </ScrollAreaPrimitive.Root>
   );
 }
