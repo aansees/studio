@@ -27,13 +27,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Frame, FrameFooter, FrameHeader, FramePanel } from "@/components/ui/frame";
+import { Frame, FrameHeader, FramePanel } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination, useTablePagination } from "@/components/ui/table-pagination";
-import Image from "next/image";
 
 type TeamMember = {
   id: string;

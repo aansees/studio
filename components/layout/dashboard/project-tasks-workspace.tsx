@@ -1,25 +1,14 @@
 "use client"
 
-import { addDays, format, startOfWeek, subWeeks } from "date-fns"
+import { startOfWeek } from "date-fns"
 import { useMemo, useState } from "react"
-import {
-  CalendarDaysIcon,
-  CalendarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ListIcon,
-} from "lucide-react"
+import { CalendarDaysIcon, ListIcon } from "lucide-react"
 
-import { CreateTaskDialog } from "@/components/layout/dashboard/create-task-dialog"
 import { ProjectTaskTimeline } from "@/components/layout/dashboard/project-task-timeline"
 import { ProjectTasksTable } from "@/components/layout/dashboard/project-tasks-table"
 import ProjectTasksToolbar from "@/app/(app)/(auth)/dashboard/projects/[projectId]/_components/project_tasks_toolbar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type TaskStatus } from "@/lib/constants/domain"
-import { taskStatusOptions } from "@/lib/constants/domain-display"
-import { VisualSelect } from "@/components/ui/visual-select"
 
 export type ProjectTaskPerson = {
   id: string
@@ -103,13 +92,12 @@ export function ProjectTasksWorkspace({
 
         <ProjectTasksToolbar
           activeTab={activeTab}
-          setActiveTab={(v) => setActiveTab(v)}
           query={query}
           setQuery={(v) => setQuery(v)}
           statusFilter={statusFilter}
           setStatusFilter={(v) => setStatusFilter(v)}
           currentWeekStart={currentWeekStart}
-          setCurrentWeekStart={(d) => setCurrentWeekStart(d as Date)}
+          setCurrentWeekStart={setCurrentWeekStart}
           canManageProjectTasks={canManageProjectTasks}
           projectId={projectId}
           assignees={assignees}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Fragment } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,10 +92,7 @@ export function ColumnBookingView({
 }
 
 export function CalendarBookingView({
-  bookingView,
-  previousBookingViewRef,
   renderBookingDetails,
-  renderTimeFormatToggle,
   renderBookingControls,
   timelineRangeLabel,
   shiftTimelineRange,
@@ -104,10 +101,9 @@ export function CalendarBookingView({
   renderColumnBookingView,
   renderWeeklyTimeGrid,
 }: {
-  bookingView: string;
-  previousBookingViewRef: React.RefObject<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   renderBookingDetails: (opts?: any) => React.ReactNode;
-  renderTimeFormatToggle: () => React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   renderBookingControls: (opts?: any) => React.ReactNode;
   timelineRangeLabel: string;
   shiftTimelineRange: (delta: number) => void;
@@ -116,8 +112,6 @@ export function CalendarBookingView({
   renderColumnBookingView: () => React.ReactNode;
   renderWeeklyTimeGrid: () => React.ReactNode;
 }) {
-  const enteredFromMonthly = previousBookingViewRef.current === "day";
-
   return (
     <>
       <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)]">

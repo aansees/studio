@@ -1,12 +1,22 @@
 "use client";
 
-import React from "react";
-import { Button } from "@/components/ui/button";
+import type { ReactNode } from "react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeftIcon, ChevronRightIcon, Clock3Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import MiniCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/mini_calendar";
 import BookingSubmitForm from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
+import type { BookedConsultation } from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
+
+type Slot = {
+  startsAt: string;
+  endsAt: string;
+};
+
+type ActiveDay = {
+  date: string;
+  label: string | null;
+  slots: Slot[];
+};
 
 export default function MonthlyBookingPanel({
   bookedConsultation,
@@ -31,14 +41,32 @@ export default function MonthlyBookingPanel({
   selectedSlotStart,
   selectSlot,
   formatSlotTime,
-  monthLabel,
-  shiftVisibleMonth,
-  calendarCells,
-  selectDate,
-  selectedDate,
-  timeZone,
   renderTimeFormatToggle,
-}: any) {
+}: {
+  bookedConsultation: BookedConsultation | null;
+  clearSelectedSlot: () => void;
+  selectedDurationMinutes: number;
+  pending: boolean;
+  canSubmitBase: boolean;
+  attendeeName: string;
+  setAttendeeName: (value: string) => void;
+  attendeeEmail: string;
+  setAttendeeEmail: (value: string) => void;
+  bookingNotes: string;
+  setBookingNotes: (value: string) => void;
+  showGuests: boolean;
+  setShowGuests: (value: boolean) => void;
+  guestEmails: string;
+  setGuestEmails: (value: string) => void;
+  useTwentyFourHour: boolean;
+  submitProposal: (consultation: BookedConsultation) => Promise<void> | void;
+  activeDay: ActiveDay | null;
+  slotsPending: boolean;
+  selectedSlotStart: string | null;
+  selectSlot: (date: string, slot: Slot) => void;
+  formatSlotTime: (value: string) => string;
+  renderTimeFormatToggle?: () => ReactNode;
+}) {
   if (bookedConsultation) {
     return (
       <div className="h-full p-6">
@@ -79,7 +107,7 @@ export default function MonthlyBookingPanel({
           {slotsPending ? (
             <p className="text-sm text-muted-foreground">Loading available slots...</p>
           ) : activeDay && activeDay.slots.length > 0 ? (
-            activeDay.slots.map((slot: any) => (
+            activeDay.slots.map((slot) => (
               <button
                 key={slot.startsAt}
                 type="button"

@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
 import { ProjectChatPanel } from "@/components/chat/project-chat-panel";
-import { Frame, FramePanel } from "@/components/ui/frame";
 import { requireSession } from "@/lib/session";
 import {
   PROJECT_CHAT_PAGE_SIZE,

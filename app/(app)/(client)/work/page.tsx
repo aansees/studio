@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import "./projects.css";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Copy from "../_components/copy/copy";
@@ -16,14 +16,14 @@ export default function SpacesPage() {
   const scrollTriggerInstances = useRef<ScrollTrigger[]>([]);
   const { navigateWithTransition } = useViewTransition();
 
-  const cleanupScrollTriggers = () => {
+  const cleanupScrollTriggers = useCallback(() => {
     scrollTriggerInstances.current.forEach((instance) => {
       instance.kill();
     });
     scrollTriggerInstances.current = [];
-  };
+  }, []);
 
-  const setupAnimations = () => {
+  const setupAnimations = useCallback(() => {
     cleanupScrollTriggers();
 
     if (!spacesRef.current) {
@@ -72,7 +72,7 @@ export default function SpacesPage() {
     });
 
     ScrollTrigger.refresh();
-  };
+  }, [cleanupScrollTriggers]);
 
   useEffect(() => {
     setupAnimations();
@@ -87,7 +87,7 @@ export default function SpacesPage() {
       window.removeEventListener("resize", handleResize);
       cleanupScrollTriggers();
     };
-  }, []);
+  }, [cleanupScrollTriggers, setupAnimations]);
 
   return (
     <div className="page spaces">

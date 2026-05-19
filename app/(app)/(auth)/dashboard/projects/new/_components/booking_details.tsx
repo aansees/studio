@@ -7,7 +7,58 @@ import { Clock3Icon, GlobeIcon, CalendarClockIcon, VideoIcon } from "lucide-reac
 import { cn } from "@/lib/utils";
 import MiniCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/mini_calendar";
 
-function getConsultationSchedule(consultation: any, useTwentyFourHour: boolean) {
+type BookableEventType = {
+  title: string;
+  locationLabel: string | null;
+};
+
+type BookingSetup = {
+  admin: {
+    name: string;
+    bookingPageTitle: string | null;
+    bookingPageDescription: string | null;
+  };
+};
+
+type BookedConsultation = {
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  locationLabel: string | null;
+};
+
+type CalendarCell = {
+  key: string;
+  date: string | null;
+  label: number | null;
+  hasSlots: boolean;
+  isCurrentMonth: boolean;
+};
+
+type BookingDetailsProps = {
+  className?: string;
+  showBackButton?: boolean;
+  showLocation?: boolean;
+  showMiniCalendar?: boolean;
+  showPageDescription?: boolean;
+  bookedConsultation: BookedConsultation | null;
+  selectedEventType: BookableEventType | null;
+  selectedDurationMinutes: number;
+  timeZone: string;
+  bookingSetup: BookingSetup | null;
+  onBack: () => void;
+  monthLabel: string;
+  shiftVisibleMonth: (delta: number) => void;
+  calendarCells: CalendarCell[];
+  selectDate: (date: string) => void;
+  selectedDate: string | null;
+  useTwentyFourHour: boolean;
+};
+
+function getConsultationSchedule(
+  consultation: BookedConsultation | null,
+  useTwentyFourHour: boolean,
+) {
   if (!consultation) return null;
   const start = new Date(consultation.startsAt);
   const end = new Date(consultation.endsAt);
@@ -48,7 +99,7 @@ export default function BookingDetails({
   selectDate,
   selectedDate,
   useTwentyFourHour,
-}: any) {
+}: BookingDetailsProps) {
   const schedule = React.useMemo(() => getConsultationSchedule(bookedConsultation, useTwentyFourHour), [bookedConsultation, useTwentyFourHour]);
   const locationLabel = bookedConsultation?.locationLabel ?? selectedEventType?.locationLabel ?? "Cal Video";
 

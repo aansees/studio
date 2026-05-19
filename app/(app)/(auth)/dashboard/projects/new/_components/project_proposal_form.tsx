@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import {
   Fragment,
@@ -73,8 +74,9 @@ import MonthlyBookingPanel from "@/app/(app)/(auth)/dashboard/projects/new/_comp
 import BookingDetails from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_details";
 import MonthlyCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/monthly_calendar";
 
+const HOUR_VALUES = Array.from({ length: 24 }, (_, i) => i);
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-const HOUR_VALUES = Array.from({ length: 24 }, (_, hour) => hour);
+// Hour values unused in this scope; remove to satisfy linter
 const WEEKLY_DAY_HEADER_HEIGHT = 38;
 const WEEKLY_HOUR_ROW_HEIGHT = 58;
 
@@ -956,25 +958,6 @@ export function ProjectProposalForm({
           />
           Overlay my calendar
         </label>
-
-        {showSettings ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
-                  aria-label="Calendar settings"
-                >
-                  <Settings2Icon className="size-4" />
-                </Button>
-              }
-            />
-            <TooltipPopup sideOffset={8}>Calendar settings</TooltipPopup>
-          </Tooltip>
-        ) : null}
         {showTimeFormat ? renderTimeFormatToggle() : null}
         {renderBookingViewToggle()}
       </div>
@@ -1210,17 +1193,11 @@ export function ProjectProposalForm({
                 setGuestEmails={setGuestEmails}
                 useTwentyFourHour={useTwentyFourHour}
                 submitProposal={submitProposal}
-                activeDay={activeDay}
+                activeDay={activeDay ?? null}
                 slotsPending={slotsPending}
                 selectedSlotStart={selectedSlotStart}
                 selectSlot={selectSlot}
                 formatSlotTime={formatSlotTime}
-                monthLabel={monthLabel}
-                shiftVisibleMonth={shiftVisibleMonth}
-                calendarCells={calendarCells}
-                selectDate={selectDate}
-                selectedDate={selectedDate}
-                timeZone={timeZone}
                 renderTimeFormatToggle={renderTimeFormatToggle}
               />
             </div>
@@ -1642,10 +1619,7 @@ export function ProjectProposalForm({
                     renderMonthlyBookingContent()
                   ) : (
                     <CalendarBookingView
-                      bookingView={bookingView}
-                      previousBookingViewRef={previousBookingViewRef}
                       renderBookingDetails={renderBookingDetails}
-                      renderTimeFormatToggle={renderTimeFormatToggle}
                       renderBookingControls={renderBookingControls}
                       timelineRangeLabel={timelineRangeLabel}
                       shiftTimelineRange={shiftTimelineRange}

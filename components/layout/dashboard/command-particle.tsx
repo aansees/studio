@@ -57,7 +57,7 @@ export const groupedItems: Group[] = [
 export default function Particle() {
   const [open, setOpen] = useState(false);
 
-  function handleItemClick(_item: Item) {
+  function handleItemClick() {
     setOpen(false);
   }
 
@@ -88,7 +88,7 @@ export default function Particle() {
           <CommandPanel>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandList>
-              {(group: Group, _index: number) => (
+              {(group: Group) => (
                 <Fragment key={group.value}>
                   <CommandGroup items={group.items}>
                     <CommandGroupLabel>{group.value}</CommandGroupLabel>
@@ -96,7 +96,7 @@ export default function Particle() {
                       {(item: Item) => (
                         <CommandItem
                           key={item.value}
-                          onClick={() => handleItemClick(item)}
+                          onClick={handleItemClick}
                           value={item.value}
                         >
                           <span className="flex-1">{item.label}</span>

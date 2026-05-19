@@ -1,18 +1,24 @@
 "use client"
 
-import { addDays, format, startOfWeek, subWeeks } from "date-fns"
-import { CalendarDaysIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon } from "lucide-react"
+import { addDays, format, subWeeks } from "date-fns"
+import type { Dispatch, SetStateAction } from "react"
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VisualSelect } from "@/components/ui/visual-select"
 import { taskStatusOptions } from "@/lib/constants/domain-display"
 import { type TaskStatus } from "@/lib/constants/domain"
 import { CreateTaskDialog } from "@/components/layout/dashboard/create-task-dialog"
 
+type AssigneeOption = {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
 export default function ProjectTasksToolbar({
   activeTab,
-  setActiveTab,
   query,
   setQuery,
   statusFilter,
@@ -24,16 +30,15 @@ export default function ProjectTasksToolbar({
   assignees,
 }: {
   activeTab: "list" | "timeline"
-  setActiveTab: (v: "list" | "timeline") => void
   query: string
   setQuery: (v: string) => void
   statusFilter: TaskStatus | "__all__"
   setStatusFilter: (v: TaskStatus | "__all__") => void
   currentWeekStart: Date
-  setCurrentWeekStart: (d: Date | ((d: Date) => Date)) => void
+  setCurrentWeekStart: Dispatch<SetStateAction<Date>>
   canManageProjectTasks: boolean
   projectId: string
-  assignees: any[]
+  assignees: AssigneeOption[]
 }) {
   return (
     <div className="flex flex-col gap-2 xl:flex-row xl:items-center">

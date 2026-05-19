@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-type BookedConsultation = {
+export type BookedConsultation = {
   id: string;
   eventTypeId: string;
   eventTypeTitle: string;
