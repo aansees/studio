@@ -222,7 +222,7 @@ export default function HomePage() {
             </div>
             <div className="count">
               <div className="digit">
-                <h1>2</h1>
+                <h1>3</h1>
               </div>
               <div className="digit">
                 <h1>7</h1>
@@ -230,15 +230,7 @@ export default function HomePage() {
             </div>
             <div className="count">
               <div className="digit">
-                <h1>6</h1>
-              </div>
-              <div className="digit">
-                <h1>5</h1>
-              </div>
-            </div>
-            <div className="count">
-              <div className="digit">
-                <h1>9</h1>
+                <h1>7</h1>
               </div>
               <div className="digit">
                 <h1>8</h1>

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import BookingSubmitForm from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
 import type {
@@ -78,7 +77,7 @@ export default function MonthlyBookingPanel({
 }) {
   if (bookedConsultation) {
     return (
-      <div className="h-full p-6">
+      <div className="h-full overflow-y-auto overscroll-contain p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <BookingSubmitForm
           consultation={bookedConsultation}
           idPrefix="proposal-inline-booking"
@@ -114,7 +113,7 @@ export default function MonthlyBookingPanel({
         {renderTimeFormatToggle?.()}
       </div>
 
-      <ScrollArea className="h-0 min-h-0 flex-1 pr-0.5" scrollbarGutter scrollFade hideScrollbars>
+      <div className="h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-1">
           {slotsPending ? (
             <p className="text-sm text-muted-foreground">Loading available slots...</p>
@@ -141,7 +140,7 @@ export default function MonthlyBookingPanel({
             <p className="text-sm text-muted-foreground">No slots available for this day.</p>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

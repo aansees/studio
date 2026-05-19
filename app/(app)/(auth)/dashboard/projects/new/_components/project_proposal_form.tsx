@@ -1134,7 +1134,7 @@ export function ProjectProposalForm({
   function renderMonthlyBookingPanel() {
     if (bookedConsultation) {
       return (
-        <div className="h-full p-6">
+        <div className="h-full overflow-y-auto overscroll-contain p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <BookingSubmitForm
               consultation={bookedConsultation}
               idPrefix="proposal-inline-booking"
@@ -1662,8 +1662,8 @@ export function ProjectProposalForm({
           <div className="h-full w-full">
             <div
               className={cn(
-                "booking-mode-motion h-full transform-gpu overflow-hidden transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                !isPublicMode && "rounded-lg border border-border/70 bg-card/70 shadow-sm",
+                "booking-mode-motion h-full transform-gpu overflow-hidden bg-card/70 shadow-sm transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                (!isPublicMode || isMonthly) && "rounded-lg border border-border/70",
                 !isMonthly && "h-full",
               )}
             >

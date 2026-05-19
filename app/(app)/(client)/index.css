@@ -1,7 +1,7 @@
 .hero {
   position: relative;
   width: 100vw;
-  height: 135svh;
+  height: 100dvh;
   overflow: hidden;
   /* background-color: #d3cec5; */
 }
@@ -94,9 +94,6 @@
 }
 
 @media (max-width: 1000px) {
-  .hero {
-    height: 175svh;
-  }
 
   .hero .hero-content {
     width: 100%;

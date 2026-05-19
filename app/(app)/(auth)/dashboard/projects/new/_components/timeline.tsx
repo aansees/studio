@@ -157,7 +157,7 @@ export function CalendarBookingView({
             <AnimatePresence initial={false}>
               <motion.div
                 key={isColumnView ? "column" : "weekly"}
-                className="absolute inset-0 overflow-auto overscroll-contain"
+                className="absolute inset-0 h-full min-h-0 overflow-x-auto overflow-y-auto overscroll-contain"
                 initial={{
                   opacity: 0,
                   x: isColumnView ? 96 : -96,
