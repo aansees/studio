@@ -96,13 +96,13 @@ export default function MonthlyBookingPanel({
   }
 
   return (
-    <div className="h-full p-5">
+    <div className="flex h-full min-h-0 flex-col p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm font-medium">{activeDay?.label ?? "Select date"}</p>
         {renderTimeFormatToggle?.()}
       </div>
 
-      <ScrollArea className="max-h-[390px] pr-0.5" scrollbarGutter scrollFade hideScrollbars>
+      <ScrollArea className="h-0 min-h-0 flex-1 pr-0.5" scrollbarGutter scrollFade hideScrollbars>
         <div className="space-y-1">
           {slotsPending ? (
             <p className="text-sm text-muted-foreground">Loading available slots...</p>

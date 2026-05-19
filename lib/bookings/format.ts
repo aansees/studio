@@ -124,3 +124,60 @@ export function formatBookingDateTimeRange(
     minute: "2-digit",
   }).formatRange(start, end)
 }
+
+const timeZoneCountryLabels: Record<string, string> = {
+  UTC: "Coordinated Universal Time",
+  "Etc/UTC": "Coordinated Universal Time",
+  "Asia/Kathmandu": "Nepal",
+  "Asia/Katmandu": "Nepal",
+  "Asia/Kolkata": "India",
+  "Asia/Dubai": "United Arab Emirates",
+  "Asia/Singapore": "Singapore",
+  "Asia/Tokyo": "Japan",
+  "Asia/Seoul": "South Korea",
+  "Asia/Shanghai": "China",
+  "Asia/Hong_Kong": "Hong Kong",
+  "Asia/Bangkok": "Thailand",
+  "Asia/Jakarta": "Indonesia",
+  "Asia/Manila": "Philippines",
+  "Australia/Sydney": "Australia",
+  "Australia/Melbourne": "Australia",
+  "Europe/London": "United Kingdom",
+  "Europe/Paris": "France",
+  "Europe/Berlin": "Germany",
+  "Europe/Madrid": "Spain",
+  "Europe/Rome": "Italy",
+  "Europe/Amsterdam": "Netherlands",
+  "America/New_York": "United States",
+  "America/Chicago": "United States",
+  "America/Denver": "United States",
+  "America/Los_Angeles": "United States",
+  "America/Toronto": "Canada",
+  "America/Vancouver": "Canada",
+}
+
+function getTimeZoneCityLabel(timeZone: string) {
+  const city = timeZone.split("/").at(-1)
+  return city ? city.replace(/_/g, " ") : timeZone
+}
+
+export function formatBookingTimeZoneLabel(
+  timeZone: string | null | undefined,
+  options: { hour12?: boolean } = {},
+) {
+  const candidate = timeZone?.trim() || "UTC"
+  const label = timeZoneCountryLabels[candidate] ?? getTimeZoneCityLabel(candidate)
+
+  try {
+    const currentTime = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: options.hour12,
+      timeZone: candidate,
+    }).format(new Date())
+
+    return `${label} time - ${currentTime}`
+  } catch {
+    return `${label} time`
+  }
+}

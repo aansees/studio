@@ -24,7 +24,10 @@ import {
   bookingQuestionVisibilityOptions,
   getBookingOptionLabel,
 } from "@/lib/constants/booking-display"
-import { formatBookingMinuteRange } from "@/lib/bookings/format"
+import {
+  formatBookingMinuteRange,
+  formatBookingTimeZoneLabel,
+} from "@/lib/bookings/format"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -784,7 +787,7 @@ export function BookingEventTypeEditor({
                 ))}
               </div>
               <div className="flex items-center justify-between border-t border-border/60 px-4 py-3 text-sm text-muted-foreground">
-                <span>{selectedAvailability.timezone}</span>
+                <span>{formatBookingTimeZoneLabel(selectedAvailability.timezone)}</span>
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/bookings/availability?schedule=${selectedAvailability.id}`}>
                     Edit availability

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock3Icon, GlobeIcon, CalendarClockIcon, VideoIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatBookingTimeZoneLabel } from "@/lib/bookings/format";
 import MiniCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/mini_calendar";
 
 type BookableEventType = {
@@ -101,6 +102,13 @@ export default function BookingDetails({
   useTwentyFourHour,
 }: BookingDetailsProps) {
   const schedule = React.useMemo(() => getConsultationSchedule(bookedConsultation, useTwentyFourHour), [bookedConsultation, useTwentyFourHour]);
+  const timeZoneLabel = React.useMemo(
+    () =>
+      formatBookingTimeZoneLabel(timeZone, {
+        hour12: !useTwentyFourHour,
+      }),
+    [timeZone, useTwentyFourHour],
+  );
   const locationLabel = bookedConsultation?.locationLabel ?? selectedEventType?.locationLabel ?? "Cal Video";
 
   return (
@@ -129,7 +137,7 @@ export default function BookingDetails({
             </p>
             <p className="inline-flex items-center gap-1.5">
               <GlobeIcon className="h-3.5 w-3.5" />
-              {timeZone}
+              {timeZoneLabel}
             </p>
           </div>
 

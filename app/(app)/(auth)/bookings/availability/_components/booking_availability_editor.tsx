@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import {
   bookingDayLabels,
   formatBookingMinuteRange,
+  formatBookingTimeZoneLabel,
   minutesToTimeInput,
   summarizeBookingAvailabilityWindows,
   timeInputToMinutes,
@@ -615,7 +616,7 @@ export function BookingAvailabilityEditor({
                     </FrameDescription>
                     <FrameDescription className="flex items-center gap-2 text-sm">
                       <GlobeIcon className="size-4" />
-                      {schedule.timezone}
+                      {formatBookingTimeZoneLabel(schedule.timezone)}
                     </FrameDescription>
                   </button>
 

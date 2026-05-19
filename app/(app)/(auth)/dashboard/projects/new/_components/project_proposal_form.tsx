@@ -29,6 +29,7 @@ import {
 import { toast } from "sonner";
 
 import { ProjectRichTextEditor } from "@/components/layout/dashboard/project-rich-text";
+import { formatBookingTimeZoneLabel } from "@/lib/bookings/format";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -438,6 +439,13 @@ export function ProjectProposalForm({
   }, [slotsByDate, visibleMonth.month, visibleMonth.year]);
 
   const timeZone = slotsData?.timezone ?? selectedEventType?.timezone ?? "UTC";
+  const timeZoneLabel = useMemo(
+    () =>
+      formatBookingTimeZoneLabel(timeZone, {
+        hour12: !useTwentyFourHour,
+      }),
+    [timeZone, useTwentyFourHour],
+  );
 
   const canContinue = title.trim().length >= 2;
 
@@ -1018,7 +1026,7 @@ export function ProjectProposalForm({
               </p>
               <p className="inline-flex items-center gap-1.5">
                 <GlobeIcon className="h-3.5 w-3.5" />
-                {timeZone}
+                {timeZoneLabel}
               </p>
             </div>
 
@@ -1147,23 +1155,23 @@ export function ProjectProposalForm({
     return (
       <div
         className={cn(
-          "grid grid-cols-1 transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:grid-cols-[260px_minmax(0,1fr)_260px]",
+          "grid h-full grid-cols-1 transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:grid-cols-[260px_minmax(0,1fr)_260px]",
           isSlotSelected && "lg:grid-cols-[318px_minmax(0,1fr)]",
         )}
       >
         {renderBookingDetails({
-          className: "min-h-[420px] border-b border-border/60 p-6 lg:border-b-0 lg:border-r",
+          className: "h-full min-h-0 border-b border-border/60 p-6 lg:border-b-0 lg:border-r",
           showBackButton: false,
           showLocation: true,
         })}
 
         {isSlotSelected ? (
-          <div className="min-h-[420px] min-w-0">
+          <div className="h-full min-h-0 min-w-0">
             {renderMonthlyBookingPanel()}
           </div>
         ) : (
           <>
-            <div className="min-h-[420px] min-w-0 p-6">
+            <div className="h-full min-h-0 min-w-0 p-6">
               <MonthlyCalendar
                 monthLabel={monthLabel}
                 shiftVisibleMonth={shiftVisibleMonth}
@@ -1174,7 +1182,7 @@ export function ProjectProposalForm({
               />
             </div>
 
-            <div className="min-h-[420px] min-w-0 border-t border-border/60 lg:border-l lg:border-t-0">
+            <div className="h-full min-h-0 min-w-0 border-t border-border/60 lg:border-l lg:border-t-0">
               <MonthlyBookingPanel
                 bookedConsultation={bookedConsultation}
                 clearSelectedSlot={clearSelectedSlot}
@@ -1565,7 +1573,7 @@ export function ProjectProposalForm({
     const isColumnView = bookingView === "list";
 
     return (
-      <div className="relative flex min-h-[calc(100vh-49px)] flex-col">
+      <div className="relative min-h-[calc(100vh-49px)] overflow-hidden">
         {isMonthly ? (
           <div className="absolute right-1 top-1 z-10 flex flex-wrap items-center justify-end gap-3">
             {renderBookingControls({ showTimeFormat: false })}
@@ -1574,46 +1582,47 @@ export function ProjectProposalForm({
 
         <div
           className={cn(
-            "flex flex-1",
+            "absolute left-1/2 top-1/2 w-[calc(100%-0.5rem)] transition-[left,top,width,height,max-width,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
             isMonthly
-              ? "items-center justify-center px-2 py-16 md:py-20"
-              : "items-stretch",
+              ? "-translate-x-1/2 -translate-y-1/2"
+              : "left-0 top-0 h-[calc(100vh-49px)] max-w-none translate-x-0 translate-y-0",
+            isMonthly && isSlotSelected
+              ? "h-[500px] max-w-[710px]"
+              : isMonthly
+                ? "h-[500px] max-w-[974px]"
+                : null,
           )}
         >
-          <div
-            className={cn(
-              "w-full transition-[max-width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-              isMonthly
-                ? isSlotSelected
-                  ? "max-w-[710px]"
-                  : "max-w-[974px]"
-                : "h-[calc(100vh-49px)] max-w-none",
-            )}
-          >
-            <motion.div
-              layout="position"
-              transition={{
-                duration: 0.5,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              style={{ willChange: "transform" }}
+          <div className="h-full w-full">
+            <div
               className={cn(
-                "booking-mode-motion transform-gpu overflow-hidden bg-card/70",
+                "booking-mode-motion h-full transform-gpu overflow-hidden rounded-lg border border-border/70 bg-card/70 shadow-sm transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 !isMonthly && "h-full",
               )}
             >
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={false} mode="sync">
                 <motion.div
                   key={isMonthly ? "monthly" : "calendar"}
-                  className={cn(!isMonthly && "h-full")}
-                  initial={{ opacity: 0, x: isMonthly ? -40 : 96 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: isMonthly ? -40 : 96 }}
+                  className="h-full"
+                  initial={{
+                    opacity: 0,
+                    scale: isMonthly ? 0.985 : 1.01,
+                    y: isMonthly ? -18 : 22,
+                  }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{
+                    opacity: 0,
+                    scale: isMonthly ? 0.985 : 1.01,
+                    y: isMonthly ? -18 : 22,
+                  }}
                   transition={{
-                    duration: 0.3,
+                    duration: 0.32,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  style={{ willChange: "transform, opacity" }}
+                  style={{
+                    transformOrigin: isMonthly ? "center center" : "top center",
+                    willChange: "transform, opacity",
+                  }}
                 >
                   {isMonthly ? (
                     renderMonthlyBookingContent()
@@ -1658,20 +1667,20 @@ export function ProjectProposalForm({
                   )}
                 </motion.div>
               </AnimatePresence>
-            </motion.div>
-
-            {isMonthly ? (
-              <Button
-                type="button"
-                variant="link"
-                className="mx-auto mt-5 flex text-base font-semibold text-muted-foreground"
-                onClick={() => setStep("proposal")}
-              >
-                Back
-              </Button>
-            ) : null}
+            </div>
           </div>
         </div>
+
+        {isMonthly ? (
+          <Button
+            type="button"
+            variant="link"
+            className="absolute left-1/2 top-1/2 z-10 mt-[270px] -translate-x-1/2 text-base font-semibold text-muted-foreground"
+            onClick={() => setStep("proposal")}
+          >
+            Back
+          </Button>
+        ) : null}
       </div>
     );
   }

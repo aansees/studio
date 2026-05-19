@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Slot = { startsAt: string; endsAt: string };
 type Day = { date: string; label: string | null; slots: Slot[] };
@@ -153,10 +153,33 @@ export function CalendarBookingView({
             {renderBookingControls({ showSettings: true })}
           </div>
 
-          <ScrollArea hideScrollbars className="relative min-h-0 flex-1">
-            {/* Keep the same motion container behavior in the parent; render appropriate view here */}
-            {isColumnView ? renderColumnBookingView() : renderWeeklyTimeGrid()}
-          </ScrollArea>
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={isColumnView ? "column" : "weekly"}
+                className="absolute inset-0 overflow-auto overscroll-contain"
+                initial={{
+                  opacity: 0,
+                  x: isColumnView ? 96 : -96,
+                }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                }}
+                exit={{
+                  opacity: 0,
+                  x: isColumnView ? -96 : 96,
+                }}
+                transition={{
+                  duration: 0.34,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={{ willChange: "transform, opacity" }}
+              >
+                {isColumnView ? renderColumnBookingView() : renderWeeklyTimeGrid()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </section>
       </div>
     </>
