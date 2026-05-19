@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import LenisProvider from "@/components/lenis-provider";
 import ClickSpark from "@/components/global/cursor-sparklin";
 import { Toaster } from "@/components/ui/sonner";
+import { SiteShell } from "@/app/(app)/(client)/_components";
 import "./globals.css";
 
 const raleway = Raleway({ subsets: ["latin"], variable: "--font-sans" });
@@ -64,7 +65,7 @@ export default async function RootLayout({
       >
         
           <LenisProvider>
-            {children}
+            <SiteShell>{children}</SiteShell>
             <ClickSpark />
           </LenisProvider>
         <Toaster />

@@ -21,6 +21,8 @@ import {
 
 gsap.registerPlugin(useGSAP);
 
+const PRELOADER_MAX_SECONDS = 5;
+
 type PreloaderProps = {
   onComplete?: () => void;
 };
@@ -97,7 +99,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       });
 
       if (prefersReducedMotion) {
-        gsap
+        const reducedMotionTimeline = gsap
           .timeline({
             onComplete: () => onCompleteRef.current?.(),
           })
@@ -111,15 +113,19 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           })
           .to(
             revealers,
-            {
-              width: revealTargetSize.width,
-              height: revealTargetSize.height,
-              duration: REDUCED_MOTION_REVEAL_DURATION,
-              stagger: 0.08,
-              ease: REVEAL_EASE,
-            },
-            "<",
-          );
+	          {
+	            width: revealTargetSize.width,
+	            height: revealTargetSize.height,
+	            duration: REDUCED_MOTION_REVEAL_DURATION,
+	            stagger: 0.08,
+	            ease: REVEAL_EASE,
+	          },
+	          "<",
+	        );
+
+        reducedMotionTimeline.timeScale(
+          Math.max(1, reducedMotionTimeline.duration() / PRELOADER_MAX_SECONDS),
+        );
 
         return;
       }
@@ -177,6 +183,8 @@ export default function Preloader({ onComplete }: PreloaderProps) {
         },
         "<",
       );
+
+      timeline.timeScale(Math.max(1, timeline.duration() / PRELOADER_MAX_SECONDS));
     },
     {
       scope: rootRef,

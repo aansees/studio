@@ -36,6 +36,8 @@ function shouldShowHomePreloader() {
 gsap.registerPlugin(ScrollTrigger, CustomEase);
 CustomEase.create("hop", "0.9, 0, 0.1, 1");
 
+const HOME_PRELOADER_MAX_SECONDS = 5;
+
 export default function HomePage() {
   const tagsRef = useRef<HTMLDivElement>(null);
   const [showPreloader, setShowPreloader] = useState(false);
@@ -68,7 +70,6 @@ export default function HomePage() {
 
   useGSAP(() => {
     const tl = gsap.timeline({
-      delay: 0.3,
       defaults: {
         ease: "hop",
       },
@@ -157,6 +158,8 @@ export default function HomePage() {
         },
         "<",
       );
+
+      tl.timeScale(Math.max(1, tl.duration() / HOME_PRELOADER_MAX_SECONDS));
     }
   }, [showPreloader]);
 
@@ -185,9 +188,9 @@ export default function HomePage() {
     { scope: tagsRef },
   );
 
-  const heroTitleDelay = useIntroHeroTiming ? 10 : 0.85;
-  const heroTaglineDelay = useIntroHeroTiming ? 10.15 : 1;
-  const heroButtonDelay = useIntroHeroTiming ? 10.3 : 1.15;
+  const heroTitleDelay = useIntroHeroTiming ? 4.8 : 0.85;
+  const heroTaglineDelay = useIntroHeroTiming ? 4.9 : 1;
+  const heroButtonDelay = useIntroHeroTiming ? 5 : 1.15;
 
   return (
     <>
@@ -251,7 +254,7 @@ export default function HomePage() {
         {/* <div className="hero-bg">
           <img className="hero-img" src="/home/hero.jpg" alt="" />
         </div> */}
-        <div className="hero-gradient"></div>
+        {/* <div className="hero-gradient"></div> */}
         <div className="container">
           <div className="hero-content">
             <div className="hero-header">

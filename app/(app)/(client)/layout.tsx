@@ -1,4 +1,3 @@
-import { SiteShell } from "./_components";
 import "./ancs-studio-base.css";
 import "./index.css";
 import "./preloader.css";
@@ -19,13 +18,11 @@ export default function ClientRootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-(--otis-bg) text-(--otis-fg) [--otis-accent1:#ed6a5a] [--otis-accent2:#f4f1bb] [--otis-accent3:#9bc1bc] [--otis-accent4:#5d576b] [--otis-bg:#edf1e8] [--otis-bg2:#d7dbd2] [--otis-fg:#141414]">
-      <SiteShell>
+      <div className="client-site-root relative min-h-screen overflow-x-hidden bg-(--otis-bg) text-(--otis-fg) [--otis-accent1:#ed6a5a] [--otis-accent2:#f4f1bb] [--otis-accent3:#9bc1bc] [--otis-accent4:#5d576b] [--otis-bg:#edf1e8] [--otis-bg2:#d7dbd2] [--otis-fg:#141414]">
         <Header />
         <Menu />
         {children}
         <ConditionalFooter />
-      </SiteShell>
     </div>
   );
 }
