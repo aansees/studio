@@ -62,9 +62,10 @@ import {
   getMinuteOfDayInTimeZone,
   formatHourLabel,
   isValidEmail,
-  appendBookingNotesToProposalNotes,
 } from "@/app/(app)/(auth)/dashboard/projects/new/_components/helpers";
-import BookingSubmitForm from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
+import BookingSubmitForm, {
+  type BookingQuestion,
+} from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
 import MiniCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/mini_calendar";
 import {
   WeeklyTimeGrid,
@@ -93,6 +94,7 @@ type BookableEventType = {
   timezone: string;
   locationLabel: string | null;
   locationKind: string | null;
+  questions: BookingQuestion[];
 };
 
 type BookingSetup = {
@@ -121,6 +123,9 @@ type SlotsPayload = {
       endsAt: string;
     }>;
   }>;
+  eventType?: {
+    questions?: BookingQuestion[];
+  };
 };
 
 type BookedConsultation = {
@@ -146,22 +151,29 @@ export function ProjectProposalForm({
   bookingSetup,
   bookingSetupError,
   currentUser,
+  mode = "client",
 }: {
   bookingSetup: BookingSetup | null;
   bookingSetupError: string | null;
   currentUser: ProposalClient;
+  mode?: "client" | "public";
 }) {
   const router = useRouter();
   const editorHostRef = useRef<HTMLDivElement | null>(null);
-  const [step, setStep] = useState<ProposalStep>("proposal");
-  const [title, setTitle] = useState("");
+  const isPublicMode = mode === "public";
+  const [step, setStep] = useState<ProposalStep>(
+    isPublicMode ? "consultation" : "proposal",
+  );
+  const [title, setTitle] = useState(isPublicMode ? "New project request" : "");
   const [notes, setNotes] = useState("");
   const [pending, setPending] = useState(false);
+  const [submittedProjectId, setSubmittedProjectId] = useState<string | null>(null);
   const [attendeeName, setAttendeeName] = useState(currentUser.name);
   const [attendeeEmail, setAttendeeEmail] = useState(currentUser.email);
   const [bookingNotes, setBookingNotes] = useState("");
   const [showGuests, setShowGuests] = useState(false);
   const [guestEmails, setGuestEmails] = useState("");
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [bookingView, setBookingView] = useState<BookingView>("day");
   const previousBookingViewRef = useRef<BookingView>("day");
   const [useTwentyFourHour, setUseTwentyFourHour] = useState(false);
@@ -228,7 +240,15 @@ export function ProjectProposalForm({
 
       return selectedEventType.durationMinutes;
     });
+    setQuestionAnswers({});
   }, [selectedEventType]);
+
+  function setQuestionAnswer(fieldKey: string, value: string) {
+    setQuestionAnswers((current) => ({
+      ...current,
+      [fieldKey]: value,
+    }));
+  }
 
   useEffect(() => {
     if (step !== "consultation") {
@@ -257,7 +277,10 @@ export function ProjectProposalForm({
       days: "14",
     });
 
-    fetch(`/api/bookings/client/slots?${query.toString()}`, {
+    const slotsEndpoint =
+      mode === "public" ? "/api/bookings/public/slots" : "/api/bookings/client/slots";
+
+    fetch(`${slotsEndpoint}?${query.toString()}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -308,7 +331,7 @@ export function ProjectProposalForm({
     return () => {
       controller.abort();
     };
-  }, [selectedDurationMinutes, selectedEventTypeId, step]);
+  }, [mode, selectedDurationMinutes, selectedEventTypeId, step]);
 
   useEffect(() => {
     const seedDate = selectedDate ?? slotsData?.days[0]?.date;
@@ -446,12 +469,16 @@ export function ProjectProposalForm({
       }),
     [timeZone, useTwentyFourHour],
   );
+  const activeQuestions = useMemo(
+    () => slotsData?.eventType?.questions ?? selectedEventType?.questions ?? [],
+    [selectedEventType, slotsData],
+  );
 
   const canContinue = title.trim().length >= 2;
 
   const canSubmitBase = useMemo(
     () =>
-      title.trim().length >= 2 &&
+      (isPublicMode || title.trim().length >= 2) &&
       attendeeName.trim().length >= 2 &&
       isValidEmail(attendeeEmail.trim()) &&
       !bookingSetupError &&
@@ -461,6 +488,7 @@ export function ProjectProposalForm({
       attendeeName,
       bookingSetupError,
       eventTypes.length,
+      isPublicMode,
       title,
     ],
   );
@@ -696,7 +724,7 @@ export function ProjectProposalForm({
       return false;
     }
 
-    if (title.trim().length < 2) {
+    if (!isPublicMode && title.trim().length < 2) {
       toast.error("Add a proposal title before submitting");
       return false;
     }
@@ -713,6 +741,16 @@ export function ProjectProposalForm({
 
     if (bookingSetupError || eventTypes.length === 0) {
       toast.error(bookingSetupError ?? "No consultation event type is active");
+      return false;
+    }
+
+    const missingQuestion = activeQuestions.find(
+      (question) =>
+        question.visibility === "required" &&
+        !(questionAnswers[question.fieldKey] ?? "").trim(),
+    );
+    if (missingQuestion) {
+      toast.error(`Please answer "${missingQuestion.label}"`);
       return false;
     }
 
@@ -737,47 +775,57 @@ export function ProjectProposalForm({
 
     try {
       const normalizedAttendeeEmail = attendeeEmail.trim().toLowerCase();
-      const bookingNoteLines = [
-        attendeeName.trim() !== currentUser.name
-          ? `Preferred attendee name: ${attendeeName.trim()}`
-          : null,
-        normalizedAttendeeEmail !== currentUser.email.toLowerCase()
-          ? `Preferred attendee email: ${normalizedAttendeeEmail}`
-          : null,
-        bookingNotes.trim()
-          ? `Additional notes: ${bookingNotes.trim()}`
-          : null,
-        guestEmails.trim() ? `Guest emails: ${guestEmails.trim()}` : null,
-      ].filter((value): value is string => Boolean(value));
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: title.trim(),
-          notes: appendBookingNotesToProposalNotes(
+      const normalizedQuestionAnswers = Object.fromEntries(
+        Object.entries(questionAnswers)
+          .map(([key, value]) => [key, value.trim()] as const)
+          .filter(([, value]) => value.length > 0),
+      );
+      const normalizedGuests = guestEmails
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      const normalizedBookingAnswers = {
+        ...normalizedQuestionAnswers,
+        ...(bookingNotes.trim() ? { notes: bookingNotes.trim() } : {}),
+      };
+      const response = await fetch(
+        isPublicMode ? "/api/projects/public-proposals" : "/api/projects",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: isPublicMode
+              ? `Project request from ${attendeeName.trim()}`
+              : title.trim(),
             notes,
-            bookingNoteLines.join("\n"),
-          ),
-          ...(consultation.id.startsWith("draft:")
-            ? {
-                bookingRequest: {
-                  eventTypeId: consultation.eventTypeId,
-                  startsAt: consultation.startsAt,
-                  durationMinutes: Math.max(
-                    5,
-                    Math.round(
-                      (new Date(consultation.endsAt).getTime() -
-                        new Date(consultation.startsAt).getTime()) /
-                        60_000,
+            ...(consultation.id.startsWith("draft:")
+              ? {
+                  bookingRequest: {
+                    eventTypeId: consultation.eventTypeId,
+                    startsAt: consultation.startsAt,
+                    durationMinutes: Math.max(
+                      5,
+                      Math.round(
+                        (new Date(consultation.endsAt).getTime() -
+                          new Date(consultation.startsAt).getTime()) /
+                          60_000,
+                      ),
                     ),
-                  ),
-                  attendeeTimezone:
-                    Intl.DateTimeFormat().resolvedOptions().timeZone,
-                },
-              }
-            : { bookingId: consultation.id }),
-        }),
-      });
+                    attendeeTimezone:
+                      Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    attendeeName: attendeeName.trim(),
+                    attendeeEmail: normalizedAttendeeEmail,
+                    answers:
+                      Object.keys(normalizedBookingAnswers).length > 0
+                        ? normalizedBookingAnswers
+                        : null,
+                    guests: normalizedGuests.length > 0 ? normalizedGuests : null,
+                  },
+                }
+              : { bookingId: consultation.id }),
+          }),
+        },
+      );
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
@@ -785,8 +833,12 @@ export function ProjectProposalForm({
       }
 
       toast.success("Proposal submitted");
-      router.push(`/dashboard/projects/${payload.projectId}`);
-      router.refresh();
+      if (isPublicMode) {
+        setSubmittedProjectId(payload.projectId ?? "submitted");
+      } else {
+        router.push(`/dashboard/projects/${payload.projectId}`);
+        router.refresh();
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Unable to submit proposal",
@@ -1101,6 +1153,9 @@ export function ProjectProposalForm({
               setShowGuests={setShowGuests}
               guestEmails={guestEmails}
               setGuestEmails={setGuestEmails}
+              questions={activeQuestions}
+              questionAnswers={questionAnswers}
+              setQuestionAnswer={setQuestionAnswer}
               useTwentyFourHour={useTwentyFourHour}
               onSubmit={() => submitProposal(bookedConsultation)}
             />
@@ -1199,6 +1254,9 @@ export function ProjectProposalForm({
                 setShowGuests={setShowGuests}
                 guestEmails={guestEmails}
                 setGuestEmails={setGuestEmails}
+                questions={activeQuestions}
+                questionAnswers={questionAnswers}
+                setQuestionAnswer={setQuestionAnswer}
                 useTwentyFourHour={useTwentyFourHour}
                 submitProposal={submitProposal}
                 activeDay={activeDay ?? null}
@@ -1573,7 +1631,12 @@ export function ProjectProposalForm({
     const isColumnView = bookingView === "list";
 
     return (
-      <div className="relative min-h-[calc(100vh-49px)] overflow-hidden">
+      <div
+        className={cn(
+          "relative overflow-hidden",
+          isPublicMode ? "h-[100dvh] w-full" : "min-h-[calc(100vh-49px)]",
+        )}
+      >
         {isMonthly ? (
           <div className="absolute right-1 top-1 z-10 flex flex-wrap items-center justify-end gap-3">
             {renderBookingControls({ showTimeFormat: false })}
@@ -1585,7 +1648,10 @@ export function ProjectProposalForm({
             "absolute left-1/2 top-1/2 w-[calc(100%-0.5rem)] transition-[left,top,width,height,max-width,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
             isMonthly
               ? "-translate-x-1/2 -translate-y-1/2"
-              : "left-0 top-0 h-[calc(100vh-49px)] max-w-none translate-x-0 translate-y-0",
+              : cn(
+                  "left-0 top-0 max-w-none translate-x-0 translate-y-0",
+                  isPublicMode ? "h-[100dvh]" : "h-[calc(100vh-49px)]",
+                ),
             isMonthly && isSlotSelected
               ? "h-[500px] max-w-[710px]"
               : isMonthly
@@ -1596,7 +1662,8 @@ export function ProjectProposalForm({
           <div className="h-full w-full">
             <div
               className={cn(
-                "booking-mode-motion h-full transform-gpu overflow-hidden rounded-lg border border-border/70 bg-card/70 shadow-sm transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "booking-mode-motion h-full transform-gpu overflow-hidden transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                !isPublicMode && "rounded-lg border border-border/70 bg-card/70 shadow-sm",
                 !isMonthly && "h-full",
               )}
             >
@@ -1676,7 +1743,14 @@ export function ProjectProposalForm({
             type="button"
             variant="link"
             className="absolute left-1/2 top-1/2 z-10 mt-[270px] -translate-x-1/2 text-base font-semibold text-muted-foreground"
-            onClick={() => setStep("proposal")}
+            onClick={() => {
+              if (isPublicMode) {
+                router.push("/");
+                return;
+              }
+
+              setStep("proposal");
+            }}
           >
             Back
           </Button>
@@ -1689,10 +1763,29 @@ export function ProjectProposalForm({
     ? buildDraftConsultation(pendingSlot.slot)
     : null;
 
+  if (submittedProjectId && mode === "public") {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col justify-center gap-4 p-4 md:p-6">
+        <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
+          <p className="text-sm text-muted-foreground">Project request submitted</p>
+          <h1 className="mt-2 text-3xl font-semibold">We received your brief.</h1>
+          <p className="mt-3 text-muted-foreground">
+            Your proposal and consultation request were submitted together. We will
+            follow up using the email address you provided.
+          </p>
+          <Button className="mt-6" type="button" onClick={() => router.push("/")}>
+            Back to site
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
         "flex w-full flex-1 flex-col gap-6",
+        isPublicMode && step !== "proposal" ? "h-full min-h-0 gap-0" : null,
         step === "proposal"
           ? "mx-auto max-w-5xl p-4 md:p-6"
           : bookingView === "day" ||
@@ -1750,7 +1843,12 @@ export function ProjectProposalForm({
           </div>
         ) : (
           <LayoutGroup id="proposal-booking-mode">
-            <div className="w-full overflow-hidden">
+            <div
+              className={cn(
+                "w-full overflow-hidden",
+                isPublicMode ? "h-full min-h-0" : null,
+              )}
+            >
               {bookingSetupError ? (
                 <div className="p-4 md:p-5">
                   <p className="text-sm text-destructive">
@@ -1816,6 +1914,9 @@ export function ProjectProposalForm({
               setShowGuests={setShowGuests}
               guestEmails={guestEmails}
               setGuestEmails={setGuestEmails}
+              questions={activeQuestions}
+              questionAnswers={questionAnswers}
+              setQuestionAnswer={setQuestionAnswer}
               useTwentyFourHour={useTwentyFourHour}
               onSubmit={() => submitProposal(pendingConsultation)}
             />

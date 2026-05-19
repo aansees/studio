@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type {
+  BookingQuestionType,
+  BookingQuestionVisibility,
+} from "@/lib/constants/booking";
 import { cn } from "@/lib/utils";
 
 export type BookedConsultation = {
@@ -19,6 +23,16 @@ export type BookedConsultation = {
   locationLabel: string | null;
   locationKind: string | null;
   meetingUrl: string | null;
+};
+
+export type BookingQuestion = {
+  fieldKey: string;
+  label: string;
+  description: string | null;
+  inputType: BookingQuestionType;
+  visibility: BookingQuestionVisibility;
+  placeholder: string | null;
+  options: string[] | null;
 };
 
 export type BookingSubmitFormProps = {
@@ -39,6 +53,9 @@ export type BookingSubmitFormProps = {
   setShowGuests: (v: boolean) => void;
   guestEmails: string;
   setGuestEmails: (v: string) => void;
+  questions?: BookingQuestion[];
+  questionAnswers?: Record<string, string>;
+  setQuestionAnswer?: (fieldKey: string, value: string) => void;
   useTwentyFourHour: boolean;
   onSubmit: () => Promise<void> | void;
 };
@@ -61,6 +78,9 @@ export function BookingSubmitForm({
   setShowGuests,
   guestEmails,
   setGuestEmails,
+  questions = [],
+  questionAnswers = {},
+  setQuestionAnswer,
   useTwentyFourHour,
   onSubmit,
 }: BookingSubmitFormProps) {
@@ -145,6 +165,58 @@ export function BookingSubmitForm({
           className="min-h-20"
         />
       </Field>
+
+      {questions.map((question) => {
+        const id = `${idPrefix}-question-${question.fieldKey}`;
+        const value = questionAnswers[question.fieldKey] ?? "";
+        const commonProps = {
+          id,
+          value,
+          required: question.visibility === "required",
+          placeholder: question.placeholder ?? undefined,
+          onChange: (
+            ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+          ) => setQuestionAnswer?.(question.fieldKey, ev.target.value),
+        };
+
+        return (
+          <Field key={question.fieldKey}>
+            <FieldLabel htmlFor={id}>
+              {question.label}
+              {question.visibility === "required" ? " *" : ""}
+            </FieldLabel>
+            {question.description ? (
+              <p className="-mt-1 text-xs text-muted-foreground">{question.description}</p>
+            ) : null}
+            {question.inputType === "long_text" ? (
+              <Textarea {...commonProps} className="min-h-20" />
+            ) : question.inputType === "select" ? (
+              <select
+                {...commonProps}
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select an option</option>
+                {(question.options ?? []).map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                {...commonProps}
+                type={
+                  question.inputType === "email"
+                    ? "email"
+                    : question.inputType === "phone"
+                      ? "tel"
+                      : "text"
+                }
+              />
+            )}
+          </Field>
+        );
+      })}
 
       <button
         type="button"

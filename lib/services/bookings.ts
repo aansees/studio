@@ -26,6 +26,7 @@ import {
   bookingEventTypeQuestion,
   user,
 } from "@/lib/db/schema"
+import { sendAppMail } from "@/lib/email/mailer"
 import { badRequest, conflict, forbidden, notFound, unauthorized } from "@/lib/errors"
 import type { SessionUser } from "@/lib/session"
 import { isAdmin } from "@/lib/services/access-control"
@@ -1335,18 +1336,27 @@ export async function listBookingsForAdmin(currentUser: SessionUser) {
       status: booking.status,
       source: booking.source,
       title: booking.title,
+      projectId: booking.projectId,
       attendeeName: booking.attendeeName,
       attendeeEmail: booking.attendeeEmail,
       attendeePhone: booking.attendeePhone,
       attendeeTimezone: booking.attendeeTimezone,
+      answers: booking.answers,
+      guests: booking.guests,
       locationKind: booking.locationKind,
       locationLabel: booking.locationLabel,
+      locationValue: booking.locationValue,
       meetingUrl: booking.meetingUrl,
+      internalNotes: booking.internalNotes,
+      cancellationReason: booking.cancellationReason,
+      rescheduleReason: booking.rescheduleReason,
       startsAt: booking.startsAt,
       endsAt: booking.endsAt,
       confirmedAt: booking.confirmedAt,
       cancelledAt: booking.cancelledAt,
+      completedAt: booking.completedAt,
       createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt,
       eventTypeId: booking.eventTypeId,
       eventTypeTitle: bookingEventType.title,
     })
@@ -1384,6 +1394,7 @@ type ResolvedClientBookableEvent = {
   adminLead: {
     id: string
     name: string
+    email: string
     bookingPageTitle: string | null
     bookingPageDescription: string | null
   }
@@ -1392,6 +1403,43 @@ type ResolvedClientBookableEvent = {
   windows: typeof bookingAvailabilityWindow.$inferSelect[]
   overrides: typeof bookingAvailabilityOverride.$inferSelect[]
   location: typeof bookingEventTypeLocation.$inferSelect | null
+  questions: BookableQuestion[]
+}
+
+type BookableQuestion = {
+  fieldKey: string
+  label: string
+  description: string | null
+  inputType: BookingQuestionType
+  visibility: BookingQuestionVisibility
+  placeholder: string | null
+  options: string[] | null
+  isSystem: boolean
+  position: number
+}
+
+function toBookableQuestion(question: {
+  fieldKey: string
+  label: string
+  description: string | null
+  inputType: string
+  visibility: string
+  placeholder: string | null
+  options: string[] | null
+  isSystem: boolean
+  position: number
+}) {
+  return {
+    fieldKey: question.fieldKey,
+    label: question.label,
+    description: question.description,
+    inputType: question.inputType as BookingQuestionType,
+    visibility: question.visibility as BookingQuestionVisibility,
+    placeholder: question.placeholder,
+    options: question.options,
+    isSystem: question.isSystem,
+    position: question.position,
+  } satisfies BookableQuestion
 }
 
 type ClientSlotComputationInput = {
@@ -1417,7 +1465,12 @@ export type ClientBookingCreateInput = {
   eventTypeId: string
   startsAt: Date
   durationMinutes?: number
+  attendeeName?: string | null
+  attendeeEmail?: string | null
+  attendeePhone?: string | null
   attendeeTimezone?: string | null
+  answers?: Record<string, unknown> | null
+  guests?: string[] | null
 }
 
 export type GuestBookingCreateInput = ClientBookingCreateInput & {
@@ -1698,11 +1751,63 @@ function resolveEventTypeDurationMinutes(
   return options.includes(baseDuration) ? baseDuration : options[0]
 }
 
+const directlyHandledQuestionKeys = new Set([
+  "name",
+  "email",
+  "notes",
+  "guests",
+  "location",
+  "reschedule_reason",
+])
+
+function getBookableQuestions(questions: BookableQuestion[]) {
+  return questions
+    .filter(
+      (question) =>
+        question.visibility !== "hidden" &&
+        !directlyHandledQuestionKeys.has(question.fieldKey),
+    )
+    .sort((left, right) => left.position - right.position)
+}
+
+function assertRequiredQuestionAnswers(
+  questions: BookableQuestion[],
+  answers: Record<string, unknown> | null | undefined,
+) {
+  const providedAnswers = answers ?? {}
+
+  for (const question of getBookableQuestions(questions)) {
+    if (question.visibility !== "required") {
+      continue
+    }
+
+    const answer = providedAnswers[question.fieldKey]
+    if (Array.isArray(answer)) {
+      if (answer.length === 0) {
+        throw badRequest(`Please answer "${question.label}"`, "booking_question_required")
+      }
+      continue
+    }
+
+    if (typeof answer === "string") {
+      if (answer.trim().length === 0) {
+        throw badRequest(`Please answer "${question.label}"`, "booking_question_required")
+      }
+      continue
+    }
+
+    if (answer === null || typeof answer === "undefined") {
+      throw badRequest(`Please answer "${question.label}"`, "booking_question_required")
+    }
+  }
+}
+
 async function getDefaultProposalLeadForClientBooking() {
   const [adminLead] = await db
     .select({
       id: user.id,
       name: user.name,
+      email: user.email,
       bookingPageTitle: user.bookingPageTitle,
       bookingPageDescription: user.bookingPageDescription,
       bookingEnabled: user.bookingEnabled,
@@ -1782,7 +1887,7 @@ async function resolveBookableEventType(
     )
   }
 
-  const [windows, overrides, locations] = await Promise.all([
+  const [windows, overrides, locations, questions] = await Promise.all([
     db
       .select()
       .from(bookingAvailabilityWindow)
@@ -1809,12 +1914,18 @@ async function resolveBookableEventType(
         desc(bookingEventTypeLocation.isDefault),
         asc(bookingEventTypeLocation.position),
       ),
+    db
+      .select()
+      .from(bookingEventTypeQuestion)
+      .where(eq(bookingEventTypeQuestion.eventTypeId, eventType.id))
+      .orderBy(asc(bookingEventTypeQuestion.position)),
   ])
 
   return {
     adminLead: {
       id: adminLead.id,
       name: adminLead.name,
+      email: adminLead.email,
       bookingPageTitle: adminLead.bookingPageTitle,
       bookingPageDescription: adminLead.bookingPageDescription,
     },
@@ -1823,6 +1934,7 @@ async function resolveBookableEventType(
     windows,
     overrides,
     location: locations[0] ?? null,
+    questions: questions.map(toBookableQuestion),
   }
 }
 
@@ -2040,12 +2152,88 @@ function resolveBookingMeetingUrl(
   return null
 }
 
+function formatBookingConfirmationRange(
+  startsAt: Date,
+  endsAt: Date,
+  timeZone: string,
+) {
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone,
+  }).format(startsAt)
+  const timeLabel = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).formatRange(startsAt, endsAt)
+
+  return `${dateLabel}, ${timeLabel}`
+}
+
+async function sendBookingConfirmationEmails({
+  eventType,
+  adminLead,
+  attendeeName,
+  attendeeEmail,
+  startsAt,
+  endsAt,
+  timeZone,
+  meetingUrl,
+  manageToken,
+}: {
+  eventType: typeof bookingEventType.$inferSelect
+  adminLead: ResolvedClientBookableEvent["adminLead"]
+  attendeeName: string
+  attendeeEmail: string
+  startsAt: Date
+  endsAt: Date
+  timeZone: string
+  meetingUrl: string | null
+  manageToken: string | null
+}) {
+  if (!(eventType.confirmationChannels ?? ["email"]).includes("email")) {
+    return
+  }
+
+  const when = formatBookingConfirmationRange(startsAt, endsAt, timeZone)
+  const manageUrl = manageToken ? `/bookings/manage/${manageToken}` : undefined
+  const lines = [
+    `When: ${when}`,
+    meetingUrl ? `Meeting link: ${meetingUrl}` : null,
+  ].filter((value): value is string => Boolean(value))
+
+  await Promise.allSettled([
+    sendAppMail({
+      to: attendeeEmail,
+      subject: `Confirmed: ${eventType.title}`,
+      preview: `${eventType.title} is confirmed for ${when}.`,
+      title: "Booking confirmed",
+      intro: `Your ${eventType.title} booking with ${adminLead.name} is confirmed.`,
+      lines,
+      ctaLabel: manageUrl ? "Manage booking" : undefined,
+      ctaUrl: manageUrl,
+    }),
+    sendAppMail({
+      to: adminLead.email,
+      subject: `New booking: ${eventType.title}`,
+      preview: `${attendeeName} booked ${eventType.title}.`,
+      title: "New booking",
+      intro: `${attendeeName} booked ${eventType.title}.`,
+      lines: [`Attendee: ${attendeeName} <${attendeeEmail}>`, ...lines],
+    }),
+  ])
+}
+
 async function assertNoActiveBookingOverlap(
   database: BookingDatabase,
   input: {
     ownerUserId: string
     startsAt: Date
     endsAt: Date
+    excludeBookingId?: string
   },
 ) {
   const [existing] = await database
@@ -2057,6 +2245,7 @@ async function assertNoActiveBookingOverlap(
         inArray(booking.status, ACTIVE_BOOKING_STATUSES),
         lt(booking.startsAt, input.endsAt),
         gt(booking.endsAt, input.startsAt),
+        input.excludeBookingId ? ne(booking.id, input.excludeBookingId) : undefined,
       ),
     )
     .limit(1)
@@ -2116,6 +2305,7 @@ async function buildBookableEventTypeList(
         timezone: string
         locationLabel: string | null
         locationKind: string | null
+        questions: BookableQuestion[]
       }>,
     }
   }
@@ -2128,7 +2318,7 @@ async function buildBookableEventTypeList(
     ),
   )
 
-  const [defaultSchedule, schedules, locations] = await Promise.all([
+  const [defaultSchedule, schedules, locations, questions] = await Promise.all([
     db
       .select({
         id: bookingAvailabilitySchedule.id,
@@ -2173,6 +2363,30 @@ async function buildBookableEventTypeList(
         desc(bookingEventTypeLocation.isDefault),
         asc(bookingEventTypeLocation.position),
       ),
+    db
+      .select({
+        eventTypeId: bookingEventTypeQuestion.eventTypeId,
+        fieldKey: bookingEventTypeQuestion.fieldKey,
+        label: bookingEventTypeQuestion.label,
+        description: bookingEventTypeQuestion.description,
+        inputType: bookingEventTypeQuestion.inputType,
+        visibility: bookingEventTypeQuestion.visibility,
+        placeholder: bookingEventTypeQuestion.placeholder,
+        options: bookingEventTypeQuestion.options,
+        isSystem: bookingEventTypeQuestion.isSystem,
+        position: bookingEventTypeQuestion.position,
+      })
+      .from(bookingEventTypeQuestion)
+      .where(
+        inArray(
+          bookingEventTypeQuestion.eventTypeId,
+          eventTypes.map((eventType) => eventType.id),
+        ),
+      )
+      .orderBy(
+        asc(bookingEventTypeQuestion.eventTypeId),
+        asc(bookingEventTypeQuestion.position),
+      ),
   ])
 
   const timezoneByScheduleId = new Map(
@@ -2188,6 +2402,13 @@ async function buildBookableEventTypeList(
         kind: location.kind,
       })
     }
+  }
+
+  const questionsByEventTypeId = new Map<string, BookableQuestion[]>()
+  for (const question of questions) {
+    const current = questionsByEventTypeId.get(question.eventTypeId) ?? []
+    current.push(toBookableQuestion(question))
+    questionsByEventTypeId.set(question.eventTypeId, current)
   }
 
   return {
@@ -2226,6 +2447,7 @@ async function buildBookableEventTypeList(
           defaultTimezone,
         locationLabel: location?.label ?? null,
         locationKind: location?.kind ?? null,
+        questions: getBookableQuestions(questionsByEventTypeId.get(eventType.id) ?? []),
       }
     }),
   }
@@ -2319,6 +2541,7 @@ export async function listAvailableBookingSlotsForClient(
       durationMinutes: resolved.eventType.durationMinutes,
       allowMultipleDurations: resolved.eventType.allowMultipleDurations,
       durationOptions: resolved.eventType.durationOptions ?? null,
+      questions: getBookableQuestions(resolved.questions),
     },
     timezone: slotData.timezone,
     selectedDurationMinutes: slotData.selectedDurationMinutes,
@@ -2351,6 +2574,7 @@ export async function listAvailableBookingSlotsForPublic(input: {
       durationMinutes: resolved.eventType.durationMinutes,
       allowMultipleDurations: resolved.eventType.allowMultipleDurations,
       durationOptions: resolved.eventType.durationOptions ?? null,
+      questions: getBookableQuestions(resolved.questions),
     },
     timezone: slotData.timezone,
     selectedDurationMinutes: slotData.selectedDurationMinutes,
@@ -2395,6 +2619,8 @@ export async function createBookingForClient(
     throw conflict("Selected slot is no longer available", "booking_slot_unavailable")
   }
 
+  assertRequiredQuestionAnswers(resolved.questions, input.answers)
+
   const [attendee] = await db
     .select({
       name: user.name,
@@ -2407,6 +2633,13 @@ export async function createBookingForClient(
     .limit(1)
 
   const meetingUrl = resolveBookingMeetingUrl(resolved.location)
+  const attendeeName = input.attendeeName?.trim() || attendee?.name || currentUser.name
+  const attendeeEmail =
+    input.attendeeEmail?.trim().toLowerCase() ||
+    attendee?.email ||
+    currentUser.email
+  const attendeePhone = input.attendeePhone?.trim() || attendee?.phone || null
+  const manageToken = crypto.randomUUID()
   const insertValues: typeof booking.$inferInsert = {
     ownerUserId: resolved.adminLead.id,
     eventTypeId: resolved.eventType.id,
@@ -2417,9 +2650,9 @@ export async function createBookingForClient(
     source: "authenticated",
     status: "confirmed",
     title: resolved.eventType.title,
-    attendeeName: attendee?.name ?? currentUser.name,
-    attendeeEmail: attendee?.email ?? currentUser.email,
-    attendeePhone: attendee?.phone ?? null,
+    attendeeName,
+    attendeeEmail,
+    attendeePhone,
     attendeeTimezone:
       input.attendeeTimezone?.trim() ||
       attendee?.timezone ||
@@ -2428,16 +2661,30 @@ export async function createBookingForClient(
     locationLabel: resolved.location?.label ?? null,
     locationValue: resolved.location?.value ?? null,
     meetingUrl,
+    answers: input.answers ?? null,
+    guests: input.guests ?? null,
     startsAt: matchedSlot.startsAt,
     endsAt: matchedSlot.endsAt,
     confirmedAt: new Date(),
     internalNotes: options.internalNotes ?? null,
-    manageToken: crypto.randomUUID(),
+    manageToken,
   }
 
   const bookingId = options.tx
     ? await insertBookingWithConflictGuard(options.tx, insertValues)
     : await db.transaction((tx) => insertBookingWithConflictGuard(tx, insertValues))
+
+  await sendBookingConfirmationEmails({
+    eventType: resolved.eventType,
+    adminLead: resolved.adminLead,
+    attendeeName,
+    attendeeEmail,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timeZone: normalizeTimeZone(resolved.schedule.timezone),
+    meetingUrl,
+    manageToken,
+  })
 
   return {
     id: bookingId,
@@ -2454,7 +2701,10 @@ export async function createBookingForClient(
   }
 }
 
-export async function createBookingForGuest(input: GuestBookingCreateInput) {
+export async function createBookingForGuest(
+  input: GuestBookingCreateInput,
+  options: CreateClientBookingOptions = {},
+) {
   const resolved = await resolveBookableEventTypeForGuest(input.eventTypeId)
   const durationMinutes = resolveEventTypeDurationMinutes(
     resolved.eventType,
@@ -2483,19 +2733,24 @@ export async function createBookingForGuest(input: GuestBookingCreateInput) {
     throw conflict("Selected slot is no longer available", "booking_slot_unavailable")
   }
 
+  assertRequiredQuestionAnswers(resolved.questions, input.answers)
+
   const meetingUrl = resolveBookingMeetingUrl(resolved.location)
   const manageToken = crypto.randomUUID()
+  const attendeeName = input.attendeeName.trim()
+  const attendeeEmail = input.attendeeEmail.trim().toLowerCase()
   const insertValues: typeof booking.$inferInsert = {
     ownerUserId: resolved.adminLead.id,
     eventTypeId: resolved.eventType.id,
+    projectId: options.projectId ?? null,
     attendeeUserId: null,
     createdByUserId: null,
     appConnectionId: resolved.location?.appConnectionId ?? null,
     source: "guest",
     status: "confirmed",
     title: resolved.eventType.title,
-    attendeeName: input.attendeeName.trim(),
-    attendeeEmail: input.attendeeEmail.trim().toLowerCase(),
+    attendeeName,
+    attendeeEmail,
     attendeePhone: input.attendeePhone?.trim() || null,
     attendeeTimezone: input.attendeeTimezone?.trim() || timezone,
     locationKind: resolved.location?.kind ?? null,
@@ -2507,12 +2762,25 @@ export async function createBookingForGuest(input: GuestBookingCreateInput) {
     startsAt: matchedSlot.startsAt,
     endsAt: matchedSlot.endsAt,
     confirmedAt: new Date(),
+    internalNotes: options.internalNotes ?? null,
     manageToken,
   }
 
-  const bookingId = await db.transaction((tx) =>
-    insertBookingWithConflictGuard(tx, insertValues),
-  )
+  const bookingId = options.tx
+    ? await insertBookingWithConflictGuard(options.tx, insertValues)
+    : await db.transaction((tx) => insertBookingWithConflictGuard(tx, insertValues))
+
+  await sendBookingConfirmationEmails({
+    eventType: resolved.eventType,
+    adminLead: resolved.adminLead,
+    attendeeName,
+    attendeeEmail,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timeZone: timezone,
+    meetingUrl,
+    manageToken,
+  })
 
   return {
     id: bookingId,
@@ -2527,6 +2795,191 @@ export async function createBookingForGuest(input: GuestBookingCreateInput) {
     locationKind: resolved.location?.kind ?? null,
     meetingUrl,
     manageToken,
+  }
+}
+
+export async function getBookingByManageToken(token: string) {
+  const normalizedToken = token.trim()
+  if (normalizedToken.length < 16) {
+    throw notFound("Booking not found", "booking_not_found")
+  }
+
+  const [record] = await db
+    .select({
+      id: booking.id,
+      status: booking.status,
+      title: booking.title,
+      attendeeName: booking.attendeeName,
+      attendeeEmail: booking.attendeeEmail,
+      attendeeTimezone: booking.attendeeTimezone,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+      cancelledAt: booking.cancelledAt,
+      cancellationReason: booking.cancellationReason,
+      rescheduleReason: booking.rescheduleReason,
+      meetingUrl: booking.meetingUrl,
+      locationLabel: booking.locationLabel,
+      manageToken: booking.manageToken,
+      eventTypeId: booking.eventTypeId,
+      eventTypeTitle: bookingEventType.title,
+      allowCancellation: bookingEventType.allowCancellation,
+      allowReschedule: bookingEventType.allowReschedule,
+      durationMinutes: bookingEventType.durationMinutes,
+      allowMultipleDurations: bookingEventType.allowMultipleDurations,
+      durationOptions: bookingEventType.durationOptions,
+      ownerName: user.name,
+    })
+    .from(booking)
+    .innerJoin(bookingEventType, eq(booking.eventTypeId, bookingEventType.id))
+    .innerJoin(user, eq(booking.ownerUserId, user.id))
+    .where(eq(booking.manageToken, normalizedToken))
+    .limit(1)
+
+  if (!record) {
+    throw notFound("Booking not found", "booking_not_found")
+  }
+
+  const durationMinutes = Math.max(
+    5,
+    Math.round((record.endsAt.getTime() - record.startsAt.getTime()) / 60_000),
+  )
+
+  return {
+    ...record,
+    durationMinutes,
+    timezone: record.attendeeTimezone ?? "UTC",
+    canCancel:
+      record.allowCancellation &&
+      ACTIVE_BOOKING_STATUSES.includes(record.status) &&
+      record.startsAt.getTime() > Date.now(),
+    canReschedule:
+      record.allowReschedule &&
+      ACTIVE_BOOKING_STATUSES.includes(record.status) &&
+      record.startsAt.getTime() > Date.now(),
+  }
+}
+
+export async function cancelBookingByManageToken(input: {
+  token: string
+  reason?: string | null
+}) {
+  const record = await getBookingByManageToken(input.token)
+
+  if (!record.allowCancellation) {
+    throw forbidden("Cancellation is disabled for this booking")
+  }
+
+  if (!ACTIVE_BOOKING_STATUSES.includes(record.status)) {
+    throw badRequest("This booking is not active", "booking_not_active")
+  }
+
+  if (record.startsAt.getTime() <= Date.now()) {
+    throw badRequest("Past bookings cannot be cancelled", "booking_in_past")
+  }
+
+  await db
+    .update(booking)
+    .set({
+      status: "cancelled",
+      cancellationReason: input.reason?.trim() || null,
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(booking.id, record.id))
+
+  await sendAppMail({
+    to: record.attendeeEmail,
+    subject: `Cancelled: ${record.eventTypeTitle}`,
+    preview: `${record.eventTypeTitle} was cancelled.`,
+    title: "Booking cancelled",
+    intro: `Your ${record.eventTypeTitle} booking was cancelled.`,
+  })
+
+  return { id: record.id, status: "cancelled" as const }
+}
+
+export async function rescheduleBookingByManageToken(input: {
+  token: string
+  startsAt: Date | string
+  durationMinutes?: number | null
+  reason?: string | null
+}) {
+  const existing = await getBookingByManageToken(input.token)
+
+  if (!existing.allowReschedule) {
+    throw forbidden("Rescheduling is disabled for this booking")
+  }
+
+  if (!ACTIVE_BOOKING_STATUSES.includes(existing.status)) {
+    throw badRequest("This booking is not active", "booking_not_active")
+  }
+
+  if (existing.startsAt.getTime() <= Date.now()) {
+    throw badRequest("Past bookings cannot be rescheduled", "booking_in_past")
+  }
+
+  const resolved = await resolveBookableEventType(existing.eventTypeId)
+  const durationMinutes = resolveEventTypeDurationMinutes(
+    resolved.eventType,
+    input.durationMinutes ?? existing.durationMinutes,
+  )
+  const requestedStart = new Date(input.startsAt)
+  if (Number.isNaN(requestedStart.getTime())) {
+    throw badRequest("Invalid booking start time", "invalid_booking_start")
+  }
+
+  const timezone = normalizeTimeZone(resolved.schedule.timezone)
+  const requestDayKey = toDateKey(getDatePartsInTimeZone(requestedStart, timezone))
+  const slotData = await computeClientSlotsForResolvedEvent(resolved, {
+    fromDate: requestDayKey,
+    days: 1,
+    durationMinutes,
+  })
+  const matchedSlot = slotData.days
+    .flatMap((day) => day.slots)
+    .find((slot) => slot.startsAt.getTime() === requestedStart.getTime())
+
+  if (!matchedSlot) {
+    throw conflict("Selected slot is no longer available", "booking_slot_unavailable")
+  }
+
+  await assertNoActiveBookingOverlap(db, {
+    ownerUserId: resolved.adminLead.id,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    excludeBookingId: existing.id,
+  })
+
+  await db
+    .update(booking)
+    .set({
+      startsAt: matchedSlot.startsAt,
+      endsAt: matchedSlot.endsAt,
+      status: "confirmed",
+      rescheduleReason: input.reason?.trim() || null,
+      cancelledAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(booking.id, existing.id))
+
+  await sendBookingConfirmationEmails({
+    eventType: resolved.eventType,
+    adminLead: resolved.adminLead,
+    attendeeName: existing.attendeeName,
+    attendeeEmail: existing.attendeeEmail,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timeZone: timezone,
+    meetingUrl: existing.meetingUrl,
+    manageToken: existing.manageToken,
+  })
+
+  return {
+    id: existing.id,
+    status: "confirmed" as const,
+    startsAt: matchedSlot.startsAt,
+    endsAt: matchedSlot.endsAt,
+    timezone,
   }
 }
 

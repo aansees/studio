@@ -77,7 +77,7 @@ export default function Header() {
         </Link>
       </div>
       <div className="top-bar-cta">
-        <AnimatedButton label="Start Project" route="/connect" animate={false} />
+        <AnimatedButton label="Start Project" route="/start-project" animate={false} />
       </div>
     </div>
   );

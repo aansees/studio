@@ -19,6 +19,8 @@ import { canAccessProject, isAdmin } from "@/lib/services/access-control"
 import {
   createBookingForClient,
   type ClientBookingCreateInput,
+  createBookingForGuest,
+  type GuestBookingCreateInput,
 } from "@/lib/services/bookings"
 
 function toSlug(value: string) {
@@ -105,6 +107,12 @@ type CreateProjectProposalInput = {
   notes?: string
   bookingId?: string
   bookingRequest?: ClientBookingCreateInput
+}
+
+type CreatePublicProjectProposalInput = {
+  name: string
+  notes?: string
+  bookingRequest: GuestBookingCreateInput
 }
 
 const PROJECT_PROPOSAL_BOOKING_TAG = "[PROJECT_PROPOSAL_ID:"
@@ -234,6 +242,46 @@ async function insertProposalProject(
       role: "client",
     },
   ])
+
+  return projectId
+}
+
+async function insertPublicProposalProject(
+  tx: DbTransaction,
+  input: CreatePublicProjectProposalInput,
+  adminLeadId: string,
+  notes: string | null,
+) {
+  const slug = `${toSlug(input.name)}-${Date.now().toString(36)}`
+  const [created] = await tx
+    .insert(project)
+    .values({
+      slug,
+      name: input.name,
+      description: null,
+      status: "draft",
+      priority: "medium",
+      startDate: null,
+      endDate: null,
+      projectLeadId: adminLeadId,
+      clientId: null,
+      notes,
+      devLinks: null,
+      credentials: null,
+      createdById: adminLeadId,
+    })
+    .$returningId()
+
+  const projectId = created?.id
+  if (!projectId) {
+    throw new Error("Unable to create project proposal")
+  }
+
+  await tx.insert(projectMember).values({
+    projectId,
+    userId: adminLeadId,
+    role: "admin",
+  })
 
   return projectId
 }
@@ -710,6 +758,38 @@ export async function createProjectProposalAsClient(
         "booking_already_linked",
       )
     }
+
+    return projectId
+  })
+}
+
+export async function createPublicProjectProposal(input: CreatePublicProjectProposalInput) {
+  const adminLead = await getDefaultProposalLead()
+
+  return db.transaction(async (tx) => {
+    const projectId = await insertPublicProposalProject(
+      tx,
+      input,
+      adminLead.id,
+      input.notes?.trim() || null,
+    )
+    const bookedConsultation = await createBookingForGuest(input.bookingRequest, {
+      tx,
+      projectId,
+      internalNotes: `${PROJECT_PROPOSAL_BOOKING_TAG}${projectId}]`,
+    })
+    const proposalNotes = buildProjectProposalNotes({
+      notes: input.notes,
+      eventTypeTitle: bookedConsultation.eventTypeTitle,
+      bookingId: bookedConsultation.id,
+      startsAt: bookedConsultation.startsAt,
+      endsAt: bookedConsultation.endsAt,
+    })
+
+    await tx
+      .update(project)
+      .set({ notes: proposalNotes, updatedAt: new Date() })
+      .where(eq(project.id, projectId))
 
     return projectId
   })

@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import BookingSubmitForm from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
-import type { BookedConsultation } from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
+import type {
+  BookedConsultation,
+  BookingQuestion,
+} from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
 
 type Slot = {
   startsAt: string;
@@ -34,6 +37,9 @@ export default function MonthlyBookingPanel({
   setShowGuests,
   guestEmails,
   setGuestEmails,
+  questions,
+  questionAnswers,
+  setQuestionAnswer,
   useTwentyFourHour,
   submitProposal,
   activeDay,
@@ -58,6 +64,9 @@ export default function MonthlyBookingPanel({
   setShowGuests: (value: boolean) => void;
   guestEmails: string;
   setGuestEmails: (value: string) => void;
+  questions: BookingQuestion[];
+  questionAnswers: Record<string, string>;
+  setQuestionAnswer: (fieldKey: string, value: string) => void;
   useTwentyFourHour: boolean;
   submitProposal: (consultation: BookedConsultation) => Promise<void> | void;
   activeDay: ActiveDay | null;
@@ -88,6 +97,9 @@ export default function MonthlyBookingPanel({
           setShowGuests={setShowGuests}
           guestEmails={guestEmails}
           setGuestEmails={setGuestEmails}
+          questions={questions}
+          questionAnswers={questionAnswers}
+          setQuestionAnswer={setQuestionAnswer}
           useTwentyFourHour={useTwentyFourHour}
           onSubmit={() => submitProposal(bookedConsultation)}
         />

@@ -29,10 +29,32 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Frame, FrameHeader, FramePanel } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
-import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TablePagination, useTablePagination } from "@/components/ui/table-pagination";
+import {
+  Menu,
+  MenuItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  TablePagination,
+  useTablePagination,
+} from "@/components/ui/table-pagination";
 
 type TeamMember = {
   id: string;
@@ -57,13 +79,20 @@ const defaultInviteForm: InviteFormState = {
 export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
   const [team, setTeam] = useState(initialTeam);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState<InviteFormState>(defaultInviteForm);
+  const [inviteForm, setInviteForm] =
+    useState<InviteFormState>(defaultInviteForm);
   const [invitePending, setInvitePending] = useState(false);
-  const [actionPendingById, setActionPendingById] = useState<Record<string, boolean>>({});
+  const [actionPendingById, setActionPendingById] = useState<
+    Record<string, boolean>
+  >({});
   const [memberToBlock, setMemberToBlock] = useState<TeamMember | null>(null);
   const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<TeamMember["role"] | "__all__">("__all__");
-  const [statusFilter, setStatusFilter] = useState<"__all__" | "active" | "blocked">("__all__");
+  const [roleFilter, setRoleFilter] = useState<TeamMember["role"] | "__all__">(
+    "__all__",
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    "__all__" | "active" | "blocked"
+  >("__all__");
 
   const sortedTeam = useMemo(() => {
     const priority: Record<TeamMember["role"], number> = {
@@ -86,7 +115,8 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
         normalizedQuery.length === 0 ||
         member.name.toLowerCase().includes(normalizedQuery) ||
         member.email.toLowerCase().includes(normalizedQuery);
-      const matchesRole = roleFilter === "__all__" || member.role === roleFilter;
+      const matchesRole =
+        roleFilter === "__all__" || member.role === roleFilter;
       const matchesStatus =
         statusFilter === "__all__" ||
         (statusFilter === "active" ? member.isActive : !member.isActive);
@@ -94,8 +124,13 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
     });
   }, [query, roleFilter, sortedTeam, statusFilter]);
 
-  const { currentPage, paginatedItems: visibleTeam, setCurrentPage, totalItems, totalPages } =
-    useTablePagination(filteredTeam);
+  const {
+    currentPage,
+    paginatedItems: visibleTeam,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+  } = useTablePagination(filteredTeam);
 
   const blockPending = memberToBlock
     ? Boolean(actionPendingById[memberToBlock.id])
@@ -130,7 +165,9 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
       toast.success("Developer account created");
     } catch (submitError) {
       const message =
-        submitError instanceof Error ? submitError.message : "Unable to invite developer";
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to invite developer";
       toast.error(message);
     } finally {
       setInvitePending(false);
@@ -151,14 +188,20 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
       }
 
       setTeam((prev) =>
-        prev.map((member) => (member.id === userId ? { ...member, role } : member)),
+        prev.map((member) =>
+          member.id === userId ? { ...member, role } : member,
+        ),
       );
       toast.success(
-        role === "developer" ? "User promoted to Developer" : "User role set to Client",
+        role === "developer"
+          ? "User promoted to Developer"
+          : "User role set to Client",
       );
     } catch (updateError) {
       const message =
-        updateError instanceof Error ? updateError.message : "Unable to update role";
+        updateError instanceof Error
+          ? updateError.message
+          : "Unable to update role";
       toast.error(message);
     } finally {
       setActionPendingById((prev) => {
@@ -183,13 +226,17 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
       }
 
       setTeam((prev) =>
-        prev.map((member) => (member.id === userId ? { ...member, isActive } : member)),
+        prev.map((member) =>
+          member.id === userId ? { ...member, isActive } : member,
+        ),
       );
       toast.success(isActive ? "User unblocked" : "User blocked");
       return true;
     } catch (statusError) {
       const message =
-        statusError instanceof Error ? statusError.message : "Unable to update user status";
+        statusError instanceof Error
+          ? statusError.message
+          : "Unable to update user status";
       toast.error(message);
       return false;
     } finally {
@@ -213,166 +260,187 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <Frame>
-        <FrameHeader className="gap-3 border-b px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <div className="text-lg font-medium">Team management</div>
-            <div className="text-sm text-muted-foreground">
-              Add developers, adjust roles, and manage access.
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() =>
-                setTeam((current) => [...current].sort((a, b) => a.name.localeCompare(b.name)))
-              }
-            >
-              <SearchIcon className="size-4" />
-              Sort by name
-            </Button>
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-              <DialogTrigger asChild>
-                <Button>Invite developer</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite developer</DialogTitle>
-                  <DialogDescription>
-                    Create a new team account with access to project management tools.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={submitInvite} className="space-y-4">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="invite-name">Name</FieldLabel>
-                      <Input
-                        id="invite-name"
-                        value={inviteForm.name}
-                        onChange={(event) =>
-                          setInviteForm((current) => ({ ...current, name: event.target.value }))
-                        }
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="invite-email">Email</FieldLabel>
-                      <Input
-                        id="invite-email"
-                        value={inviteForm.email}
-                        onChange={(event) =>
-                          setInviteForm((current) => ({ ...current, email: event.target.value }))
-                        }
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="invite-password">Password</FieldLabel>
-                      <Input
-                        id="invite-password"
-                        value={inviteForm.password}
-                        onChange={(event) =>
-                          setInviteForm((current) => ({ ...current, password: event.target.value }))
-                        }
-                      />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <Button variant="outline" type="button" onClick={() => setInviteOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={invitePending}>
-                      {invitePending ? "Inviting..." : "Invite"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </FrameHeader>
-      </Frame>
+    <div className="space-y-4 p-4 md:p-6">
+      <div className="w-full flex items-center justify-between">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search team"
+        />
+        <div className="flex items-center space-x-2">
+          <Select
+            value={roleFilter}
+            onValueChange={(value) =>
+              setRoleFilter(value as TeamMember["role"] | "__all__")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All roles</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="developer">Developer</SelectItem>
+              <SelectItem value="client">Client</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as "__all__" | "active" | "blocked")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button>Invite developer</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite developer</DialogTitle>
+                <DialogDescription>
+                  Create a new team account with access to project management
+                  tools.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={submitInvite} className="space-y-4">
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="invite-name">Name</FieldLabel>
+                    <Input
+                      id="invite-name"
+                      value={inviteForm.name}
+                      onChange={(event) =>
+                        setInviteForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="invite-email">Email</FieldLabel>
+                    <Input
+                      id="invite-email"
+                      value={inviteForm.email}
+                      onChange={(event) =>
+                        setInviteForm((current) => ({
+                          ...current,
+                          email: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="invite-password">Password</FieldLabel>
+                    <Input
+                      id="invite-password"
+                      value={inviteForm.password}
+                      onChange={(event) =>
+                        setInviteForm((current) => ({
+                          ...current,
+                          password: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </FieldGroup>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setInviteOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={invitePending}>
+                    {invitePending ? "Inviting..." : "Invite"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
 
       <Frame>
-        <FramePanel className="space-y-4 p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search team" />
-            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as TeamMember["role"] | "__all__")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="developer">Developer</SelectItem>
-                <SelectItem value="client">Client</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "__all__" | "active" | "blocked")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleTeam.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.name}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{member.role}</Badge>
-                  </TableCell>
-                  <TableCell>{member.isActive ? "Active" : "Blocked"}</TableCell>
-                  <TableCell className="text-right">
-                    <Menu>
-                      <MenuTrigger
-                        disabled={Boolean(actionPendingById[member.id])}
-                        className="inline-flex size-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleTeam.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>{member.name}</TableCell>
+                <TableCell>{member.email}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{member.role}</Badge>
+                </TableCell>
+                <TableCell>{member.isActive ? "Active" : "Blocked"}</TableCell>
+                <TableCell className="text-right">
+                  <Menu>
+                    <MenuTrigger
+                      disabled={Boolean(actionPendingById[member.id])}
+                      className="inline-flex size-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <MoreHorizontalIcon className="size-4" />
+                    </MenuTrigger>
+                    <MenuPopup align="end">
+                      <MenuItem
+                        onClick={() => void updateRole(member.id, "developer")}
                       >
-                        <MoreHorizontalIcon className="size-4" />
-                      </MenuTrigger>
-                      <MenuPopup align="end">
-                        <MenuItem onClick={() => void updateRole(member.id, "developer")}>Set developer</MenuItem>
-                        <MenuItem onClick={() => void updateRole(member.id, "client")}>Set client</MenuItem>
-                        <MenuSeparator />
-                        <MenuItem onClick={() => void updateStatus(member.id, !member.isActive)}>
-                          {member.isActive ? "Block user" : "Unblock user"}
-                        </MenuItem>
-                        <MenuItem onClick={() => setMemberToBlock(member)}>
-                          Block with confirmation
-                        </MenuItem>
-                      </MenuPopup>
-                    </Menu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          <TablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-          />
-        </FramePanel>
+                        Set developer
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => void updateRole(member.id, "client")}
+                      >
+                        Set client
+                      </MenuItem>
+                      <MenuSeparator />
+                      <MenuItem
+                        onClick={() =>
+                          void updateStatus(member.id, !member.isActive)
+                        }
+                      >
+                        {member.isActive ? "Block user" : "Unblock user"}
+                      </MenuItem>
+                      <MenuItem onClick={() => setMemberToBlock(member)}>
+                        Block with confirmation
+                      </MenuItem>
+                    </MenuPopup>
+                  </Menu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Frame>
 
-      <AlertDialog open={Boolean(memberToBlock)} onOpenChange={(open) => !open && setMemberToBlock(null)}>
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+      />
+
+      <AlertDialog
+        open={Boolean(memberToBlock)}
+        onOpenChange={(open) => !open && setMemberToBlock(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
@@ -380,12 +448,19 @@ export function TeamManagement({ initialTeam }: { initialTeam: TeamMember[] }) {
             </AlertDialogMedia>
             <AlertDialogTitle>Block team member?</AlertDialogTitle>
             <AlertDialogDescription>
-              {memberToBlock ? `${memberToBlock.name} will lose access until unblocked.` : ""}
+              {memberToBlock
+                ? `${memberToBlock.name} will lose access until unblocked.`
+                : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={blockPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={blockPending} onClick={() => void confirmBlock()}>
+            <AlertDialogCancel disabled={blockPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={blockPending}
+              onClick={() => void confirmBlock()}
+            >
               {blockPending ? "Blocking..." : "Block user"}
             </AlertDialogAction>
           </AlertDialogFooter>
