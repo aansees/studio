@@ -27,9 +27,8 @@ import {
   useTablePagination,
 } from "@/components/ui/table-pagination";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/domain";
-import type { ProjectTaskRow } from "./project-tasks-workspace";
+import type { ProjectTaskRow } from "@/components/layout/dashboard/project-tasks-workspace";
 import { cn } from "@/lib/utils";
-import ProjectTasksTableView from "@/app/(app)/(auth)/dashboard/projects/[projectId]/_components/project_tasks_table";
 
 const STATUS_META: Record<
   TaskStatus,
@@ -131,11 +130,7 @@ function ProjectTaskStatusSection({
             className="size-8"
             onClick={onToggle}
           >
-            {isOpen ? (
-              <ChevronUpIcon className="size-4" />
-            ) : (
-              <ChevronDownIcon className="size-4" />
-            )}
+            {isOpen ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
           </Button>
         </div>
 
@@ -167,43 +162,24 @@ function ProjectTaskStatusSection({
                     <TableCell className="max-w-[360px] truncate text-muted-foreground">
                       {row.description || "-"}
                     </TableCell>
-                    <TableCell>
-                      {row.dueDate
-                        ? new Date(row.dueDate).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
+                    <TableCell>{row.dueDate ? new Date(row.dueDate).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>
                       {row.people.length === 0 ? (
-                        <span className="text-muted-foreground">
-                          Unassigned
-                        </span>
+                        <span className="text-muted-foreground">Unassigned</span>
                       ) : (
                         <AvatarGroup>
                           {row.people.slice(0, 3).map((person) => (
                             <Avatar key={person.id} size="sm">
-                              {person.image ? (
-                                <AvatarImage
-                                  src={person.image}
-                                  alt={person.name}
-                                />
-                              ) : null}
-                              <AvatarFallback>
-                                {getInitials(person.name)}
-                              </AvatarFallback>
+                              {person.image ? <AvatarImage src={person.image} alt={person.name} /> : null}
+                              <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
                             </Avatar>
                           ))}
-                          {row.people.length > 3 ? (
-                            <AvatarGroupCount>
-                              +{row.people.length - 3}
-                            </AvatarGroupCount>
-                          ) : null}
+                          {row.people.length > 3 ? <AvatarGroupCount>+{row.people.length - 3}</AvatarGroupCount> : null}
                         </AvatarGroup>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={priorityTone(row.priority)}>
-                        {row.priority}
-                      </Badge>
+                      <Badge className={priorityTone(row.priority)}>{row.priority}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -213,17 +189,52 @@ function ProjectTaskStatusSection({
         ) : null}
       </Frame>
       <div className="pb-4">
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          onPageChange={setCurrentPage}
-        />
+        <TablePagination currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} onPageChange={setCurrentPage} />
       </div>
     </>
   );
 }
 
-export function ProjectTasksTable({ rows }: { rows: ProjectTaskRow[] }) {
-  return <ProjectTasksTableView rows={rows} />;
+export default function ProjectTasksTableView({ rows }: { rows: ProjectTaskRow[] }) {
+  const [openState, setOpenState] = useState<Record<TaskStatus, boolean>>({
+    todo: true,
+    in_progress: true,
+    review: true,
+    blocked: true,
+    done: true,
+  });
+  const sections = TASK_STATUSES.map((status) => ({
+    status,
+    rows: rows.filter((row) => row.status === status),
+    meta: STATUS_META[status],
+  }));
+  const visibleSections = rows.length === 0 ? [] : sections.filter((section) => section.rows.length > 0);
+
+  return (
+    <div>
+      {rows.length === 0 ? (
+        <div className="flex h-40 items-center justify-center px-4 text-sm text-muted-foreground">No tasks found for the current filters.</div>
+      ) : null}
+      {visibleSections.map((section, index) => {
+        const { status, rows: statusRows, meta } = section;
+        const isOpen = openState[status];
+
+        return (
+          <ProjectTaskStatusSection
+            key={status}
+            statusRows={statusRows}
+            meta={meta}
+            isOpen={isOpen}
+            className={index > 0 ? "mt-5" : undefined}
+            onToggle={() =>
+              setOpenState((current) => ({
+                ...current,
+                [status]: !current[status],
+              }))
+            }
+          />
+        );
+      })}
+    </div>
+  );
 }

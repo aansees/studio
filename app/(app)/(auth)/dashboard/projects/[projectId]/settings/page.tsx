@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
-import { ProjectDetailsEditor } from "@/components/layout/dashboard/project-details-editor";
+import { ProjectDetailsEditor } from "./_components/project_details_editor";
 import { ProjectDocsLauncher } from "@/components/layout/dashboard/project-docs-launcher";
-import { ProjectMembersEditor } from "@/components/layout/dashboard/project-members-editor";
+import { ProjectMembersEditor } from "./_components/project_members_editor";
 import { Frame, FramePanel } from "@/components/ui/frame";
 import {
   PROJECT_PRIORITIES,

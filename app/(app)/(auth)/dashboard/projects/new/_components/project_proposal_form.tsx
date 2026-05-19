@@ -52,6 +52,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import {
+  parseDateKey,
+  formatDateKey,
+  getDateKeyInTimeZone,
+  getHourInTimeZone,
+  getMinuteOfDayInTimeZone,
+  formatHourLabel,
+  isValidEmail,
+  appendBookingNotesToProposalNotes,
+} from "@/app/(app)/(auth)/dashboard/projects/new/_components/helpers";
+import BookingSubmitForm from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_submit_form";
+import MiniCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/mini_calendar";
+import {
+  WeeklyTimeGrid,
+  ColumnBookingView,
+  CalendarBookingView,
+} from "@/app/(app)/(auth)/dashboard/projects/new/_components/timeline";
+import MonthlyBookingPanel from "@/app/(app)/(auth)/dashboard/projects/new/_components/monthly_booking_panel";
+import BookingDetails from "@/app/(app)/(auth)/dashboard/projects/new/_components/booking_details";
+import MonthlyCalendar from "@/app/(app)/(auth)/dashboard/projects/new/_components/monthly_calendar";
+
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const HOUR_VALUES = Array.from({ length: 24 }, (_, hour) => hour);
 const WEEKLY_DAY_HEADER_HEIGHT = 38;
@@ -117,109 +138,6 @@ type SlotSelection = {
   slot: SlotsPayload["days"][number]["slots"][number];
 };
 
-function parseDateKey(value: string) {
-  return new Date(`${value}T12:00:00`);
-}
-
-function formatDateKey(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const date = String(value.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${date}`;
-}
-
-function getDateKeyInTimeZone(value: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(value);
-  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
-  const month = parts.find((part) => part.type === "month")?.value ?? "01";
-  const day = parts.find((part) => part.type === "day")?.value ?? "01";
-
-  return `${year}-${month}-${day}`;
-}
-
-function getHourInTimeZone(value: string, timeZone: string) {
-  const hourPart = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    hour12: false,
-    timeZone,
-  })
-    .formatToParts(new Date(value))
-    .find((part) => part.type === "hour")?.value;
-
-  return Number.parseInt(hourPart ?? "0", 10);
-}
-
-function getMinuteOfDayInTimeZone(value: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    timeZone,
-  }).formatToParts(value);
-  const hour = Number.parseInt(
-    parts.find((part) => part.type === "hour")?.value ?? "0",
-    10,
-  );
-  const minute = Number.parseInt(
-    parts.find((part) => part.type === "minute")?.value ?? "0",
-    10,
-  );
-
-  return hour * 60 + minute;
-}
-
-function formatHourLabel(hour: number, useTwentyFourHour: boolean) {
-  if (useTwentyFourHour) {
-    return `${String(hour).padStart(2, "0")}:00`;
-  }
-
-  const suffix = hour >= 12 ? "PM" : "AM";
-  const normalized = hour % 12 === 0 ? 12 : hour % 12;
-
-  return `${normalized}:00 ${suffix}`;
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function appendBookingNotesToProposalNotes(
-  proposalNotes: string,
-  bookingNotes: string,
-) {
-  const trimmedNotes = proposalNotes.trim();
-  const trimmedBookingNotes = bookingNotes.trim();
-
-  if (!trimmedBookingNotes) {
-    return trimmedNotes || undefined;
-  }
-
-  const bookingNotesBlock = {
-    type: "paragraph" as const,
-    content: `Booking notes: ${trimmedBookingNotes}`,
-  };
-
-  if (!trimmedNotes) {
-    return JSON.stringify([bookingNotesBlock]);
-  }
-
-  try {
-    const parsed = JSON.parse(trimmedNotes);
-    if (Array.isArray(parsed)) {
-      return JSON.stringify([...parsed, bookingNotesBlock]);
-    }
-  } catch {
-    // Plain text notes are still accepted by the server-side normalizer.
-  }
-
-  return `${trimmedNotes}\n\n${bookingNotesBlock.content}`;
-}
 
 export function ProjectProposalForm({
   bookingSetup,
@@ -875,197 +793,9 @@ export function ProjectProposalForm({
     setSlotConfirmOpen(false);
   }
 
-  function renderBookingSubmitForm({
-    consultation,
-    idPrefix,
-    onBack,
-    variant,
-  }: {
-    consultation: BookedConsultation | null;
-    idPrefix: string;
-    onBack: () => void;
-    variant: "dialog" | "inline";
-  }) {
-    const schedule = getConsultationSchedule(consultation);
+  // Booking submit form extracted to route-local component
 
-    return (
-      <form
-        className={cn(
-          "space-y-4",
-          variant === "inline" && "h-full",
-        )}
-        onSubmit={(event: FormEvent<HTMLFormElement>) => {
-          event.preventDefault();
-          void submitProposal(consultation);
-        }}
-      >
-        {variant === "dialog" && schedule ? (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
-              <CalendarClockIcon className="size-3.5" />
-              {schedule.dateLabel}, {schedule.timeLabel}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
-              <Clock3Icon className="size-3.5" />
-              {selectedDurationMinutes}m
-            </span>
-          </div>
-        ) : null}
-
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-name`}>Your name *</FieldLabel>
-          <Input
-            id={`${idPrefix}-name`}
-            type="text"
-            autoComplete="name"
-            value={attendeeName}
-            onChange={(event) => setAttendeeName(event.target.value)}
-            aria-invalid={attendeeName.trim().length > 0 && attendeeName.trim().length < 2}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-email`}>Email address *</FieldLabel>
-          <Input
-            id={`${idPrefix}-email`}
-            type="email"
-            autoComplete="email"
-            value={attendeeEmail}
-            onChange={(event) => setAttendeeEmail(event.target.value)}
-            aria-invalid={
-              attendeeEmail.trim().length > 0 &&
-              !isValidEmail(attendeeEmail.trim())
-            }
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-notes`}>
-            Additional notes
-          </FieldLabel>
-          <Textarea
-            id={`${idPrefix}-notes`}
-            value={bookingNotes}
-            onChange={(event) => setBookingNotes(event.target.value)}
-            placeholder="Please share anything that will help prepare for our meeting."
-            className="min-h-20"
-          />
-        </Field>
-
-        <button
-          type="button"
-          onClick={() => setShowGuests((current) => !current)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
-          <UserPlusIcon className="size-3.5" />
-          Add guests
-        </button>
-
-        {showGuests ? (
-          <Field>
-            <FieldLabel htmlFor={`${idPrefix}-guests`}>
-              Guest emails
-            </FieldLabel>
-            <Input
-              id={`${idPrefix}-guests`}
-              type="text"
-              value={guestEmails}
-              onChange={(event) => setGuestEmails(event.target.value)}
-              placeholder="guest@example.com, teammate@example.com"
-            />
-          </Field>
-        ) : null}
-
-        <p className="text-xs text-muted-foreground">
-          By proceeding, your proposal and consultation request will be
-          submitted together.
-        </p>
-
-        <div
-          className={cn(
-            "flex items-center justify-end gap-2",
-            variant === "dialog" && "-mx-4 -mb-4 border-t bg-muted/40 p-4",
-          )}
-        >
-          <Button type="button" variant="ghost" onClick={onBack}>
-            Back
-          </Button>
-          <Button
-            type="submit"
-            disabled={!canSubmitBase || !consultation || pending}
-          >
-            {pending ? "Submitting..." : "Confirm"}
-          </Button>
-        </div>
-      </form>
-    );
-  }
-
-  function renderMiniCalendar() {
-    return (
-      <div className="space-y-3 pt-4">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">{monthLabel}</p>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={() => shiftVisibleMonth(-1)}
-            >
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={() => shiftVisibleMonth(1)}
-            >
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-muted-foreground">
-          {WEEKDAY_LABELS.map((label) => (
-            <span key={label}>{label}</span>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {calendarCells.map((cell) =>
-            cell.date ? (
-              <button
-                key={cell.key}
-                type="button"
-                onClick={() => selectDate(cell.date!)}
-                disabled={!cell.hasSlots}
-                className={cn(
-                  "relative h-10 rounded-md text-xs font-medium transition",
-                  selectedDate === cell.date
-                    ? "bg-primary text-primary-foreground"
-                    : cell.hasSlots
-                      ? "bg-muted/40 hover:bg-muted"
-                      : "cursor-not-allowed text-muted-foreground/45",
-                )}
-              >
-                {cell.label}
-                {cell.date === getDateKeyInTimeZone(new Date(), timeZone) ? (
-                  <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current" />
-                ) : null}
-              </button>
-            ) : (
-              <span key={cell.key} className="h-10" />
-            ),
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Mini calendar extracted to route-local component `mini_calendar`
 
   function renderTimeFormatToggle() {
     return (
@@ -1340,97 +1070,49 @@ export function ProjectProposalForm({
               </div>
             ) : null}
 
-            {showMiniCalendar ? renderMiniCalendar() : null}
+                        {showMiniCalendar ? (
+                          <MiniCalendar
+                            monthLabel={monthLabel}
+                            shiftVisibleMonth={shiftVisibleMonth}
+                            calendarCells={calendarCells}
+                            selectDate={selectDate}
+                            selectedDate={selectedDate}
+                            timeZone={timeZone}
+                          />
+                        ) : null}
           </div>
         </ScrollArea>
       </aside>
     );
   }
 
-  function renderMonthlyCalendar() {
-    return (
-      <div className="min-w-0 space-y-5">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">{monthLabel}</p>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={() => shiftVisibleMonth(-1)}
-            >
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={() => shiftVisibleMonth(1)}
-            >
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-muted-foreground">
-          {WEEKDAY_LABELS.map((label) => (
-            <span key={label}>{label}</span>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1.5">
-          {calendarCells.map((cell) =>
-            cell.date ? (
-              <button
-                key={cell.key}
-                type="button"
-                onClick={() => selectDate(cell.date!)}
-                disabled={!cell.hasSlots}
-                className={cn(
-                  "relative aspect-square min-h-12 rounded-md border text-sm font-semibold transition-colors duration-200",
-                  selectedDate === cell.date
-                    ? cell.isCurrentMonth
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-foreground bg-foreground text-background"
-                    : cell.hasSlots
-                      ? "border-border/30 bg-muted/45 hover:border-primary/60 hover:bg-muted/60"
-                      : "cursor-not-allowed border-transparent bg-transparent text-muted-foreground/45",
-                )}
-              >
-                {!cell.isCurrentMonth && cell.label === 1 ? (
-                  <span className="absolute left-1 top-1 text-[10px] font-semibold uppercase text-muted-foreground">
-                    {new Intl.DateTimeFormat(undefined, {
-                      month: "short",
-                      timeZone,
-                    }).format(parseDateKey(cell.date))}
-                  </span>
-                ) : null}
-                {cell.label}
-                {cell.date === getDateKeyInTimeZone(new Date(), timeZone) ? (
-                  <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current" />
-                ) : null}
-              </button>
-            ) : (
-              <span key={cell.key} className="aspect-square min-h-12" />
-            ),
-          )}
-        </div>
-      </div>
-    );
-  }
+  
 
   function renderMonthlyBookingPanel() {
     if (bookedConsultation) {
       return (
         <div className="h-full p-6">
-          {renderBookingSubmitForm({
-            consultation: bookedConsultation,
-            idPrefix: "proposal-inline-booking",
-            onBack: clearSelectedSlot,
-            variant: "inline",
-          })}
+            <BookingSubmitForm
+              consultation={bookedConsultation}
+              idPrefix="proposal-inline-booking"
+              onBack={clearSelectedSlot}
+              variant="inline"
+              selectedDurationMinutes={selectedDurationMinutes}
+              pending={pending}
+              canSubmitBase={canSubmitBase}
+              attendeeName={attendeeName}
+              setAttendeeName={setAttendeeName}
+              attendeeEmail={attendeeEmail}
+              setAttendeeEmail={setAttendeeEmail}
+              bookingNotes={bookingNotes}
+              setBookingNotes={setBookingNotes}
+              showGuests={showGuests}
+              setShowGuests={setShowGuests}
+              guestEmails={guestEmails}
+              setGuestEmails={setGuestEmails}
+              useTwentyFourHour={useTwentyFourHour}
+              onSubmit={() => submitProposal(bookedConsultation)}
+            />
         </div>
       );
     }
@@ -1499,11 +1181,48 @@ export function ProjectProposalForm({
         ) : (
           <>
             <div className="min-h-[420px] min-w-0 p-6">
-              {renderMonthlyCalendar()}
+              <MonthlyCalendar
+                monthLabel={monthLabel}
+                shiftVisibleMonth={shiftVisibleMonth}
+                calendarCells={calendarCells}
+                selectDate={selectDate}
+                selectedDate={selectedDate}
+                timeZone={timeZone}
+              />
             </div>
 
             <div className="min-h-[420px] min-w-0 border-t border-border/60 lg:border-l lg:border-t-0">
-              {renderMonthlyBookingPanel()}
+              <MonthlyBookingPanel
+                bookedConsultation={bookedConsultation}
+                clearSelectedSlot={clearSelectedSlot}
+                selectedDurationMinutes={selectedDurationMinutes}
+                pending={pending}
+                canSubmitBase={canSubmitBase}
+                attendeeName={attendeeName}
+                setAttendeeName={setAttendeeName}
+                attendeeEmail={attendeeEmail}
+                setAttendeeEmail={setAttendeeEmail}
+                bookingNotes={bookingNotes}
+                setBookingNotes={setBookingNotes}
+                showGuests={showGuests}
+                setShowGuests={setShowGuests}
+                guestEmails={guestEmails}
+                setGuestEmails={setGuestEmails}
+                useTwentyFourHour={useTwentyFourHour}
+                submitProposal={submitProposal}
+                activeDay={activeDay}
+                slotsPending={slotsPending}
+                selectedSlotStart={selectedSlotStart}
+                selectSlot={selectSlot}
+                formatSlotTime={formatSlotTime}
+                monthLabel={monthLabel}
+                shiftVisibleMonth={shiftVisibleMonth}
+                calendarCells={calendarCells}
+                selectDate={selectDate}
+                selectedDate={selectedDate}
+                timeZone={timeZone}
+                renderTimeFormatToggle={renderTimeFormatToggle}
+              />
             </div>
           </>
         )}
@@ -1826,7 +1545,34 @@ export function ProjectProposalForm({
                   }}
                   style={{ willChange: "transform, opacity" }}
                 >
-                  {isColumnView ? renderColumnBookingView() : renderWeeklyTimeGrid()}
+                  {isColumnView ? (
+                    <ColumnBookingView
+                      timelineDays={timelineDays}
+                      selectDate={selectDate}
+                      formatWeeklyDayHeader={formatWeeklyDayHeader}
+                      selectedDate={selectedDate}
+                      selectedSlotStart={selectedSlotStart}
+                      selectSlot={selectSlot}
+                      formatSlotTime={formatSlotTime}
+                    />
+                  ) : (
+                    <WeeklyTimeGrid
+                      timelineDays={timelineDays}
+                      HOUR_VALUES={HOUR_VALUES}
+                      WEEKLY_HOUR_ROW_HEIGHT={WEEKLY_HOUR_ROW_HEIGHT}
+                      WEEKLY_DAY_HEADER_HEIGHT={WEEKLY_DAY_HEADER_HEIGHT}
+                      currentTimeIndicator={currentTimeIndicator}
+                      formatWeeklyDayHeader={formatWeeklyDayHeader}
+                      selectedDate={selectedDate}
+                      selectedSlotStart={selectedSlotStart}
+                      formatSlotTime={formatSlotTime}
+                      selectDate={selectDate}
+                      selectSlot={selectSlot}
+                      useTwentyFourHour={useTwentyFourHour}
+                      timeZone={timeZone}
+                      overlayCalendar={overlayCalendar}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -1839,6 +1585,7 @@ export function ProjectProposalForm({
   function renderBookingFrameView() {
     const isMonthly = bookingView === "day";
     const isSlotSelected = Boolean(bookedConsultation);
+    const isColumnView = bookingView === "list";
 
     return (
       <div className="relative flex min-h-[calc(100vh-49px)] flex-col">
@@ -1891,9 +1638,50 @@ export function ProjectProposalForm({
                   }}
                   style={{ willChange: "transform, opacity" }}
                 >
-                  {isMonthly
-                    ? renderMonthlyBookingContent()
-                    : renderCalendarBookingView()}
+                  {isMonthly ? (
+                    renderMonthlyBookingContent()
+                  ) : (
+                    <CalendarBookingView
+                      bookingView={bookingView}
+                      previousBookingViewRef={previousBookingViewRef}
+                      renderBookingDetails={renderBookingDetails}
+                      renderTimeFormatToggle={renderTimeFormatToggle}
+                      renderBookingControls={renderBookingControls}
+                      timelineRangeLabel={timelineRangeLabel}
+                      shiftTimelineRange={shiftTimelineRange}
+                      selectToday={selectToday}
+                      isColumnView={isColumnView}
+                      renderColumnBookingView={() => (
+                        <ColumnBookingView
+                          timelineDays={timelineDays}
+                          selectDate={selectDate}
+                          formatWeeklyDayHeader={formatWeeklyDayHeader}
+                          selectedDate={selectedDate}
+                          selectedSlotStart={selectedSlotStart}
+                          selectSlot={selectSlot}
+                          formatSlotTime={formatSlotTime}
+                        />
+                      )}
+                      renderWeeklyTimeGrid={() => (
+                        <WeeklyTimeGrid
+                          timelineDays={timelineDays}
+                          HOUR_VALUES={HOUR_VALUES}
+                          WEEKLY_HOUR_ROW_HEIGHT={WEEKLY_HOUR_ROW_HEIGHT}
+                          WEEKLY_DAY_HEADER_HEIGHT={WEEKLY_DAY_HEADER_HEIGHT}
+                          currentTimeIndicator={currentTimeIndicator}
+                          formatWeeklyDayHeader={formatWeeklyDayHeader}
+                          selectedDate={selectedDate}
+                          selectedSlotStart={selectedSlotStart}
+                          formatSlotTime={formatSlotTime}
+                          selectDate={selectDate}
+                          selectSlot={selectSlot}
+                          useTwentyFourHour={useTwentyFourHour}
+                          timeZone={timeZone}
+                          overlayCalendar={overlayCalendar}
+                        />
+                      )}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </motion.div>
@@ -2027,12 +1815,27 @@ export function ProjectProposalForm({
               </div>
             ) : null}
 
-            {renderBookingSubmitForm({
-              consultation: pendingConsultation,
-              idPrefix: "proposal-dialog-booking",
-              onBack: () => handleSlotDialogOpenChange(false),
-              variant: "dialog",
-            })}
+            <BookingSubmitForm
+              consultation={pendingConsultation}
+              idPrefix="proposal-dialog-booking"
+              onBack={() => handleSlotDialogOpenChange(false)}
+              variant="dialog"
+              selectedDurationMinutes={selectedDurationMinutes}
+              pending={pending}
+              canSubmitBase={canSubmitBase}
+              attendeeName={attendeeName}
+              setAttendeeName={setAttendeeName}
+              attendeeEmail={attendeeEmail}
+              setAttendeeEmail={setAttendeeEmail}
+              bookingNotes={bookingNotes}
+              setBookingNotes={setBookingNotes}
+              showGuests={showGuests}
+              setShowGuests={setShowGuests}
+              guestEmails={guestEmails}
+              setGuestEmails={setGuestEmails}
+              useTwentyFourHour={useTwentyFourHour}
+              onSubmit={() => submitProposal(pendingConsultation)}
+            />
           </DialogContent>
         </Dialog>
       </TooltipProvider>

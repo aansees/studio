@@ -1,4 +1,4 @@
-import { BookingAvailabilityEditor } from "@/components/layout/dashboard/booking-availability-editor"
+import { BookingAvailabilityEditor } from "./_components/booking_availability_editor"
 import { requireSession } from "@/lib/session"
 import { listBookingAvailabilitySchedulesForAdmin } from "@/lib/services/bookings"
 

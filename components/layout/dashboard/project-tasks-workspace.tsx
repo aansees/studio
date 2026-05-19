@@ -13,6 +13,7 @@ import {
 import { CreateTaskDialog } from "@/components/layout/dashboard/create-task-dialog"
 import { ProjectTaskTimeline } from "@/components/layout/dashboard/project-task-timeline"
 import { ProjectTasksTable } from "@/components/layout/dashboard/project-tasks-table"
+import ProjectTasksToolbar from "@/app/(app)/(auth)/dashboard/projects/[projectId]/_components/project_tasks_toolbar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -100,55 +101,19 @@ export function ProjectTasksWorkspace({
           </TabsTrigger>
         </TabsList>
 
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-          {activeTab === "timeline" ? (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9"
-                onClick={() => setCurrentWeekStart((current) => subWeeks(current, 1))}
-              >
-                <ChevronLeftIcon className="size-4" />
-              </Button>
-              <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                <CalendarIcon className="size-4 text-muted-foreground" />
-                <span>
-                  {format(currentWeekStart, "d MMM")} - {format(addDays(currentWeekStart, 6), "d MMM")}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9"
-                onClick={() => setCurrentWeekStart((current) => addDays(current, 7))}
-              >
-                <ChevronRightIcon className="size-4" />
-              </Button>
-            </div>
-          ) : null}
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search tasks"
-            className="sm:w-72"
-          />
-          <VisualSelect
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as TaskStatus | "__all__")}
-            options={[
-              { value: "__all__", label: "All statuses" },
-              ...taskStatusOptions,
-            ]}
-            placeholder="Status"
-            triggerClassName="sm:w-44"
-          />
-          {canManageProjectTasks ? (
-            <CreateTaskDialog projectId={projectId} assignees={assignees} />
-          ) : null}
-        </div>
+        <ProjectTasksToolbar
+          activeTab={activeTab}
+          setActiveTab={(v) => setActiveTab(v)}
+          query={query}
+          setQuery={(v) => setQuery(v)}
+          statusFilter={statusFilter}
+          setStatusFilter={(v) => setStatusFilter(v)}
+          currentWeekStart={currentWeekStart}
+          setCurrentWeekStart={(d) => setCurrentWeekStart(d as Date)}
+          canManageProjectTasks={canManageProjectTasks}
+          projectId={projectId}
+          assignees={assignees}
+        />
       </div>
 
       <TabsContent value="list">

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { ProjectAnalyticsDashboard } from "@/components/layout/dashboard/project-analytics-dashboard"
+import { ProjectAnalyticsDashboard } from "./_components/project_analytics_dashboard"
 import { requireSession } from "@/lib/session"
 import {
   getProjectByIdForUser,

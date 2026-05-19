@@ -1,4 +1,4 @@
-import { ProjectProposalForm } from "@/components/layout/dashboard/project-proposal-form";
+import { ProjectProposalForm } from "./_components/project_proposal_form";
 import { requireSession } from "@/lib/session";
 import { Unauthorized } from "@/components/global/pages";
 import { listBookableEventTypesForClient } from "@/lib/services/bookings";

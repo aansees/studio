@@ -1,5 +1,5 @@
 import { requireSession } from "@/lib/session"
-import { TaskDetailsPageContent } from "@/components/layout/dashboard/task-details-page"
+import { TaskDetailsPageContent } from "./_components/task_details_page"
 import { Unauthorized } from "@/components/global/pages";
 
 export default async function ProjectTaskDetailsPage({

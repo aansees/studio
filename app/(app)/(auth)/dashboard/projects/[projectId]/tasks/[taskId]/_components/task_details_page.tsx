@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { notFound } from "next/navigation"
 
 import { TaskChatPanel } from "@/components/chat/task-chat-panel"
-import { TaskManagementForm } from "@/components/layout/dashboard/task-management-form"
+import { TaskManagementForm } from "./task_management_form"
 import {
   Collapsible,
   CollapsibleContent,

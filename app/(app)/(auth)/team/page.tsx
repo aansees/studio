@@ -1,4 +1,4 @@
-import { TeamManagement } from "@/components/layout/dashboard/team-management";
+import { TeamManagement } from "./_components/team_management";
 import { isUserRole } from "@/lib/constants/rbac";
 import { requireSession } from "@/lib/session";
 import { listTeamAsAdmin } from "@/lib/services/team";

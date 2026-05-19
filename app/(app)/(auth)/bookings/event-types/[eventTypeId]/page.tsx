@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { BookingEventTypeEditor } from "@/components/layout/dashboard/booking-event-type-editor"
+import { BookingEventTypeEditor } from "./_components/booking_event_type_editor"
 import { requireSession } from "@/lib/session"
 import {
   getBookingEventTypeForAdmin,
