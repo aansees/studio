@@ -264,6 +264,10 @@ body {
   opacity: 0;
 }
 
+[data-ns-animate] {
+  opacity: 0;
+}
+
 [data-opai-split-text] {
   @apply opacity-0;
 }
@@ -355,6 +359,11 @@ dialog.modal-overlay::backdrop {
 
 dialog.modal-overlay.modal-close {
   display: none;
+}
+
+.button-icon,
+.button-text {
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* =========================== Text reveal =========================== */
