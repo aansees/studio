@@ -1,84 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import "./header.css";
 
-import { useEffect, useRef } from "react";
-
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-import AnimatedButton from "../animated-button/animated-button";
-import Link from "next/link";
-
-gsap.registerPlugin(ScrollTrigger);
-
-export default function Header() {
-  const topBarRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const topBar = topBarRef.current;
-    if (!topBar) return;
-
-    const topBarHeight = topBar.offsetHeight;
-    let lastScrollY = 0;
-    let isScrolling = false;
-
-    gsap.set(topBar, { y: 0 });
-
-    const handleScroll = () => {
-      if (isScrolling) return;
-
-      isScrolling = true;
-      const currentScrollY = window.scrollY;
-      const direction = currentScrollY > lastScrollY ? 1 : -1;
-
-      if (direction === 1 && currentScrollY > 50) {
-        gsap.to(topBar, {
-          y: -topBarHeight,
-          duration: 1,
-          ease: "power4.out",
-        });
-      } else if (direction === -1) {
-        gsap.to(topBar, {
-          y: 0,
-          duration: 1,
-          ease: "power4.out",
-        });
-      }
-
-      lastScrollY = currentScrollY;
-
-      setTimeout(() => {
-        isScrolling = false;
-      }, 100);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (topBarRef.current) {
-      gsap.set(topBarRef.current, { y: 0 });
-    }
-  }, []);
-
+const Navbar = () => {
   return (
-    <div className="top-bar" ref={topBarRef}>
-      <div className="pointer-events-auto rounded-[0.4em] px-[0.65em] py-[0.5em]">
-        <Link
-          className="font-otis-mono text-[0.875rem] font-medium uppercase leading-[1.125] text-[var(--otis-bg)]"
-          href="/"
-        >
-          ANCS STUDIO
-        </Link>
+    <header
+      className="lp:max-w-[1290px]! fixed top-5 left-1/2 z-50 mx-auto w-full max-w-[350px] -translate-x-1/2 transition-all duration-400 ease-in-out min-[425px]:max-w-[375px] min-[500px]:max-w-[450px] sm:max-w-[540px] md:max-w-[720px] lg:max-w-[960px] xl:max-w-[1140px]"
+    >
+      <div className="header-one flex w-full items-center justify-between rounded-lg bg-white pl-2.5 pr-1 py-2.5 backdrop-blur-[25px] xl:py-0 h-12">
+        <div>
+          <Link href="/" className="font-otis-display text-2xl font-bold">
+            <span className="sr-only">Home</span>
+            Ancs Studio
+          </Link>
+        </div>
+
+        <div className="hidden items-center justify-center xl:flex">
+          <Link href="/start-project" className="cta">
+            <div className="arrow">
+              <div></div>
+            </div>
+            <span className="label">Book a demo</span>
+          </Link>
+        </div>
       </div>
-      <div className="top-bar-cta">
-        <AnimatedButton label="Start Project" route="/start-project" animate={false} />
-      </div>
-    </div>
+    </header>
   );
-}
+};
+
+export default Navbar;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, MoreHorizontalIcon, SearchIcon } from "lucide-react";
+import { AlertTriangle, MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -27,7 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Frame, FrameHeader, FramePanel } from "@/components/ui/frame";
+import { Frame } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import {
   Menu,

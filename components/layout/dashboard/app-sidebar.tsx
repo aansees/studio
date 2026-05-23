@@ -53,7 +53,7 @@ import { NavSecondary } from "./nav-secondary";
 type SidebarUser = {
   name: string;
   email: string;
-  avatar: string;
+  avatar?: string | null;
   role: UserRole;
 };
 

@@ -63,7 +63,7 @@ export default async function Page({
             user={{
               name: user.name,
               email: user.email,
-              avatar: user.image ?? "/images/ns-avatar-1.png",
+              avatar: user.image,
               role: user.role,
             }}
             myTasks={sidebarTasks}
