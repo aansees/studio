@@ -15,6 +15,13 @@
       "when": 1778968860196,
       "tag": "0001_pale_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779666200000,
+      "tag": "0002_safe_user_booking_columns",
+      "breakpoints": true
     }
   ]
 }

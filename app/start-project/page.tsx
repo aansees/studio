@@ -1,6 +1,8 @@
 import { ProjectProposalForm } from "@/app/(app)/(auth)/dashboard/projects/new/_components/project_proposal_form"
 import { listBookableEventTypesForPublic } from "@/lib/services/bookings"
 
+export const dynamic = "force-dynamic"
+
 export default async function StartProjectPage() {
   let bookingSetup: Awaited<ReturnType<typeof listBookableEventTypesForPublic>> | null =
     null
@@ -9,8 +11,9 @@ export default async function StartProjectPage() {
   try {
     bookingSetup = await listBookableEventTypesForPublic()
   } catch (error) {
+    console.error("Unable to load public booking options")
     bookingSetupError =
-      error instanceof Error ? error.message : "Unable to load booking options"
+      "Booking options are temporarily unavailable. You can still submit the project details."
   }
 
   return (

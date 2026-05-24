@@ -17,10 +17,9 @@ export default async function NewProjectProposalPage() {
   try {
     bookingSetup = await listBookableEventTypesForClient(user);
   } catch (error) {
+    console.error("Unable to load client booking options");
     bookingSetupError =
-      error instanceof Error
-        ? error.message
-        : "Unable to load booking options";
+      "Booking options are temporarily unavailable. You can still submit the project details.";
   }
 
   return (
