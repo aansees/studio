@@ -353,12 +353,27 @@ dialog.modal-overlay.modal-close {
   animation: spin 50s linear infinite;
 }
 
+.integration-icon-upright {
+  animation: spin-upright 50s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-upright {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
   }
 }
 

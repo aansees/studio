@@ -2,7 +2,7 @@
 title: 'Custom web applications'
 iconClass: 'ns-shape-9'
 description: 'Build secure, responsive web apps tailored to your customer and business workflows.'
-image: '/images/opai-img-50.png'
+image: '/images/client/custom.jpg'
 ---
 
 ## Custom web applications

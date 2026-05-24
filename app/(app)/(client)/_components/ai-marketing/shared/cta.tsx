@@ -27,23 +27,6 @@ const CTA = ({ className }: CtaProps) => {
     >
       <div className="main-container">
         <div className="space-y-14 pb-9">
-          <AvatarReveal
-            className="flex items-center justify-center gap-x-2"
-            direction="left"
-            stagger={0.1}
-          >
-            {[5, 6, 7, 8].map((i) => (
-              <AvatarItem key={i} className="inline-block shrink-0">
-                <Image
-                  src={`/images/opai-avatar-img-0${i}.png`}
-                  alt={`ANCS Studio team member ${i - 4}`}
-                  width={56}
-                  height={56}
-                  className="inline-block size-14 rounded-full object-cover"
-                />
-              </AvatarItem>
-            ))}
-          </AvatarReveal>
           <div className="space-y-3">
             <RevealAnimation delay={0.1}>
               <h2 className="text-is-heading-3 lg:text-is-heading-2 font-instrument-serif text-center font-normal tracking-[-2.4px] text-white/90">
@@ -51,9 +34,9 @@ const CTA = ({ className }: CtaProps) => {
                   <span className="w-full sm:w-auto">Turn ideas</span>
                   <span
                     ref={contentImageRef}
-                    className="cta-content-image inline-block h-[52px] w-[88px] overflow-hidden rounded-[300px] align-middle"
+                    className="cta-content-image inline-block h-[52px] w-[88px] align-middle"
                   >
-                    <Image src={opaiImg24} alt="" aria-hidden className="size-full object-cover" />
+                    <Image src={"/images/idea.png"} width={88} height={88} alt="" aria-hidden className="size-full object-contain" />
                   </span>
                   <span className="w-full sm:w-auto">into working products</span>
                 </span>
@@ -64,9 +47,11 @@ const CTA = ({ className }: CtaProps) => {
                     className="cta-content-image-2 inline-block size-12 -rotate-20 overflow-hidden rounded-lg align-middle"
                   >
                     <Image
-                      src={opaiAvatarImg25}
+                      src={"/images/weee.png"}
                       alt=""
                       aria-hidden
+                      width={48}
+                      height={48}
                       className="size-full object-cover"
                     />
                   </span>

@@ -49,7 +49,7 @@ const MediaLayer = ({ id, src, revealDuration, className }: MediaLayerProps) => 
   return (
     <div ref={wrapperRef} className={cn('absolute inset-0 overflow-hidden', className)}>
       <div ref={imageRef} className="absolute inset-0">
-        <Image src={src} width={292} height={386} alt="reveal image" className="object-cover" />
+        <Image src={src} width={292} height={386} alt="reveal image" className="object-cover h-full object-center" />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 title: 'Mobile app development'
 iconClass: 'ns-shape-4'
 description: 'Plan, design, and build customer-facing mobile applications for real use cases.'
-image: '/images/opai-img-54.png'
+image: '/images/client/android.jpg'
 ---
 
 ## Mobile app development

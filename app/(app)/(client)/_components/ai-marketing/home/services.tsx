@@ -55,7 +55,7 @@ const Services = ({ services }: { services: ServiceItem[] }) => {
                       iconClass={service.iconClass}
                       title={service.title}
                       description={service.description}
-                      href={service.href}
+                      // href={service.href}
                     />
                   </RevealItem>
                 </RevealAnimation>

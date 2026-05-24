@@ -6,7 +6,7 @@ import CardRevealItem from '@/app/(app)/(client)/_components/ai-marketing/shared
 import CaseStudyCard from '@/app/(app)/(client)/_components/ai-marketing/shared/ui/card/case-study-card';
 import { getCaseStudies } from '@/app/(app)/(client)/_components/ai-marketing/utils/getCaseStudies';
 
-const CASE_STUDY_LIMIT = 4;
+const CASE_STUDY_LIMIT = 3;
 const DEFAULT_STATS = [{ value: 0, suffix: '%', label: 'Impact' }];
 
 const CaseStudy = () => {

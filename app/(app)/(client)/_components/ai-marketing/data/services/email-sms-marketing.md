@@ -2,7 +2,7 @@
 title: 'Business systems & automation'
 iconClass: 'ns-shape-1'
 description: 'Replace manual processes with practical systems, workflows, and integrations.'
-image: '/images/opai-img-52.png'
+image: '/images/client/automation.jpg'
 ---
 
 ## Business systems & automation

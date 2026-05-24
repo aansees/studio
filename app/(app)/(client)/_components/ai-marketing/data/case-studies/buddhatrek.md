@@ -1,24 +1,18 @@
 ---
-title: 'Foodly Delivery App'
-client: 'Foodly'
-date: '10/1/2026'
-mainImg: '/images/opai-img-262.png'
-detailsImgOne: '/images/opai-img-263.png'
-detailsImgTwo: '/images/opai-img-270.png'
-excerpt: 'A custom ordering and dispatch app cut delivery friction and improved completion rates.'
+title: "Buddha Trek"
+client: "Nepali Hickers"
+date: "15/3/2026"
+mainImg: "/images/case_study/buddhatrek.png"
+detailsImgOne: "/images/case_study/buddhatrek.png"
+detailsImgTwo: "/images/case_study/buddhatrek.png"
+excerpt: "Buddha Trekks is a Nepal-based trekking and travel company helping tourists discover the best trekking destinations with affordable prices, highly qualified guides, joyful activities, and safe, memorable Himalayan adventures."
 stats:
   - value: 85
-    suffix: '%'
-    label: 'More conversions'
-  - value: 34
-    suffix: '%'
-    label: 'Failed deliveries'
-  - value: 74
-    suffix: '%'
-    label: 'More successful deliveries'
+    suffix: "%"
+    label: "More conversions"
   - value: 4
-    suffix: 'x'
-    label: 'Faster scheduling'
+    suffix: "x"
+    label: "Faster scheduling"
 ---
 
 ### Challenge:

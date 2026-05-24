@@ -2,7 +2,7 @@
 title: 'Dashboard & admin portals'
 iconClass: 'ns-shape-3'
 description: 'Create internal dashboards, admin tools, and reporting views teams can rely on.'
-image: '/images/opai-img-53.png'
+image: '/images/client/admin.jpg'
 ---
 
 ## Dashboard & admin portals

@@ -2,7 +2,7 @@
 title: 'Maintenance & support'
 iconClass: 'ns-shape-6'
 description: 'Keep websites and applications updated, monitored, improved, and supported.'
-image: '/images/opai-img-56.png'
+image: '/images/client/support.jpg'
 ---
 
 ## Maintenance & support

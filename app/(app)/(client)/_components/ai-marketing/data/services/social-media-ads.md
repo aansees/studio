@@ -2,7 +2,7 @@
 title: 'API integrations'
 iconClass: 'ns-shape-5'
 description: 'Connect payments, booking tools, CRMs, messaging, analytics, and third-party APIs.'
-image: '/images/opai-img-55.png'
+image: '/images/client/api.jpg'
 ---
 
 ## API integrations

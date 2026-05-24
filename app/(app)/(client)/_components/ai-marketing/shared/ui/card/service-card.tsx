@@ -5,7 +5,7 @@ export type ServiceCardProps = {
   iconClass: string;
   title: string;
   description: string;
-  href: string;
+  href?: string;
   className?: string;
 };
 
@@ -13,12 +13,11 @@ const ServiceCard = ({
   iconClass,
   title,
   description,
-
   href,
   className,
 }: ServiceCardProps) => (
-  <Link
-    href={href}
+  <div
+    // href={href}
     className={cn(
       'group relative inline-block w-full py-4 pl-0 transition-all duration-300 ease-out hover:pl-4 lg:py-8',
       className
@@ -44,7 +43,7 @@ const ServiceCard = ({
         </p>
       </div>
     </div>
-  </Link>
+  </div>
 );
 
 export default ServiceCard;

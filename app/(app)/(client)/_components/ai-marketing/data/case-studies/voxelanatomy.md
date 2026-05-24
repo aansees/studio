@@ -1,11 +1,11 @@
 ---
-title: 'BrightNest Storefront'
-client: 'BrightNest'
-date: '14/1/2026'
-mainImg: '/images/opai-img-160.jpg'
-detailsImgOne: '/images/opai-img-264.png'
-detailsImgTwo: '/images/opai-img-271.png'
-excerpt: 'A faster storefront and cleaner checkout improved revenue and repeat buyers.'
+title: 'Voxel Anatomy'
+client: 'Dr. *****'
+date: '24/4/2026'
+mainImg: '/images/case_study/voxelanatomy.jpeg'
+detailsImgOne: '/images/case_study/voxelanatomy.jpeg'
+detailsImgTwo: '/images/case_study/voxelanatomy.jpeg'
+excerpt: 'Interactive anatomy learning atlas for exploring radiology slices, anatomical areas, and guided medical learning modules.'
 stats:
   - value: 120
     suffix: '%'
