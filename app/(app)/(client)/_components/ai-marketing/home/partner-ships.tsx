@@ -46,7 +46,7 @@ const PartnerShips: React.FC<PartnerShipsProps> = ({ className }) => {
   ];
 
   return (
-    <section className={cn('bg-background-7 pt-20 md:pt-30 lg:pt-44', className)}>
+    <section className={cn('bg-background-7 py-20 md:py-30 lg:py-44', className)}>
       <div className="main-container space-y-10 md:space-y-17.5">
         <div className="space-y-1.5 text-center md:space-y-3">
           <RevealAnimation delay={0.1}>

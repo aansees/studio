@@ -5,7 +5,6 @@ import { PrimaryLinkButton } from '@/app/(app)/(client)/_components/ai-marketing
 import Image from 'next/image';
 import AnimateGradient from './animate-gradient';
 import GradientImg from './gradient-img';
-import HeroPill, { heroPills } from './hero-pill';
 
 const avatars = [
   '/images/opai-avatar-img-01.png',
@@ -74,12 +73,13 @@ const Hero = () => (
           </RevealAnimation>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-1 pt-10 sm:gap-4 md:pt-17 lg:pt-30">
-        {heroPills.map((item, i) => (
-          <RevealAnimation key={item.title} delay={0.1 + i * 0.1}>
-            <HeroPill src={item.src} title={item.title} href={item.href} />
-          </RevealAnimation>
-        ))}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none flex flex-wrap items-center justify-center gap-1 pt-10 sm:gap-4 md:pt-17 lg:pt-30"
+      >
+        <div className="h-[90px] w-[220px] lg:h-[120px] lg:w-[250px] xl:h-[150px] xl:w-[300px]" />
+        <div className="h-[90px] w-[220px] lg:h-[120px] lg:w-[250px] xl:h-[150px] xl:w-[300px]" />
+        <div className="h-[90px] w-[220px] lg:h-[120px] lg:w-[250px] xl:h-[150px] xl:w-[300px]" />
       </div>
     </div>
     <figure className="absolute bottom-0 left-1/2 z-0 size-full max-w-[1390px] -translate-x-1/2 md:-bottom-10 lg:bottom-0">

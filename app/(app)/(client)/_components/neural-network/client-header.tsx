@@ -17,7 +17,7 @@ export function ClientHeader() {
       )}
     >
       <RevealAnimation direction="up" offset={100} delay={0.1} instant>
-        <div className="header-one flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-1 py-1 backdrop-blur-[25px]">
+        <div className="header-one flex w-full items-center justify-between gap-3 rounded-lg bg-white px-1 py-1 backdrop-blur-[25px]">
           <Link
             href="/"
             aria-label="Ancs Studio home"

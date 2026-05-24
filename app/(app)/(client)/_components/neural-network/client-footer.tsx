@@ -6,10 +6,10 @@ import { FooterLinkGroups } from "./footer-link-groups";
 
 export function ClientFooter() {
   return (
-    <footer className="bg-background-8 pt-[80px] pb-7 md:pt-[120px] xl:pt-[156px]">
+    <footer className="bg-background-6 pt-[80px] pb-7 md:pt-[120px] xl:pt-[156px]">
       <div className="main-container">
         <RevealAnimation delay={0.1}>
-          <div className="bg-background-5 space-y-16 overflow-hidden rounded-[30px] p-9">
+          <div className="bg-background-6 space-y-16 overflow-hidden rounded-[30px] p-9">
             <RevealAnimation delay={0.2}>
               <div>
                 <Link href="/" className="inline-block" aria-label="Ancs Studio home">
