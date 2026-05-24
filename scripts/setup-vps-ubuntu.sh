@@ -285,13 +285,9 @@ configure_ufw() {
   ufw allow 80/tcp
   ufw allow 443/tcp
 
-  while ufw --force delete deny "${MYSQL_PORT}/tcp" >/dev/null 2>&1; do
-    true
-  done
-
   compose_network_subnets | awk 'NF && !seen[$0]++' |
     while IFS= read -r subnet; do
-      ufw allow from "$subnet" to any port "$MYSQL_PORT" proto tcp
+      ufw insert 1 allow from "$subnet" to any port "$MYSQL_PORT" proto tcp || true
     done
 
   ufw deny "${MYSQL_PORT}/tcp"
