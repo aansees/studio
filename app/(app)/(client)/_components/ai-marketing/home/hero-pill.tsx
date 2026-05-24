@@ -2,9 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export const heroPills = [
-  { src: '/images/opai-img-155.png', title: 'Customer Acquisition', href: '/service-details' },
-  { src: '/images/opai-img-156.png', title: 'Engagement', href: '/service-details' },
-  { src: '/images/opai-img-157.png', title: 'Sticking around', href: '/service-details' },
+  { src: '/images/opai-img-155.png', title: 'Websites', href: '/start-project' },
+  { src: '/images/opai-img-156.png', title: 'Web Apps', href: '/start-project' },
+  { src: '/images/opai-img-157.png', title: 'Custom Systems', href: '/start-project' },
 ];
 
 export interface HeroPillProps {

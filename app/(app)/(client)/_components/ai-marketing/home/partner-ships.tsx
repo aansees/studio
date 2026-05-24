@@ -24,24 +24,24 @@ const PartnerShips: React.FC<PartnerShipsProps> = ({ className }) => {
   const partners = [
     {
       img: '/images/icons/meta.png',
-      alt: 'meta',
-      title: 'Meta Marketing Partner',
+      alt: 'product strategy',
+      title: 'Product Strategy',
       description:
-        "As a Meta Marketing Partner, we specialize in digital marketing strategies that leverage Meta's platforms to drive your business growth. Our tailored approaches and expert insights enhance your advertising efforts and broaden your audience reach, ensuring you remain a strong contender in the online marketing landscape.",
+        'We help turn rough ideas into practical product scopes, user flows, feature priorities, and delivery plans that make sense for your budget and timeline.',
     },
     {
       img: '/images/icons/google-ads-certified.png',
-      alt: 'google ads certified',
-      title: 'Google Ads Certified Partner',
+      alt: 'web and app engineering',
+      title: 'Web & App Engineering',
       description:
-        "As a Google Ads Certified Partner, we specialize in digital marketing strategies that leverage Google's platforms to drive your business growth. Our tailored approaches and expert insights enhance your advertising efforts and broaden your audience reach, ensuring you remain a strong contender in the online marketing landscape.",
+        'We build responsive websites, web applications, dashboards, APIs, and customer-facing tools with a focus on reliability, speed, and maintainable code.',
     },
     {
       img: '/images/icons/klaviyo.png',
-      alt: 'klaviyo',
-      title: 'Klaviyo Partner',
+      alt: 'launch support',
+      title: 'Launch & Support',
       description:
-        "As a Klaviyo Partner, we specialize in digital marketing strategies that leverage Klaviyo's platforms to drive your business growth. Our tailored approaches and expert insights enhance your email marketing efforts and broaden your audience reach, ensuring you remain a strong contender in the online marketing landscape.",
+        'We support deployment, training, performance fixes, iteration, and maintenance so the product keeps working after the first release.',
     },
   ];
 
@@ -51,18 +51,18 @@ const PartnerShips: React.FC<PartnerShipsProps> = ({ className }) => {
         <div className="space-y-1.5 text-center md:space-y-3">
           <RevealAnimation delay={0.1}>
             <div className="flex items-center justify-center max-md:pb-3">
-              <Badge badgeText="Partnership" className="text-black" />
+              <Badge badgeText="Capabilities" className="text-black" />
             </div>
           </RevealAnimation>
           <RevealAnimation delay={0.2}>
             <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-background-13 pt-1 font-normal max-md:leading-[1.1]">
-              Certified by the Best
+              Built around the way your business works
             </h2>
           </RevealAnimation>
           <RevealAnimation delay={0.3}>
             <p className="text-tagline-2 text-background-13/60 font-normal">
-              Discover expert tips, industry trends, and actionable strategies to power your growth
-              with Nexsas.
+              We combine product thinking, interface design, and engineering so your software
+              solves the real workflow, not just the brief.
             </p>
           </RevealAnimation>
         </div>
@@ -94,8 +94,8 @@ const PartnerShips: React.FC<PartnerShipsProps> = ({ className }) => {
         </RevealAnimation>
         <RevealAnimation delay={0.1}>
           <div className="flex justify-center">
-            <SecondaryLinkButton href="/pricing" displayClassName="w-[85%] md:w-auto">
-              Let&apos;s get started
+            <SecondaryLinkButton href="/start-project" displayClassName="w-[85%] md:w-auto">
+              Start a project
             </SecondaryLinkButton>
           </div>
         </RevealAnimation>

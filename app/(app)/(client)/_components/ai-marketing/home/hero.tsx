@@ -20,24 +20,25 @@ const Hero = () => (
       <div className="space-y-1.5 text-center md:space-y-3">
         <RevealAnimation delay={0.1}>
           <h1 className="text-is-heading-3 md:text-is-heading-2 lg:text-is-heading-1 font-normal text-white/90 max-md:leading-[1.1]">
-            Intelligent, community-focused &
+            Software, web apps &
             <br className="hidden lg:block" />
-            AI-powered marketing
+            digital products built to last
           </h1>
         </RevealAnimation>
         <RevealAnimation delay={0.2}>
           <p className="text-tagline-2 font-normal text-white/60">
-            Your trusted local digital marketing agency, powered by data and AI.
+            ANCS Studio designs and builds websites, custom systems, dashboards, and applications
+            for teams that need reliable digital tools.
             <br className="hidden lg:block" />
-            We help businesses grow traffic, leads, and revenue faster.
+            From first idea to launch, we keep the work clear, practical, and built around your users.
           </p>
         </RevealAnimation>
       </div>
       <div className="space-y-8 pt-13 lg:pt-18">
         <RevealAnimation delay={0.3}>
           <div className="flex justify-center">
-            <PrimaryLinkButton href="/about" displayClassName="w-[80%] sm:w-auto">
-              Learn more
+            <PrimaryLinkButton href="/start-project" displayClassName="w-[80%] sm:w-auto">
+              Start a project
             </PrimaryLinkButton>
           </div>
         </RevealAnimation>
@@ -61,14 +62,14 @@ const Hero = () => (
             ))}
             <AvatarItem>
               <div className="text-tagline-4 inline-flex size-9 items-center justify-center rounded-full bg-[#0d0d1280] font-medium text-white/80 ring-2 ring-white backdrop-blur-[6px]">
-                99+
+                1:1
               </div>
             </AvatarItem>
           </AvatarReveal>
           <RevealAnimation delay={0.4}>
             <div className="text-left max-[375px]:text-center">
-              <p className="text-tagline-3 block font-medium text-white/90">Trusted by 20k+</p>
-              <p className="text-tagline-4 text-white/60">Customers across the globe</p>
+              <p className="text-tagline-3 block font-medium text-white/90">Direct collaboration</p>
+              <p className="text-tagline-4 text-white/60">From planning to launch and support</p>
             </div>
           </RevealAnimation>
         </div>

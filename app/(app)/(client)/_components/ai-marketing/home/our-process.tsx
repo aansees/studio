@@ -2,10 +2,10 @@ import RevealAnimation from '@/app/(app)/(client)/_components/ai-marketing/anima
 import { Badge } from '@/app/(app)/(client)/_components/ai-marketing/shared/ui/badge';
 
 const steps = [
-  { num: '1', title: 'Free Consultation & Audit', desc: 'Create your account and explore with a 7-day free trial.' },
-  { num: '2', title: 'AI-Driven Strategy', desc: 'Co-build a roadmap that blends predictive insights with human creativity.' },
-  { num: '3', title: 'Launch, Test, and Optimize', desc: 'Deploy experiences, run iterative experiments, and scale what works.' },
-  { num: '4', title: 'Monthly Reports & Growth', desc: 'Stay in the loop with transparent reporting and optimization insights.' },
+  { num: '1', title: 'Discovery & Scope', desc: 'Understand the business goal, users, constraints, and what needs to ship first.' },
+  { num: '2', title: 'Design & Architecture', desc: 'Map the user experience, data flow, features, and technical foundation before build.' },
+  { num: '3', title: 'Build, Integrate, Test', desc: 'Develop the product in clear milestones with practical reviews and quality checks.' },
+  { num: '4', title: 'Launch & Improve', desc: 'Deploy, monitor, support, and continue improving based on real use.' },
 ];
 
 const numberClass =

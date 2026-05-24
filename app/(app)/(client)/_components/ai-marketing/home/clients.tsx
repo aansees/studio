@@ -24,19 +24,20 @@ const Clients = () => (
       <div className="space-y-1.5 text-center md:space-y-3">
         <RevealAnimation delay={0.1}>
           <div className="flex items-center justify-center pb-4">
-            <Badge badgeText="Our clients" />
+              <Badge badgeText="Who we help" />
           </div>
         </RevealAnimation>
         <RevealAnimation delay={0.2}>
           <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-background-13/90 font-normal max-md:leading-[1.1]">
-            Helping local businesses and national brands
+            Building digital tools for founders,
             <br className="hidden lg:block" />
-            succeed with data-backed marketing.
+            service teams, and growing companies.
           </h2>
         </RevealAnimation>
         <RevealAnimation delay={0.3}>
           <p className="text-tagline-2 text-background-13/60 font-normal">
-            Trusted by 100+ businesses in retail, healthcare, tech, and more.
+            From public websites to internal platforms, we shape the product around your workflow,
+            budget, and launch path.
           </p>
         </RevealAnimation>
       </div>

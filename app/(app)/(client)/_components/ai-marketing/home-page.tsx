@@ -1,5 +1,4 @@
 import About from "./home/about";
-import Blog from "./home/blog";
 import CaseStudy from "./home/case-study";
 import Clients from "./home/clients";
 import Hero from "./home/hero";
@@ -27,7 +26,6 @@ export default function AiMarketingHomePage() {
       <OurProcess />
       <Testimonial />
       <PartnerShips />
-      <Blog />
       <CTA className="pt-20! md:pt-30! lg:pt-44!" />
     </main>
   );

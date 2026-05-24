@@ -23,11 +23,7 @@ const CaseStudy = () => {
             </RevealAnimation>
             <RevealAnimation delay={0.2}>
               <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-background-13 font-normal max-md:leading-[1.1]">
-                Success Stories That{' '}
-                <span className="font-instrument-serif text-background-13/30">
-                  Speak <br className="hidden lg:block" />
-                  for Themselves.
-                </span>
+                Project outcomes that show the work.
               </h2>
             </RevealAnimation>
           </div>
@@ -46,7 +42,7 @@ const CaseStudy = () => {
           </CardReveal>
           <RevealAnimation delay={0.1}>
             <div className="flex justify-center">
-              <SecondaryLinkButton href="/case-study">More success stories</SecondaryLinkButton>
+              <SecondaryLinkButton href="/start-project">Plan a project</SecondaryLinkButton>
             </div>
           </RevealAnimation>
         </div>

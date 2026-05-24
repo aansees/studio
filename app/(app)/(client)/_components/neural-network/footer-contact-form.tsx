@@ -13,7 +13,7 @@ export function FooterContactForm() {
                 Address:
               </p>
               <p className="font-inter-tight text-tagline-3 font-normal text-white/50">
-                30 North Gould Street, Sheridan, WY 8280
+                Kathmandu, Nepal. Remote delivery for clients worldwide.
               </p>
             </div>
           </RevealAnimation>
@@ -23,10 +23,10 @@ export function FooterContactForm() {
                 Contact:
               </p>
               <p className="font-inter-tight text-tagline-3 font-normal text-white/50">
-                1800 123 4567
+                Project inquiries and support
               </p>
               <p className="font-inter-tight text-tagline-3 font-normal text-white/50">
-                hello@pixels71.com
+                hello@ancsstudio.com
               </p>
             </div>
           </RevealAnimation>
@@ -50,12 +50,12 @@ export function FooterContactForm() {
                   iconClassName="!rounded-sm"
                   buttonTextClassName="!text-background-13"
                 >
-                  Subscribe now
+                  Send inquiry
                 </SubmitButtonV2>
               </div>
             </form>
             <p className="font-inter-tight text-tagline-4 font-normal text-white/60">
-              By subscribing you agree to with our{" "}
+              By contacting us you agree to our{" "}
               <Link href="#" className="font-medium text-white hover:underline">
                 Privacy Policy
               </Link>

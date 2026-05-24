@@ -7,10 +7,10 @@ import { StairCards } from '@/app/(app)/(client)/_components/ai-marketing/shared
 import { cn } from '@/app/(app)/(client)/_components/ai-marketing/utils/cn';
 
 const cards = [
-  { shapeClass: 'ns-shape-7', title: 'Strategy first, AI-enhanced execution' },
-  { shapeClass: 'ns-shape-8', title: 'Performance marketing across every channel' },
-  { shapeClass: 'ns-shape-9', title: 'Clear reporting, real insights, weekly wins' },
-  { shapeClass: 'ns-shape-10', title: 'End-to-end execution that compounds results' },
+  { shapeClass: 'ns-shape-7', title: 'Business-first planning before code' },
+  { shapeClass: 'ns-shape-8', title: 'Web apps and software built to scale' },
+  { shapeClass: 'ns-shape-9', title: 'Transparent delivery with clear milestones' },
+  { shapeClass: 'ns-shape-10', title: 'Long-term support after launch' },
 ];
 
 const WhyChooseUs = () => (
@@ -28,16 +28,15 @@ const WhyChooseUs = () => (
           </RevealAnimation>
           <RevealAnimation delay={0.2}>
             <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-center font-normal text-white max-md:leading-[1.1] lg:text-left">
-              Why growth teams <br className="hidden lg:block" />
-              choose Nexsas
+              Why teams choose <br className="hidden lg:block" />
+              ANCS Studio
             </h2>
           </RevealAnimation>
         </div>
         <RevealAnimation delay={0.3}>
           <p className="font-inter-tight text-tagline-2 text-center font-normal text-white/60 lg:max-w-[402px] lg:text-right">
-            We don&apos;t run &quot;random campaigns.&quot; We build repeatable systems—powered by
-            AI, guided by strategy, and measured with clean reporting—so you can scale with
-            confidence.
+            We do not start with templates or vague promises. We clarify the problem, define the
+            product, build the right pieces, and keep communication direct from kickoff to launch.
           </p>
         </RevealAnimation>
       </div>

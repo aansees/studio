@@ -6,7 +6,7 @@ const OurTechStack = () => (
     <div className="md:main-container">
       <RevealAnimation delay={0.1}>
         <div className="flex items-center justify-center pb-4">
-          <Badge badgeText="Our Tech Stack" className="text-black" />
+          <Badge badgeText="Tools & Stack" className="text-black" />
         </div>
       </RevealAnimation>
       <div className="relative z-40 mx-auto h-[240px] w-full max-w-[960px] overflow-hidden md:h-[322px]">
@@ -14,12 +14,13 @@ const OurTechStack = () => (
         <div className="relative z-5 space-y-1.5 text-center md:space-y-3">
           <RevealAnimation delay={0.2}>
             <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-background-5 font-normal max-md:leading-[1.1]">
-              Built on Top AI + <span className="text-background-13/30">Marketing Tools</span>
+              Modern tools for <span className="text-background-13/30">websites, apps & systems</span>
             </h2>
           </RevealAnimation>
           <RevealAnimation delay={0.3}>
             <p className="text-tagline-2 text-background-13/60 font-normal">
-              We blend automation with human creativity.
+              We choose the stack around performance, maintainability, and how your team will use
+              the product after launch.
             </p>
           </RevealAnimation>
         </div>

@@ -76,26 +76,22 @@ const About = () => {
           </RevealAnimation>
           <RevealAnimation delay={0.3}>
             <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 pt-2.5 font-normal text-white/90 max-md:leading-[1.1]">
-              Your growth partner
-              <span className="font-instrument-serif text-white/30">
-                {' '}
-                with <br className="hidden lg:block" />
-                AI expertise
-              </span>
+              A small studio for serious digital products
             </h2>
           </RevealAnimation>
           <RevealAnimation delay={0.4}>
             <p className="font-inter-tight text-tagline-2 mx-auto text-center font-normal text-white/60 lg:max-w-[482px]">
-              Businesses trust Nexsas because of its proven ability to deliver data-driven insights
-              that drive real results. With advanced AI technology, robust security protocols,
+              ANCS Studio partners directly with customers to plan, design, build, and improve
+              websites, web apps, admin systems, and custom applications. We care about clear
+              communication, dependable engineering, and products people can actually use.
             </p>
           </RevealAnimation>
         </div>
         <AboutSwiper />
         <RevealAnimation delay={0.5}>
           <div className="flex justify-center">
-            <PrimaryLinkButton href="/about" displayClassName="w-[85%] !py-[11px] sm:w-auto">
-              Learn More
+            <PrimaryLinkButton href="/start-project" displayClassName="w-[85%] !py-[11px] sm:w-auto">
+              Work with us
             </PrimaryLinkButton>
           </div>
         </RevealAnimation>

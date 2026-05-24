@@ -14,29 +14,30 @@ const Services = ({ services }: { services: ServiceItem[] }) => {
           <div className="space-y-1.5 md:space-y-3 lg:max-w-[514px]">
             <RevealAnimation delay={0.1}>
               <div className="pb-4">
-                <Badge badgeText="Our Services" className="text-white/60" />
+                <Badge badgeText="What we build" className="text-white/60" />
               </div>
             </RevealAnimation>
 
             <RevealAnimation delay={0.2}>
               <h2 className="text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-2 text-center font-normal text-white/90 lg:text-left">
-                Marketing solutions that drive results
+                Practical software services for growing teams
               </h2>
             </RevealAnimation>
 
             <RevealAnimation delay={0.3}>
               <p className="text-tagline-2 text-center font-normal text-white/60 lg:text-left">
-                Trusted by 100+ businesses in retail, healthcare, tech, and more.
+                Websites, web apps, dashboards, booking systems, mobile apps, and automation
+                delivered with clean design and maintainable engineering.
               </p>
             </RevealAnimation>
 
             <RevealAnimation delay={0.4}>
               <div className="pt-8 md:pt-18">
                 <PrimaryLinkButton
-                  href="/services"
+                  href="/start-project"
                   displayClassName="mx-auto w-[85%] sm:w-fit lg:mx-0"
                 >
-                  Explore all services
+                  Discuss a build
                 </PrimaryLinkButton>
               </div>
             </RevealAnimation>

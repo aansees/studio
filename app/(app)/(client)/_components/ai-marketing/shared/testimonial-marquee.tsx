@@ -6,44 +6,44 @@ import Marquee from 'react-fast-marquee';
 const testimonialsData = [
   {
     quote:
-      'Committed, innovative, and results-oriented—exactly what we needed. Their creative strategies consistently introduce new concepts. With a deep dedication to quality.',
+      'ANCS Studio helped us turn a scattered internal process into a clean web application our team actually uses every day.',
     name: 'Lena Torres',
-    role: 'CMO',
+    role: 'Operations Director',
     avatar: '/images/opai-avatar-img-01.png',
   },
   {
     quote:
-      "The team's expertise and hands-on approach made the entire integration seamless and surprisingly fast. Highly recommend!",
+      'The planning was clear, the communication was direct, and the final dashboard gave us the visibility we were missing.',
     name: 'Maya Chen',
-    role: 'CTO, Fintech Innovators',
+    role: 'Founder, Service Company',
     avatar: '/images/opai-avatar-img-02.png',
   },
   {
     quote:
-      'From day one, Nexsas felt like an extension of our internal team. Their tools and support are truly next-level.',
+      'They understood the business problem before writing code. That made the website and booking flow much stronger.',
     name: 'Derek Singh',
-    role: 'Head of Product, E-commerce Platform',
+    role: 'Head of Product',
     avatar: '/images/opai-avatar-img-03.png',
   },
   {
     quote:
-      'We went from idea to execution in weeks—not months. The automation is saving us countless hours every month.',
+      'We went from a rough idea to a working client portal without losing weeks in unclear meetings or shifting scope.',
     name: 'Laura Fernandez',
-    role: 'Operations Lead, SaaS Company',
+    role: 'Project Lead',
     avatar: '/images/opai-avatar-img-04.png',
   },
   {
     quote:
-      'What impressed me most was the flexibility. Nexsas adapted to our workflow instead of forcing us to change.',
-    name: 'Jonas Müller',
-    role: 'Growth Manager, Logistics Startup',
+      'The best part was how practical the team was. They built what we needed now and left room to grow later.',
+    name: 'Jonas Muller',
+    role: 'Growth Manager',
     avatar: '/images/opai-avatar-img-05.png',
   },
   {
     quote:
-      'The onboarding was seamless and the team was incredibly responsive. Now, our marketing runs smoother and results are up by 33%!',
+      'Our app launch felt organized from start to finish. The handoff, fixes, and follow-up support were handled professionally.',
     name: 'Priya Singh',
-    role: 'Marketing Director, E-Commerce Brand',
+    role: 'Business Owner',
     avatar: '/images/opai-avatar-img-06.png',
   },
 ];

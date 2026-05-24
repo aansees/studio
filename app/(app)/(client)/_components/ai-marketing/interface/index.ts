@@ -25,29 +25,3 @@ export interface CaseStudy {
   client?: string;
   date?: string;
 }
-
-/** Blog post as used in lists and cards (from markdown frontmatter + slug). */
-export interface BlogPost {
-  slug: string;
-  title: string;
-  date: string;
-  category: string;
-  tags: string[];
-  image: string;
-  excerpt: string;
-  /** Optional: from markdown frontmatter */
-  description?: string;
-  /** Optional: alternate date field (e.g. publishDate) for sorting/display */
-  publishDate?: string;
-  /** Optional: reading time from frontmatter */
-  readTime?: string;
-  /** Optional: author name */
-  author?: string;
-  /** Optional: author avatar URL */
-  authorImage?: string;
-  /** Optional: related post slugs for details page */
-  related?: string[];
-  /** Optional: raw markdown body (when loaded via getMarkDownData) */
-  content?: string;
-  [key: string]: unknown;
-}

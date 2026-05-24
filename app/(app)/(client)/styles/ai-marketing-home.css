@@ -309,28 +309,6 @@ textarea::-moz-resizer {
   -webkit-text-fill-color: transparent;
 }
 
-/*  =========================== Blog title underline hover effect =========================== */
-.underline-hover-effect .blog-title h3 {
-  @apply inline w-full cursor-pointer pb-px transition-all duration-500 ease-[cubic-bezier(0.645,0.045,0.355,1.000)];
-  background-image: linear-gradient(transparent calc(100% - 1px), white 1px);
-  @apply bg-size-[0%_100%] bg-no-repeat;
-}
-
-.underline-hover-effect:hover .blog-title h3 {
-  @apply bg-size-[100%_100%];
-}
-
-/*  =========================== Blog title underline hover effect black =========================== */
-.underline-hover-effect-black .blog-title-black h3 {
-  @apply inline w-full cursor-pointer pb-px transition-all duration-500 ease-[cubic-bezier(0.645,0.045,0.355,1.000)];
-  background-image: linear-gradient(transparent calc(100% - 1px), black 1px);
-  @apply bg-size-[0%_100%] bg-no-repeat;
-}
-
-.underline-hover-effect-black:hover .blog-title-black h3 {
-  @apply bg-size-[100%_100%];
-}
-
 /* =========================== Image Loading Reveal =========================== */
 .image-loading-reveal img {
   will-change: transform, clip-path;
@@ -382,14 +360,6 @@ dialog.modal-overlay.modal-close {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* =========================== Blog Card Active Width transition =========================== */
-.blog-card {
-  @apply w-full transition-[width] duration-800 ease-in-out md:w-[318px];
-}
-.blog-card.active-card {
-  @apply md:w-[590px];
 }
 
 /* =========================== Partner Ship Card Active Width transition =========================== */
@@ -486,40 +456,6 @@ dialog.modal-overlay.modal-close {
 
   h3 + p {
     @apply mt-2;
-  }
-}
-
-/* =========================== Blog Details Markdown =========================== */
-.blog-details-markdown {
-  h3 {
-    @apply text-background-13/90 font-instrument-serif text-is-heading-4 md:text-is-heading-3 lg:text-is-heading-4 mt-[70px] font-normal;
-  }
-
-  p {
-    @apply text-tagline-2 text-background-13/60 font-inter-tight my-[70px] font-normal;
-  }
-
-  blockquote {
-    @apply bg-background-4 relative mt-[70px] rounded-xl px-6 py-[39px];
-
-    &::before {
-      @apply bg-opai-blue absolute top-1/2 left-0 h-[90px] w-[3px] -translate-y-1/2 rounded-full content-[''];
-    }
-    p {
-      @apply font-inter-tight text-tagline-1 my-0 font-normal text-white/90;
-    }
-  }
-
-  h3 + p {
-    @apply mt-2! mb-0!;
-  }
-
-  h3 + p + ul {
-    @apply mt-4 space-y-2;
-
-    li {
-      @apply font-inter-tight text-tagline-2 text-background-13/90 before:bg-background-13 flex items-center gap-x-2 font-normal before:block before:size-1.5 before:rounded-full before:content-[''];
-    }
   }
 }
 

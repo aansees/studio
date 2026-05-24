@@ -8,7 +8,7 @@ export function NavButton() {
   const { wrapperRef, iconRef, textRef } = useButtonHoverTransform();
 
   return (
-    <Link href="/signup" className="inline-block shrink-0" aria-label="Get started">
+    <Link href="/start-project" className="inline-block shrink-0" aria-label="Start a project">
       <div
         ref={wrapperRef}
         className="button-inner bg-background-4 group button font-ibm-plex-mono text-tagline-2 text-background-11 flex h-11 w-full cursor-pointer items-center rounded-xl p-[3px] font-normal first-letter:uppercase"
@@ -33,7 +33,7 @@ export function NavButton() {
           </div>
         </div>
         <span ref={textRef} className="button-text shrink-0 stroke-0 px-4" aria-hidden="true">
-          Get started
+          Start project
         </span>
       </div>
     </Link>
