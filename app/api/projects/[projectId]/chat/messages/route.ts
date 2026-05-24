@@ -93,9 +93,7 @@ export async function POST(
       {
         message,
         queue: {
-          redisEnabled:
-            Boolean(env.UPSTASH_REDIS_REST_URL) &&
-            Boolean(env.UPSTASH_REDIS_REST_TOKEN),
+          redisEnabled: Boolean(env.REDIS_URL),
         },
       },
       { status: 201 },

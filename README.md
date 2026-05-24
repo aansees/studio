@@ -1,6 +1,6 @@
 # Ancs Studio
 
-Production-oriented agency project management platform built with Next.js 16, Better Auth, Drizzle ORM, MySQL, Upstash Redis/Realtime, Resend, React Email, and shadcn/ui components.
+Production-oriented agency project management platform built with Next.js 16, Better Auth, Drizzle ORM, MySQL, local Redis realtime messaging, Resend, React Email, and shadcn/ui components.
 
 ## Stack
 
@@ -8,7 +8,7 @@ Production-oriented agency project management platform built with Next.js 16, Be
 - React `19.2.3`
 - Better Auth (`email/password`, social providers, passkey, 2FA)
 - Drizzle ORM + MySQL (`mysql2`)
-- Upstash Redis + Upstash Realtime
+- Local Redis for realtime fanout, short chat buffering, and replay windows
 - Resend + React Email
 - Tailwind CSS + shadcn/ui component architecture
 
@@ -41,8 +41,10 @@ Hard rule:
 4. Core entities:
    - `project`, `projectMember`, `task`, `taskComment`, `taskChatMessage`, `notification`
 5. Chat flow:
-   - POST message -> validate access -> rate limit -> enqueue to Redis + emit realtime
-   - Redis buffered messages are flushed to MySQL in batches
+   - Browser connects to authenticated `/api/realtime` SSE.
+   - Redis pub/sub fans out live events with one shared subscriber per Next process.
+   - Project chat writes to Redis first, broadcasts immediately, then the worker persists batches to MySQL.
+   - Task chat persists attachment-backed messages before broadcast so attachment URLs are valid.
 6. Notifications:
    - Triggered on role upgrades, project assignment, task assignment/completion, project completion
 
@@ -63,33 +65,26 @@ Required before testing:
 - `ADMIN_PASSWORD`
 - `DATABASE_URL` (or MySQL docker vars)
 
-Optional but recommended:
+Recommended:
 
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `CHAT_FLUSH_API_KEY`
+- `REDIS_URL`
+- `CHAT_AUTO_FLUSH_INTERVAL_MS`
+- `CHAT_FLUSH_BATCH_SIZE`
 - `RESEND_API_KEY`
 - `RESEND_FROM` (for example `Ancs Studio <noreply@ancsstudio.com>`)
 
-### 2. Database + Admin Bootstrap (Docker)
+### 2. VPS Docker Layout
 
 ```bash
 docker compose up -d
-docker compose logs -f mysql-init
+docker compose logs -f web chat-worker nginx redis
 ```
 
 What docker does:
 
-- Starts MySQL 8.4 with persistent volume
-- Waits for MySQL to become healthy, then runs tracked Drizzle migrations
-- Runs one-shot admin seed (`bun run seed:admin`)
-
-If you need a clean DB re-initialize:
-
-```bash
-docker compose down -v
-docker compose up -d
-```
+- Runs Redis, Next.js, the chat worker, and Nginx.
+- MySQL is expected to run on the VPS host. Use `host.docker.internal` in `DATABASE_URL`.
+- The chat worker drains Redis project-chat buffers to MySQL without HTTP cron calls.
 
 ### 3. Run App
 
@@ -110,8 +105,22 @@ bun run db:generate
 bun run db:migrate
 bun run db:push
 bun run db:studio
+bun run chat:worker
 bun run seed:admin
 ```
+
+## VPS Production Notes
+
+```bash
+DATABASE_URL=mysql://agency:strong-password@host.docker.internal:3306/agency
+REDIS_URL=redis://redis:6379
+CHAT_AUTO_FLUSH_INTERVAL_MS=5000
+CHAT_FLUSH_BATCH_SIZE=500
+BETTER_AUTH_URL=https://ancsstudio.com
+NEXT_PUBLIC_BETTER_AUTH_URL=https://ancsstudio.com
+```
+
+Keep one `web` container on a 2 vCPU / 4 GB VPS unless you add sticky sessions or a shared SSE edge. Redis handles cross-process pub/sub, but each SSE connection still belongs to the web process that accepted it. Nginx disables buffering for `/api/realtime`.
 
 ## Delivery Status
 
@@ -121,9 +130,10 @@ bun run seed:admin
 - Passkey + 2FA plugin wiring
 - Drizzle schema for auth + project management domain
 - Role-based APIs for projects/tasks/team/notifications/chat
-- Redis-buffered realtime task chat + flush endpoint
+- Authenticated local realtime endpoint
+- Redis-backed project chat fanout, buffering, and worker persistence
 - Dashboard migrated from dummy data to real role-aware DB data
-- Dockerized MySQL initialization and admin bootstrap
+- Dockerized Redis, Nginx, Next.js, and chat worker layout
 - Next.js 16 route interception updated to `proxy.ts`
 
 ### Remaining
@@ -132,7 +142,7 @@ bun run seed:admin
 - Integration tests for role boundaries and critical flows
 - Audit logging for role/task mutations
 - Broader API-level abuse protection beyond chat message rate limit
-- Replace scheduling stubs with real backend logic
+- Add production monitoring/alerting for chat worker failures
 
 ## Security Assessment (2026-03-05)
 
@@ -155,8 +165,8 @@ bun run seed:admin
    - Action: added server-side validation for `replyToMessageId` existence in task context.
 5. Internal error message leakage risk
    - Action: hardened [`errorResponse`](./lib/http.ts) with status inference, Zod 422 handling, and safer production behavior.
-6. Flush endpoint misconfiguration risk
-   - Action: `CHAT_FLUSH_API_KEY` now required in production mode for `/api/chat/flush`.
+6. Realtime endpoint access risk
+   - Action: `/api/realtime` verifies session and room access before opening SSE.
 7. Realtime room predictability
    - Action: hardened task room IDs with secret-derived fingerprint.
 
@@ -186,5 +196,5 @@ These are not part of runtime request handling in production app server paths.
 ## Notes
 
 - Do not use weak `BETTER_AUTH_SECRET` in production.
-- Keep `CHAT_FLUSH_API_KEY` configured in production.
+- Keep Redis, the chat worker, and Nginx SSE buffering settings enabled in production.
 - Ensure DB and auth secrets are managed outside source control.

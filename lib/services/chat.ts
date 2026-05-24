@@ -4,14 +4,11 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { taskChatAttachment, taskChatMessage } from "@/lib/db/schema"
 import { env } from "@/lib/env"
-import { redis } from "@/lib/redis"
 import {
   type MessageAttachmentEvent,
   type MessageEvent,
   realtime,
 } from "@/lib/realtime"
-
-const DIRTY_ROOMS_KEY = "chat:dirty-rooms"
 
 export type PersistedChatAttachmentInput = {
   id?: string
@@ -32,30 +29,8 @@ function normalizeRole(value: string): MessageEvent["senderRole"] {
   return "developer"
 }
 
-function roomPendingListKey(roomId: string) {
-  return `chat:pending:${roomId}`
-}
-
 function buildAttachmentUrl(taskId: string, attachmentId: string) {
   return `/api/tasks/${taskId}/chat/attachments/${attachmentId}`
-}
-
-function deserializeRealtimeMessage(value: unknown): MessageEvent | null {
-  try {
-    if (!value) {
-      return null
-    }
-
-    const payload =
-      typeof value === "string" ? (JSON.parse(value) as MessageEvent) : (value as MessageEvent)
-
-    return {
-      ...payload,
-      attachments: payload.attachments ?? [],
-    }
-  } catch {
-    return null
-  }
 }
 
 function mapAttachmentRow(
@@ -161,56 +136,6 @@ async function insertAttachments(
   )
 }
 
-async function persistLegacyPendingMessages(taskId: string) {
-  if (!redis) {
-    return
-  }
-
-  const roomId = buildTaskRoomId(taskId)
-  const listKey = roomPendingListKey(roomId)
-  const pendingRaw = await redis.lrange<unknown[]>(listKey, 0, 500)
-  const pendingMessages = (pendingRaw ?? [])
-    .map((item) => deserializeRealtimeMessage(item))
-    .filter((item): item is MessageEvent => item !== null)
-
-  if (pendingMessages.length === 0) {
-    return
-  }
-
-  const existingRows = await db
-    .select({ id: taskChatMessage.id })
-    .from(taskChatMessage)
-    .where(
-      inArray(
-        taskChatMessage.id,
-        pendingMessages.map((message) => message.id),
-      ),
-    )
-
-  const existingIds = new Set(existingRows.map((row) => row.id))
-  const rowsToInsert = pendingMessages
-    .filter((message) => !existingIds.has(message.id))
-    .map((message) => ({
-      id: message.id,
-      roomId: message.roomId,
-      taskId: message.taskId,
-      senderId: message.sender,
-      senderRole: message.senderRole,
-      displayName: message.displayName,
-      text: message.text,
-      replyToMessageId: message.replyToMessageId ?? null,
-      reactions: null,
-      createdAt: new Date(message.timestamp),
-    }))
-
-  if (rowsToInsert.length > 0) {
-    await db.insert(taskChatMessage).values(rowsToInsert)
-  }
-
-  await redis.del(listKey)
-  await redis.zrem(DIRTY_ROOMS_KEY, roomId)
-}
-
 export function buildTaskRoomId(taskId: string) {
   const fingerprint = createHash("sha256")
     .update(`${env.BETTER_AUTH_SECRET}:${taskId}`)
@@ -254,8 +179,6 @@ export async function enqueueChatMessage(
 }
 
 export async function getTaskChatMessages(taskId: string, limit = 100) {
-  await persistLegacyPendingMessages(taskId)
-
   const rows = await db
     .select({
       id: taskChatMessage.id,
@@ -354,72 +277,6 @@ export async function getTaskChatMessages(taskId: string, limit = 100) {
     replyToMessageId: row.replyToMessageId ?? undefined,
     attachments: attachmentsByMessageId.get(row.id) ?? [],
   }))
-}
-
-export async function flushDueChatMessages() {
-  if (!redis) {
-    return { rooms: 0, messages: 0 }
-  }
-
-  const roomIds = await redis.zrange<string[]>(DIRTY_ROOMS_KEY, 0, -1)
-  if (!roomIds || roomIds.length === 0) {
-    return { rooms: 0, messages: 0 }
-  }
-
-  let persistedMessages = 0
-
-  for (const roomId of roomIds) {
-    const listKey = roomPendingListKey(roomId)
-    const pendingRaw = await redis.lrange<unknown[]>(listKey, 0, 500)
-    const pendingMessages = (pendingRaw ?? [])
-      .map((item) => deserializeRealtimeMessage(item))
-      .filter((item): item is MessageEvent => item !== null)
-
-    if (pendingMessages.length === 0) {
-      await redis.del(listKey)
-      await redis.zrem(DIRTY_ROOMS_KEY, roomId)
-      continue
-    }
-
-    const existingRows = await db
-      .select({ id: taskChatMessage.id })
-      .from(taskChatMessage)
-      .where(
-        inArray(
-          taskChatMessage.id,
-          pendingMessages.map((message) => message.id),
-        ),
-      )
-
-    const existingIds = new Set(existingRows.map((row) => row.id))
-    const rowsToInsert = pendingMessages
-      .filter((message) => !existingIds.has(message.id))
-      .map((message) => ({
-        id: message.id,
-        roomId: message.roomId,
-        taskId: message.taskId,
-        senderId: message.sender,
-        senderRole: message.senderRole,
-        displayName: message.displayName,
-        text: message.text,
-        replyToMessageId: message.replyToMessageId ?? null,
-        reactions: null,
-        createdAt: new Date(message.timestamp),
-      }))
-
-    if (rowsToInsert.length > 0) {
-      await db.insert(taskChatMessage).values(rowsToInsert)
-      persistedMessages += rowsToInsert.length
-    }
-
-    await redis.del(listKey)
-    await redis.zrem(DIRTY_ROOMS_KEY, roomId)
-  }
-
-  return {
-    rooms: roomIds.length,
-    messages: persistedMessages,
-  }
 }
 
 export async function loadTaskMessageFromDb(messageId: string, taskId: string) {

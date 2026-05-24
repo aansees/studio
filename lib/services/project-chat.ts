@@ -14,6 +14,7 @@ const PROJECT_CHAT_MAX_PENDING_MESSAGES = 50
 const PROJECT_CHAT_MAX_PENDING_BYTES = 20 * 1024 * 1024
 const PROJECT_CHAT_MAX_PENDING_AGE_MS = 5 * 60 * 1000
 const PROJECT_CHAT_LOCK_TTL_SECONDS = 30
+const PROJECT_CHAT_FLUSH_BATCH_SIZE = env.CHAT_FLUSH_BATCH_SIZE
 
 export const PROJECT_CHAT_PAGE_SIZE = 10
 
@@ -156,16 +157,19 @@ async function loadRoomMeta(roomId: string) {
     } satisfies ProjectChatRoomMeta
   }
 
-  const raw = await redis.hgetall<Record<string, unknown>>(roomMetaKey(roomId))
+  const raw = await redis.hgetall(roomMetaKey(roomId))
   return parseRoomMeta(raw)
 }
 
-async function loadPendingProjectMessages(roomId: string) {
+async function loadPendingProjectMessages(
+  roomId: string,
+  limit = PROJECT_CHAT_FLUSH_BATCH_SIZE,
+) {
   if (!redis) {
     return [] as ProjectMessageEvent[]
   }
 
-  const rawMessages = await redis.lrange<unknown[]>(roomPendingListKey(roomId), 0, -1)
+  const rawMessages = await redis.lrange(roomPendingListKey(roomId), 0, limit - 1)
   return (rawMessages ?? [])
     .map((value) => deserializeProjectMessage(value))
     .filter((value): value is ProjectMessageEvent => value !== null)
@@ -208,23 +212,30 @@ async function insertProjectMessages(messages: ProjectMessageEvent[]) {
 
 async function acquireRoomFlushLock(roomId: string) {
   if (!redis) {
-    return true
+    return crypto.randomUUID()
   }
 
-  const result = await redis.set(roomFlushLockKey(roomId), "1", {
-    ex: PROJECT_CHAT_LOCK_TTL_SECONDS,
-    nx: true,
-  })
+  const token = crypto.randomUUID()
+  const result = await redis.set(
+    roomFlushLockKey(roomId),
+    token,
+    "EX",
+    PROJECT_CHAT_LOCK_TTL_SECONDS,
+    "NX",
+  )
 
-  return result === "OK"
+  return result === "OK" ? token : null
 }
 
-async function releaseRoomFlushLock(roomId: string) {
+async function releaseRoomFlushLock(roomId: string, token: string) {
   if (!redis) {
     return
   }
 
-  await redis.del(roomFlushLockKey(roomId))
+  const currentToken = await redis.get(roomFlushLockKey(roomId))
+  if (currentToken === token) {
+    await redis.del(roomFlushLockKey(roomId))
+  }
 }
 
 export function buildProjectRoomId(projectId: string) {
@@ -306,6 +317,8 @@ export async function enqueueProjectChatMessage(message: ProjectMessageEvent) {
     updatedAt: now,
   } satisfies ProjectChatRoomMeta
 
+  // Pending buffers intentionally do not expire; the flush route owns cleanup so
+  // a missed VPS cron run cannot drop project chat messages.
   await redis
     .pipeline()
     .rpush(roomPendingListKey(message.roomId), serialized)
@@ -315,12 +328,7 @@ export async function enqueueProjectChatMessage(message: ProjectMessageEvent) {
       oldestTimestamp: nextMeta.oldestTimestamp,
       updatedAt: nextMeta.updatedAt,
     })
-    .zadd(PROJECT_CHAT_DIRTY_ROOMS_KEY, {
-      score: nextMeta.oldestTimestamp,
-      member: message.roomId,
-    })
-    .expire(roomPendingListKey(message.roomId), 60 * 60)
-    .expire(roomMetaKey(message.roomId), 60 * 60)
+    .zadd(PROJECT_CHAT_DIRTY_ROOMS_KEY, nextMeta.oldestTimestamp, message.roomId)
     .exec()
 
   await realtime.channel(message.roomId).emit("projectChat.message", message)
@@ -337,8 +345,8 @@ export async function flushProjectChatRoom(roomId: string) {
     return { roomId, messages: 0 }
   }
 
-  const lockAcquired = await acquireRoomFlushLock(roomId)
-  if (!lockAcquired) {
+  const lockToken = await acquireRoomFlushLock(roomId)
+  if (!lockToken) {
     return { roomId, messages: 0 }
   }
 
@@ -354,19 +362,23 @@ export async function flushProjectChatRoom(roomId: string) {
     }
 
     const insertedMessages = await insertProjectMessages(pendingMessages)
+    await redis.ltrim(roomPendingListKey(roomId), pendingMessages.length, -1)
 
-    await Promise.all([
-      redis.del(roomPendingListKey(roomId)),
-      redis.del(roomMetaKey(roomId)),
-      redis.zrem(PROJECT_CHAT_DIRTY_ROOMS_KEY, roomId),
-    ])
+    const remainingMessages = await redis.llen(roomPendingListKey(roomId))
+    if (remainingMessages === 0) {
+      await Promise.all([
+        redis.del(roomPendingListKey(roomId)),
+        redis.del(roomMetaKey(roomId)),
+        redis.zrem(PROJECT_CHAT_DIRTY_ROOMS_KEY, roomId),
+      ])
+    }
 
     return {
       roomId,
       messages: insertedMessages,
     }
   } finally {
-    await releaseRoomFlushLock(roomId)
+    await releaseRoomFlushLock(roomId, lockToken)
   }
 }
 
@@ -387,12 +399,12 @@ export async function maybeFlushProjectChatRoom(roomId: string) {
   }
 }
 
-export async function flushDueProjectChatRooms() {
+export async function flushDueProjectChatRooms(options?: { force?: boolean }) {
   if (!redis) {
     return { rooms: 0, messages: 0 }
   }
 
-  const roomIds = await redis.zrange<string[]>(PROJECT_CHAT_DIRTY_ROOMS_KEY, 0, -1)
+  const roomIds = await redis.zrange(PROJECT_CHAT_DIRTY_ROOMS_KEY, 0, -1)
   if (!roomIds || roomIds.length === 0) {
     return { rooms: 0, messages: 0 }
   }
@@ -402,7 +414,8 @@ export async function flushDueProjectChatRooms() {
 
   for (const roomId of roomIds) {
     const meta = await loadRoomMeta(roomId)
-    if (!shouldFlushRoom(meta)) {
+    const shouldFlush = options?.force || shouldFlushRoom(meta)
+    if (!shouldFlush) {
       continue
     }
 
