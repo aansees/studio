@@ -15,7 +15,7 @@ set -Eeuo pipefail
 # Usage:
 #   sudo APP_DIR=/opt/agency bash scripts/setup-vps-ubuntu.sh
 
-APP_DIR="${APP_DIR:-/opt/agency}"
+APP_DIR="${APP_DIR:-/app}"
 ENV_FILE="${ENV_FILE:-${APP_DIR}/.env}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-true}"
 SEED_ADMIN="${SEED_ADMIN:-false}"
