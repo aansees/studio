@@ -417,17 +417,6 @@ docker compose up -d --build redis web chat-worker nginx
 
 configure_ufw
 
-if [[ "$RUN_MIGRATIONS" == "true" ]]; then
-  echo "Running database migrations..."
-  docker compose run --rm web bun run db:migrate
-  docker compose up -d web chat-worker nginx
-fi
-
-if [[ "$SEED_ADMIN" == "true" ]]; then
-  echo "Seeding admin user..."
-  docker compose run --rm web bun run seed:admin
-fi
-
 if [[ "$ENABLE_HTTPS" == "true" ]]; then
   echo "Requesting or renewing Let's Encrypt certificate for ${DOMAIN_NAME}..."
   if [[ ! -f "deploy/certbot/conf/live/${DOMAIN_NAME}/fullchain.pem" ]]; then
@@ -470,6 +459,17 @@ RENEW
   cat > /etc/cron.d/ancs-certbot-renew <<'CRON'
 17 3 * * * root /usr/local/sbin/ancs-certbot-renew.sh >/var/log/ancs-certbot-renew.log 2>&1
 CRON
+fi
+
+if [[ "$RUN_MIGRATIONS" == "true" ]]; then
+  echo "Running database migrations..."
+  docker compose run --rm web bun run db:migrate
+  docker compose up -d web chat-worker nginx
+fi
+
+if [[ "$SEED_ADMIN" == "true" ]]; then
+  echo "Seeding admin user..."
+  docker compose run --rm web bun run seed:admin
 fi
 
 echo "Current service status:"

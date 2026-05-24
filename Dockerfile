@@ -7,12 +7,15 @@ RUN bun install --frozen-lockfile
 FROM deps AS builder
 WORKDIR /app
 
+ARG BETTER_AUTH_URL=http://localhost:3000
+ARG NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN DATABASE_URL=mysql://agency:agency@127.0.0.1:3306/agency \
     BETTER_AUTH_SECRET=build-time-secret-change-in-runtime-1234567890 \
-    BETTER_AUTH_URL=http://localhost:3000 \
-    NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000 \
+    BETTER_AUTH_URL="${BETTER_AUTH_URL}" \
+    NEXT_PUBLIC_BETTER_AUTH_URL="${NEXT_PUBLIC_BETTER_AUTH_URL}" \
     bun run build
 
 FROM oven/bun:1.3.8-alpine AS runner
