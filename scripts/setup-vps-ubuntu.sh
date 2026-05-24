@@ -92,6 +92,54 @@ sql_escape() {
   printf "%s" "$1" | sed "s/'/''/g"
 }
 
+url_encode() {
+  python3 - "$1" <<'PY'
+import sys
+from urllib.parse import quote
+
+print(quote(sys.argv[1], safe=""))
+PY
+}
+
+env_set() {
+  local key="$1"
+  local value="$2"
+  python3 - "$ENV_FILE" "$key" "$value" <<'PY'
+import sys
+from pathlib import Path
+
+env_file = Path(sys.argv[1])
+target = sys.argv[2]
+value = sys.argv[3]
+
+lines = env_file.read_text(encoding="utf-8").splitlines()
+updated = False
+out = []
+
+for raw_line in lines:
+    stripped = raw_line.strip()
+    if not stripped or stripped.startswith("#") or "=" not in raw_line:
+        out.append(raw_line)
+        continue
+    key, _ = raw_line.split("=", 1)
+    prefix = ""
+    clean_key = key.strip()
+    if clean_key.startswith("export "):
+        prefix = "export "
+        clean_key = clean_key[7:].strip()
+    if clean_key == target:
+        out.append(f"{prefix}{target}={value}")
+        updated = True
+    else:
+        out.append(raw_line)
+
+if not updated:
+    out.append(f"{target}={value}")
+
+env_file.write_text("\n".join(out) + "\n", encoding="utf-8")
+PY
+}
+
 APP_NAME="$(env_get APP_NAME "Ancs Studio")"
 DOMAIN_NAME="$(env_get DOMAIN_NAME)"
 CERTBOT_EMAIL="$(env_get CERTBOT_EMAIL)"
@@ -103,19 +151,21 @@ MYSQL_ROOT_PASSWORD="$(env_get MYSQL_ROOT_PASSWORD)"
 MYSQL_DATABASE="$(required_env MYSQL_DATABASE)"
 MYSQL_USER="$(required_env MYSQL_USER)"
 MYSQL_PASSWORD="$(required_env MYSQL_PASSWORD)"
+COMPOSE_PROJECT_NAME="$(env_get COMPOSE_PROJECT_NAME "$(basename "$APP_DIR")")"
 BETTER_AUTH_SECRET="$(required_env BETTER_AUTH_SECRET)"
 BETTER_AUTH_URL="$(required_env BETTER_AUTH_URL)"
 NEXT_PUBLIC_BETTER_AUTH_URL="$(required_env NEXT_PUBLIC_BETTER_AUTH_URL)"
 
-if [[ "$DATABASE_URL" == *"@127.0.0.1:"* || "$DATABASE_URL" == *"@localhost:"* ]]; then
-  echo "DATABASE_URL must use host.docker.internal because Next.js runs inside Docker."
-  echo "Example: mysql://${MYSQL_USER}:URL_ENCODED_PASSWORD@host.docker.internal:${MYSQL_PORT}/${MYSQL_DATABASE}"
-  exit 1
+EXPECTED_DATABASE_URL="mysql://${MYSQL_USER}:$(url_encode "$MYSQL_PASSWORD")@host.docker.internal:${MYSQL_PORT}/${MYSQL_DATABASE}"
+
+if [[ "$DATABASE_URL" != "$EXPECTED_DATABASE_URL" ]]; then
+  echo "Updating DATABASE_URL in .env for Docker host MariaDB access."
+  env_set DATABASE_URL "$EXPECTED_DATABASE_URL"
+  DATABASE_URL="$EXPECTED_DATABASE_URL"
 fi
 
-if [[ "$DATABASE_URL" != *"@host.docker.internal:${MYSQL_PORT}/"* ]]; then
-  echo "DATABASE_URL should point to host.docker.internal:${MYSQL_PORT} for this Docker layout."
-  exit 1
+if [[ -z "$(env_get COMPOSE_PROJECT_NAME)" ]]; then
+  env_set COMPOSE_PROJECT_NAME "$COMPOSE_PROJECT_NAME"
 fi
 
 if [[ "$BETTER_AUTH_SECRET" == CHANGE_ME* || "$MYSQL_PASSWORD" == CHANGE_ME* ]]; then
@@ -138,6 +188,7 @@ echo "App: ${APP_NAME}"
 echo "App dir: ${APP_DIR}"
 echo "Domain: ${DOMAIN_NAME:-http-only}"
 echo "MariaDB: ${MYSQL_DATABASE} on host port ${MYSQL_PORT}"
+echo "Compose project: ${COMPOSE_PROJECT_NAME}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Installing Docker Engine from Docker's official apt repository..."
@@ -204,13 +255,6 @@ SQL
   fi
 fi
 
-echo "Configuring UFW..."
-ufw allow "${SSH_PORT}/tcp"
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw deny "${MYSQL_PORT}/tcp"
-ufw --force enable
-
 cd "$APP_DIR"
 
 if [[ -d .git ]]; then
@@ -218,6 +262,41 @@ if [[ -d .git ]]; then
 fi
 
 mkdir -p deploy/nginx deploy/certbot/www deploy/certbot/conf
+
+compose_network_subnets() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return 0
+  fi
+
+  docker network ls \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+    --format "{{.Name}}" |
+    while IFS= read -r network_name; do
+      [[ -z "$network_name" ]] && continue
+      docker network inspect \
+        --format '{{range .IPAM.Config}}{{println .Subnet}}{{end}}' \
+        "$network_name" 2>/dev/null || true
+    done
+}
+
+configure_ufw() {
+  echo "Configuring UFW..."
+  ufw allow "${SSH_PORT}/tcp"
+  ufw allow 80/tcp
+  ufw allow 443/tcp
+
+  while ufw --force delete deny "${MYSQL_PORT}/tcp" >/dev/null 2>&1; do
+    true
+  done
+
+  compose_network_subnets | awk 'NF && !seen[$0]++' |
+    while IFS= read -r subnet; do
+      ufw allow from "$subnet" to any port "$MYSQL_PORT" proto tcp
+    done
+
+  ufw deny "${MYSQL_PORT}/tcp"
+  ufw --force enable
+}
 
 write_http_nginx_config() {
   local server_name="${1:-_}"
@@ -327,11 +406,20 @@ server {
 NGINX
 }
 
-echo "Writing initial HTTP Nginx config..."
-write_http_nginx_config "${DOMAIN_NAME:-_}"
+if [[ "$ENABLE_HTTPS" == "true" && -f "deploy/certbot/conf/live/${DOMAIN_NAME}/fullchain.pem" ]]; then
+  echo "Writing HTTPS Nginx config."
+  write_https_nginx_config "${DOMAIN_NAME}"
+else
+  echo "Writing initial HTTP Nginx config."
+  write_http_nginx_config "${DOMAIN_NAME:-_}"
+fi
+
+configure_ufw
 
 echo "Building and starting Docker services..."
 docker compose up -d --build redis web chat-worker nginx
+
+configure_ufw
 
 if [[ "$RUN_MIGRATIONS" == "true" ]]; then
   echo "Running database migrations..."
